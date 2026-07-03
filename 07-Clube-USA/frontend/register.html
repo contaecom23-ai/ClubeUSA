@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo">🇧🇷 Clube USA</a>
+  <nav><a href="login.html">Já tenho conta</a></nav>
+</header>
+
+<div class="container" style="padding-top:32px;">
+  <div class="card">
+    <h1>Criar conta</h1>
+    <p class="subtitle">Gratuito. Apenas um email para começar.</p>
+
+    <div id="alert" class="alert alert-danger"></div>
+    <div id="success" class="alert alert-success"></div>
+
+    <form id="registerForm" novalidate>
+      <div class="form-group">
+        <label for="first_name">Nome *</label>
+        <input type="text" id="first_name" placeholder="Seu nome" autocomplete="given-name" required>
+        <span class="field-error" id="err_first_name"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="last_name">Sobrenome</label>
+        <input type="text" id="last_name" placeholder="Sobrenome" autocomplete="family-name">
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input type="email" id="email" placeholder="voce@email.com" autocomplete="email" required>
+        <span class="field-error" id="err_email"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha *</label>
+        <input type="password" id="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+        <span class="field-error" id="err_password"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="zip_code">ZIP Code (EUA)</label>
+        <input type="text" id="zip_code" placeholder="Ex: 33101" maxlength="10" inputmode="numeric">
+        <span class="field-error" id="err_zip_code"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Telefone</label>
+        <input type="tel" id="phone" placeholder="Ex: 305-555-1234" autocomplete="tel">
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn" data-label="Criar conta">
+        Criar conta
+      </button>
+    </form>
+
+    <p class="page-footer" style="margin-top:20px;">
+      Ao cadastrar, você concorda com nossos <a href="#">Termos</a> e <a href="#">Privacidade</a>.
+    </p>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+  if (Auth.isLoggedIn()) window.location.href = "profile.html";
+
+  const form    = document.getElementById("registerForm");
+  const alertEl = document.getElementById("alert");
+  const successEl = document.getElementById("success");
+  const submitBtn = document.getElementById("submitBtn");
+
+  function clearErrors() {
+    document.querySelectorAll(".field-error").forEach(e => { e.style.display = "none"; e.textContent = ""; });
+    document.querySelectorAll("input").forEach(i => i.classList.remove("error"));
+    hideAlert(alertEl);
+    hideAlert(successEl);
+  }
+
+  function showFieldError(fieldId, msg) {
+    const input = document.getElementById(fieldId);
+    const err   = document.getElementById("err_" + fieldId);
+    if (!input || !err) return;
+    input.classList.add("error");
+    err.textContent = msg;
+    err.style.display = "block";
+  }
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    clearErrors();
+
+    const payload = {
+      first_name: document.getElementById("first_name").value.trim(),
+      last_name:  document.getElementById("last_name").value.trim(),
+      email:      document.getElementById("email").value.trim(),
+      password:   document.getElementById("password").value,
+      zip_code:   document.getElementById("zip_code").value.trim(),
+      phone:      document.getElementById("phone").value.trim(),
+    };
+
+    // Validação mínima no cliente (complementar — o servidor também valida)
+    if (!payload.first_name) { showFieldError("first_name", "Nome é obrigatório"); return; }
+    if (!payload.email)      { showFieldError("email", "Email é obrigatório"); return; }
+    if (payload.password.length < 8) { showFieldError("password", "Mínimo 8 caracteres"); return; }
+
+    setLoading(submitBtn, true);
+
+    try {
+      const result = await apiRequest("/auth/register", { method: "POST", body: payload });
+
+      if (!result) return; // erro de rede
+
+      if (result.ok) {
+        showAlert(successEl, result.data.message || "Verifique seu email para confirmar.", "success");
+        form.reset();
+      } else if (result.status === 422) {
+        // Erros de validação do servidor
+        const errors = result.data?.detail || [];
+        if (Array.isArray(errors)) {
+          errors.forEach(err => {
+            const field = err.loc?.[err.loc.length - 1];
+            if (field) showFieldError(field, err.msg);
+          });
+        } else {
+          showAlert(alertEl, result.data?.detail || "Dados inválidos.");
+        }
+      } else {
+        showAlert(alertEl, result.data?.detail || "Erro ao criar conta. Tente novamente.");
+      }
+    } catch {
+      showAlert(alertEl, "Erro de conexão. Verifique sua internet.");
+    } finally {
+      setLoading(submitBtn, false);
+    }
+  });
+</script>
+</body>
+</html>

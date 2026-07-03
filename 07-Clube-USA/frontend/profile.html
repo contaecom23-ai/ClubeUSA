@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo">🇧🇷 Clube USA</a>
+  <nav>
+    <button
+      id="logoutBtn"
+      style="background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.875rem;"
+    >Sair</button>
+  </nav>
+</header>
+
+<div class="container" style="padding-top:32px;">
+
+  <!-- Loading state -->
+  <div id="loading" style="text-align:center; padding:40px; color:var(--muted);">
+    Carregando perfil...
+  </div>
+
+  <!-- Profile view / edit -->
+  <div id="profileSection" style="display:none;">
+    <div class="card">
+      <div style="margin-bottom:20px;">
+        <div class="profile-name" id="displayName">—</div>
+        <div class="profile-meta" id="displayMeta">—</div>
+      </div>
+      <hr class="divider">
+
+      <div id="alertMsg" class="alert alert-danger"></div>
+      <div id="successMsg" class="alert alert-success"></div>
+
+      <form id="profileForm" novalidate>
+        <div class="form-group">
+          <label for="first_name">Nome *</label>
+          <input type="text" id="first_name" required autocomplete="given-name">
+          <span class="field-error" id="err_first_name"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="last_name">Sobrenome</label>
+          <input type="text" id="last_name" autocomplete="family-name">
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Telefone</label>
+          <input type="tel" id="phone" autocomplete="tel">
+        </div>
+
+        <div class="form-group">
+          <label for="zip_code">ZIP Code (EUA)</label>
+          <input type="text" id="zip_code" maxlength="10" inputmode="numeric">
+          <span class="field-error" id="err_zip_code"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="state">Estado</label>
+          <input type="text" id="state" maxlength="2" placeholder="Ex: FL" style="max-width:80px;">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="saveBtn" data-label="Salvar alterações">
+          Salvar alterações
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+  if (!requireAuth()) {
+    // requireAuth() já redirecionou para login.html
+  }
+
+  const loadingEl  = document.getElementById("loading");
+  const sectionEl  = document.getElementById("profileSection");
+  const alertEl    = document.getElementById("alertMsg");
+  const successEl  = document.getElementById("successMsg");
+  const saveBtn    = document.getElementById("saveBtn");
+
+  document.getElementById("logoutBtn").addEventListener("click", () => Auth.logout());
+
+  function fillForm(profile) {
+    document.getElementById("first_name").value = profile.first_name || "";
+    document.getElementById("last_name").value  = profile.last_name  || "";
+    document.getElementById("phone").value      = profile.phone      || "";
+    document.getElementById("zip_code").value   = profile.zip_code   || "";
+    document.getElementById("state").value      = profile.state      || "";
+
+    const full = [profile.first_name, profile.last_name].filter(Boolean).join(" ");
+    document.getElementById("displayName").textContent = full || "Seu nome";
+    const meta = [profile.zip_code, profile.state].filter(Boolean).join(", ");
+    document.getElementById("displayMeta").textContent = meta || "Adicione seu ZIP code e estado";
+  }
+
+  async function loadProfile() {
+    const result = await apiRequest("/users/me", { auth: true });
+    if (!result) return; // redirect handled by apiRequest
+
+    if (result.ok) {
+      loadingEl.style.display  = "none";
+      sectionEl.style.display  = "block";
+      fillForm(result.data);
+    } else {
+      loadingEl.textContent = "Erro ao carregar perfil. " + (result.data?.detail || "");
+    }
+  }
+
+  document.getElementById("profileForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    hideAlert(alertEl);
+    hideAlert(successEl);
+
+    // Limpa erros de campo
+    document.querySelectorAll(".field-error").forEach(el => { el.style.display = "none"; el.textContent = ""; });
+    document.querySelectorAll("input").forEach(i => i.classList.remove("error"));
+
+    const payload = {};
+    const first = document.getElementById("first_name").value.trim();
+    if (first) payload.first_name = first;
+    const last  = document.getElementById("last_name").value.trim();
+    if (last)  payload.last_name  = last;
+    const phone = document.getElementById("phone").value.trim();
+    if (phone) payload.phone = phone;
+    const zip   = document.getElementById("zip_code").value.trim();
+    if (zip)   payload.zip_code  = zip;
+    const state = document.getElementById("state").value.trim().toUpperCase();
+    if (state) payload.state = state;
+
+    setLoading(saveBtn, true);
+
+    try {
+      const result = await apiRequest("/users/me", { method: "PUT", body: payload, auth: true });
+      if (!result) return;
+
+      if (result.ok) {
+        fillForm(result.data);
+        showAlert(successEl, "Perfil atualizado com sucesso!", "success");
+      } else if (result.status === 422) {
+        const errors = result.data?.detail;
+        if (Array.isArray(errors)) {
+          errors.forEach(err => {
+            const field = err.loc?.[err.loc.length - 1];
+            if (field) {
+              const input = document.getElementById(field);
+              const errEl = document.getElementById("err_" + field);
+              if (input) input.classList.add("error");
+              if (errEl) { errEl.textContent = err.msg; errEl.style.display = "block"; }
+            }
+          });
+        } else {
+          showAlert(alertEl, errors || "Dados inválidos.");
+        }
+      } else {
+        showAlert(alertEl, result.data?.detail || "Erro ao salvar. Tente novamente.");
+      }
+    } catch {
+      showAlert(alertEl, "Erro de conexão. Verifique sua internet.");
+    } finally {
+      setLoading(saveBtn, false);
+    }
+  });
+
+  loadProfile();
+</script>
+</body>
+</html>
