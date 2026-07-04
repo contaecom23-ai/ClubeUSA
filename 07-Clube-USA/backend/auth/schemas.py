@@ -9,6 +9,7 @@ class RegisterRequest(BaseModel):
     last_name: str = ""
     zip_code: str = ""
     phone: str = ""
+    referred_by_slug: str = ""
 
     @field_validator("password")
     @classmethod
@@ -31,6 +32,14 @@ class RegisterRequest(BaseModel):
         v = v.strip()
         if v and not re.match(r"^\d{5}(-\d{4})?$", v):
             raise ValueError("CEP americano inválido (formato: 12345 ou 12345-6789)")
+        return v
+
+    @field_validator("referred_by_slug")
+    @classmethod
+    def referred_by_slug_format(cls, v: str) -> str:
+        v = v.strip()
+        if v and not re.match(r"^[a-zA-Z0-9_-]{3,24}$", v):
+            raise ValueError("Código de referral inválido")
         return v
 
 

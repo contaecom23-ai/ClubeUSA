@@ -26,6 +26,21 @@ def make_mock_supabase() -> MagicMock:
     return MagicMock()
 
 
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Limpa o storage do rate limiter antes de cada teste.
+
+    O limiter usa MemoryStorage compartilhada. Sem reset, contadores acumulam
+    entre testes e causam 429 em testes posteriores mesmo sendo independentes.
+    """
+    from core.limiter import limiter
+    try:
+        limiter._limiter.storage.reset()
+    except Exception:
+        pass
+    yield
+
+
 @pytest.fixture
 def mock_supabase():
     client = make_mock_supabase()

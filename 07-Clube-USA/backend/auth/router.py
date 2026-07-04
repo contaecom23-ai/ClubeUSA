@@ -1,14 +1,12 @@
 from fastapi import APIRouter, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from supabase import Client
 
 from auth.schemas import LoginRequest, MessageResponse, RefreshRequest, RegisterRequest, TokenResponse
 from auth.service import login_user, refresh_access_token, register_user
+from core.limiter import limiter
 from db.supabase import get_supabase
-from supabase import Client
 
 router = APIRouter(tags=["auth"])
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/register", response_model=MessageResponse)

@@ -2,6 +2,7 @@ import logging
 from supabase import Client
 from fastapi import HTTPException, status
 from auth.schemas import RegisterRequest, LoginRequest, TokenResponse
+from referrals.service import generate_unique_slug
 
 logger = logging.getLogger(__name__)
 
@@ -27,16 +28,33 @@ def register_user(supabase: Client, data: RegisterRequest) -> dict:
 
     user_id = response.user.id
 
+    referral_slug = generate_unique_slug(supabase, data.first_name)
+
+    profile_data: dict = {
+        "id": user_id,
+        "first_name": data.first_name.strip(),
+        "last_name": data.last_name.strip(),
+        "zip_code": data.zip_code.strip(),
+        "phone": data.phone.strip(),
+        "referral_slug": referral_slug,
+    }
+
+    # Valida o código de referral recebido sem falhar o cadastro se inválido
+    if data.referred_by_slug:
+        try:
+            ref_check = (
+                supabase.table("profiles")
+                .select("id")
+                .eq("referral_slug", data.referred_by_slug)
+                .execute()
+            )
+            if ref_check.data:
+                profile_data["referred_by_slug"] = data.referred_by_slug
+        except Exception as e:
+            logger.warning("ref slug validation error: %s", type(e).__name__)
+
     try:
-        supabase.table("profiles").insert(
-            {
-                "id": user_id,
-                "first_name": data.first_name.strip(),
-                "last_name": data.last_name.strip(),
-                "zip_code": data.zip_code.strip(),
-                "phone": data.phone.strip(),
-            }
-        ).execute()
+        supabase.table("profiles").insert(profile_data).execute()
     except Exception as e:
         logger.error("profile insert failed for user %s: %s", user_id, type(e).__name__)
         # Usuário existe no auth mas sem perfil — inconsistência gerenciável.

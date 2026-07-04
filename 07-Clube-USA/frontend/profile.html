@@ -70,6 +70,39 @@
         </button>
       </form>
     </div>
+
+    <!-- Seção de Referral -->
+    <div class="card" id="referralCard" style="margin-top:24px; display:none;">
+      <h2 style="font-size:1.1rem; margin-bottom:4px;">Indique um amigo</h2>
+      <p style="color:var(--muted); font-size:.875rem; margin-bottom:16px;">
+        Compartilhe seu link e acompanhe quantos amigos você trouxe para o Clube USA.
+      </p>
+
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input
+          type="text"
+          id="refLinkInput"
+          readonly
+          style="flex:1; min-width:0; font-size:.85rem; background:var(--surface); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:8px 12px;"
+        >
+        <button
+          id="copyRefBtn"
+          class="btn"
+          style="white-space:nowrap; padding:8px 16px; font-size:.875rem; background:var(--primary); color:#fff; border:none; border-radius:6px; cursor:pointer;"
+        >Copiar link</button>
+      </div>
+
+      <div style="display:flex; gap:24px; margin-top:16px;">
+        <div style="text-align:center;">
+          <div id="refSignupCount" style="font-size:1.75rem; font-weight:700; color:var(--primary);">—</div>
+          <div style="font-size:.8rem; color:var(--muted);">cadastros</div>
+        </div>
+        <div style="text-align:center;">
+          <div id="refClickCount" style="font-size:1.75rem; font-weight:700; color:var(--primary);">—</div>
+          <div style="font-size:.8rem; color:var(--muted);">cliques</div>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -101,14 +134,39 @@
     document.getElementById("displayMeta").textContent = meta || "Adicione seu ZIP code e estado";
   }
 
+  async function loadReferralStats() {
+    const result = await apiRequest("/referrals/me", { auth: true });
+    if (!result || !result.ok) return;
+
+    const stats = result.data;
+    if (!stats.slug) return;
+
+    const baseUrl = window.location.origin + window.location.pathname.replace("profile.html", "");
+    const refUrl  = `${baseUrl}register.html?ref=${encodeURIComponent(stats.slug)}`;
+
+    document.getElementById("refLinkInput").value     = refUrl;
+    document.getElementById("refSignupCount").textContent = stats.signup_count;
+    document.getElementById("refClickCount").textContent  = stats.click_count;
+    document.getElementById("referralCard").style.display = "block";
+
+    document.getElementById("copyRefBtn").addEventListener("click", () => {
+      navigator.clipboard.writeText(refUrl).then(() => {
+        const btn = document.getElementById("copyRefBtn");
+        btn.textContent = "Copiado!";
+        setTimeout(() => { btn.textContent = "Copiar link"; }, 2000);
+      });
+    });
+  }
+
   async function loadProfile() {
     const result = await apiRequest("/users/me", { auth: true });
-    if (!result) return; // redirect handled by apiRequest
+    if (!result) return;
 
     if (result.ok) {
       loadingEl.style.display  = "none";
       sectionEl.style.display  = "block";
       fillForm(result.data);
+      loadReferralStats();
     } else {
       loadingEl.textContent = "Erro ao carregar perfil. " + (result.data?.detail || "");
     }
@@ -119,9 +177,8 @@
     hideAlert(alertEl);
     hideAlert(successEl);
 
-    // Limpa erros de campo
     document.querySelectorAll(".field-error").forEach(el => { el.style.display = "none"; el.textContent = ""; });
-    document.querySelectorAll("input").forEach(i => i.classList.remove("error"));
+    document.querySelectorAll("input[type!=hidden]").forEach(i => i.classList.remove("error"));
 
     const payload = {};
     const first = document.getElementById("first_name").value.trim();

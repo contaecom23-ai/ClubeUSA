@@ -18,6 +18,9 @@
     <h1>Criar conta</h1>
     <p class="subtitle">Gratuito. Apenas um email para começar.</p>
 
+    <!-- Banner de referral: aparece quando a página é acessada via link de amigo -->
+    <div id="refBanner" class="alert alert-success" style="display:none;"></div>
+
     <div id="alert" class="alert alert-danger"></div>
     <div id="success" class="alert alert-success"></div>
 
@@ -56,6 +59,9 @@
         <input type="tel" id="phone" placeholder="Ex: 305-555-1234" autocomplete="tel">
       </div>
 
+      <!-- Campo oculto: preenchido a partir do query param ?ref= -->
+      <input type="hidden" id="referred_by_slug">
+
       <button type="submit" class="btn btn-primary" id="submitBtn" data-label="Criar conta">
         Criar conta
       </button>
@@ -71,6 +77,22 @@
 <script>
   if (Auth.isLoggedIn()) window.location.href = "profile.html";
 
+  // Captura código de referral do URL e rastreia o clique no servidor
+  (function captureRef() {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref") || "";
+    if (!ref || !/^[a-zA-Z0-9_-]{3,24}$/.test(ref)) return;
+
+    document.getElementById("referred_by_slug").value = ref;
+
+    const banner = document.getElementById("refBanner");
+    banner.textContent = "Você foi convidado por um membro do Clube USA!";
+    banner.style.display = "block";
+
+    // Registra clique de forma assíncrona (sem bloquear a página, sem travar o cadastro se falhar)
+    apiRequest(`/referrals/click/${encodeURIComponent(ref)}`, { method: "POST" }).catch(() => {});
+  })();
+
   const form    = document.getElementById("registerForm");
   const alertEl = document.getElementById("alert");
   const successEl = document.getElementById("success");
@@ -78,7 +100,7 @@
 
   function clearErrors() {
     document.querySelectorAll(".field-error").forEach(e => { e.style.display = "none"; e.textContent = ""; });
-    document.querySelectorAll("input").forEach(i => i.classList.remove("error"));
+    document.querySelectorAll("input[type!=hidden]").forEach(i => i.classList.remove("error"));
     hideAlert(alertEl);
     hideAlert(successEl);
   }
@@ -96,6 +118,8 @@
     e.preventDefault();
     clearErrors();
 
+    const refSlug = document.getElementById("referred_by_slug").value;
+
     const payload = {
       first_name: document.getElementById("first_name").value.trim(),
       last_name:  document.getElementById("last_name").value.trim(),
@@ -104,6 +128,7 @@
       zip_code:   document.getElementById("zip_code").value.trim(),
       phone:      document.getElementById("phone").value.trim(),
     };
+    if (refSlug) payload.referred_by_slug = refSlug;
 
     // Validação mínima no cliente (complementar — o servidor também valida)
     if (!payload.first_name) { showFieldError("first_name", "Nome é obrigatório"); return; }
