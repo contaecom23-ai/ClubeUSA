@@ -83,6 +83,8 @@ class TestAdminAnalyticsEndpoint:
         table = mock_supabase.table.return_value
         table.select.return_value.eq.return_value.gte.return_value.execute.return_value = execute_result
         table.select.return_value.gte.return_value.execute.return_value = execute_result
+        # count_valid_registrations_approx usa .neq().execute()
+        table.select.return_value.neq.return_value.execute.return_value = execute_result
 
         resp = client.get(
             "/admin/analytics/summary",
@@ -101,6 +103,7 @@ class TestAdminAnalyticsEndpoint:
         assert "referral_conversion_rate" in body
         assert "daily_signups_last_30d" in body
         assert len(body["daily_signups_last_30d"]) == 31  # 30 dias + hoje
+        assert "valid_registrations_approx" in body
 
     def test_token_usuario_sem_admin_key_retorna_422(self, client, mock_supabase, monkeypatch):
         """Endpoint admin ignora Bearer token de usuário — exige X-Admin-Key."""

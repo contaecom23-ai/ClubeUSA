@@ -9,7 +9,7 @@
 - [x] **0.1** Cadastro + perfil mínimo + email confirmado *(código completo — deploy aguarda Supabase setup, ver DECISOES.md)*
 - [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/register.html?ref=joao-x7k2 + atribuição de qual cadastro veio de qual link) *(código completo — deploy aguarda infra do 0.1, ver DECISOES.md)*
 - [x] **0.3** Analytics básico *(código completo — tracking de eventos server-side + painel admin, ver PR #4)*
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- [x] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude *(código completo — bloqueio de emails descartáveis + endpoint /users/me/validation-status, ver PR #5)*
 
 ---
 
@@ -65,4 +65,4 @@
 
 ---
 
-*Atualizado em: 2026-07-04 (0.3 completo)*
+*Atualizado em: 2026-07-04 (0.4 completo — Fase 0 toda implementada, aguarda merge dos PRs e deploy)*

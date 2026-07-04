@@ -172,8 +172,12 @@ class TestRegisterWithReferral:
         resp = client.post("/auth/register", json=payload)
         assert resp.status_code == 200
 
-        insert_data = table_mock.insert.call_args[0][0]
-        assert insert_data.get("referred_by_slug") == "maria-xyz9"
+        # register_user faz múltiplos inserts (perfil + analytics events).
+        # Buscamos o insert do perfil (contém 'id').
+        all_inserts = [call[0][0] for call in table_mock.insert.call_args_list]
+        profile_insert = next((d for d in all_inserts if "id" in d), None)
+        assert profile_insert is not None, "Insert de perfil não encontrado"
+        assert profile_insert.get("referred_by_slug") == "maria-xyz9"
 
     def test_register_with_invalid_ref_silently_ignored(self, client, mock_supabase):
         table_mock = self._setup_register_mocks(mock_supabase)

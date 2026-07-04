@@ -17,3 +17,5 @@ class AnalyticsSummary(BaseModel):
     referral_conversions_last_7d: int
     referral_conversion_rate: float
     daily_signups_last_30d: List[DailyCount]
+    # Cadastros com ZIP preenchido — proxy para valid registrations (ver validation/service.py)
+    valid_registrations_approx: int

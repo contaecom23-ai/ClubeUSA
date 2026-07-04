@@ -4,11 +4,24 @@ from fastapi import HTTPException, status
 from analytics.service import track_event
 from auth.schemas import RegisterRequest, LoginRequest, TokenResponse
 from referrals.service import generate_unique_slug
+from validation.service import is_disposable_email
 
 logger = logging.getLogger(__name__)
 
 
 def register_user(supabase: Client, data: RegisterRequest) -> dict:
+    if is_disposable_email(data.email):
+        domain = data.email.lower().split("@")[-1]
+        track_event(
+            supabase,
+            "registration.blocked",
+            metadata={"reason": "disposable_email", "domain": domain},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email temporário não é permitido. Use um email permanente.",
+        )
+
     try:
         response = supabase.auth.sign_up(
             {"email": data.email, "password": data.password}
