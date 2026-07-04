@@ -11,14 +11,20 @@ class Settings(BaseSettings):
     SUPABASE_JWT_SECRET: str
     CORS_ORIGINS: List[str] = ["http://localhost:8080", "http://localhost:3000"]
     ENVIRONMENT: str = "development"
+    # Vazio = endpoints /admin desabilitados. Sem default forjável.
+    # Gerar com: python -c "import secrets; print(secrets.token_urlsafe(32))"
+    ADMIN_API_KEY: str = ""
 
 
 def _load() -> Settings:
     try:
-        return Settings()
+        s = Settings()
     except Exception as e:
         print(f"[FATAL] Variáveis de ambiente obrigatórias não configuradas: {e}", file=sys.stderr)
         sys.exit(1)
+    if not s.ADMIN_API_KEY:
+        print("[WARN] ADMIN_API_KEY não definida — /admin/analytics desabilitado.", file=sys.stderr)
+    return s
 
 
 settings = _load()

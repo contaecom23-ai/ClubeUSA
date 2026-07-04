@@ -1,6 +1,7 @@
 import logging
 from supabase import Client
 from fastapi import HTTPException, status
+from analytics.service import track_event
 from auth.schemas import RegisterRequest, LoginRequest, TokenResponse
 from referrals.service import generate_unique_slug
 
@@ -40,6 +41,7 @@ def register_user(supabase: Client, data: RegisterRequest) -> dict:
     }
 
     # Valida o código de referral recebido sem falhar o cadastro se inválido
+    referral_valid = False
     if data.referred_by_slug:
         try:
             ref_check = (
@@ -50,6 +52,7 @@ def register_user(supabase: Client, data: RegisterRequest) -> dict:
             )
             if ref_check.data:
                 profile_data["referred_by_slug"] = data.referred_by_slug
+                referral_valid = True
         except Exception as e:
             logger.warning("ref slug validation error: %s", type(e).__name__)
 
@@ -60,6 +63,15 @@ def register_user(supabase: Client, data: RegisterRequest) -> dict:
         # Usuário existe no auth mas sem perfil — inconsistência gerenciável.
         # O perfil será criado no primeiro GET /users/me (ver users/service.py).
         # Registrar aqui para monitoramento; não falhar o cadastro.
+
+    # Analytics: fire-and-forget, nunca bloqueia o cadastro
+    track_event(supabase, "user.registered", user_id=user_id)
+    if referral_valid:
+        track_event(
+            supabase, "referral.converted",
+            user_id=user_id,
+            metadata={"referred_by_slug": data.referred_by_slug},
+        )
 
     # Mensagem genérica independente se o email já existia (anti-enumeração)
     return {"message": "Cadastro recebido! Verifique seu email para confirmar a conta."}
@@ -82,6 +94,11 @@ def login_user(supabase: Client, data: LoginRequest) -> TokenResponse:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou senha incorretos",
         )
+
+    # Analytics: registra login (user_id vem da sessão, nunca do cliente)
+    session_user = getattr(response.session, "user", None)
+    if session_user and getattr(session_user, "id", None):
+        track_event(supabase, "user.logged_in", user_id=str(session_user.id))
 
     return TokenResponse(
         access_token=response.session.access_token,

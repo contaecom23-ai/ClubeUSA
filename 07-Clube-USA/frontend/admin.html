@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Admin</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #4f46e5;
+      --danger: #dc2626;
+      --r: 8px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --border: #334155;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --primary: #818cf8;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+           background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Login ─────────────────────────────────────────────── */
+    #login-screen { display: flex; align-items: center; justify-content: center;
+                    min-height: 100vh; padding: 1rem; }
+    .login-box { background: var(--surface); border: 1px solid var(--border);
+                 border-radius: var(--r); padding: 2rem; width: 100%; max-width: 380px; }
+    .login-box h1 { font-size: 1.375rem; margin-bottom: .25rem; }
+    .login-box .sub { color: var(--muted); font-size: .875rem; margin-bottom: 1.5rem; }
+    label { display: block; font-size: .75rem; font-weight: 600; letter-spacing: .05em;
+            text-transform: uppercase; color: var(--muted); margin-bottom: .375rem; }
+    input[type=text], input[type=password] {
+      width: 100%; padding: .625rem .75rem; border: 1px solid var(--border);
+      border-radius: var(--r); background: var(--bg); color: var(--text);
+      font-size: .9375rem; margin-bottom: 1rem; }
+    .btn { width: 100%; padding: .75rem; background: var(--primary); color: #fff;
+           border: none; border-radius: var(--r); font-size: 1rem; font-weight: 600;
+           cursor: pointer; }
+    .btn:hover { opacity: .9; }
+    .btn:disabled { opacity: .6; cursor: default; }
+    .err { color: var(--danger); font-size: .875rem; margin-top: .75rem; min-height: 1.25em; }
+
+    /* ── Dashboard ──────────────────────────────────────────── */
+    #dashboard { display: none; }
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border);
+              padding: .875rem 1.5rem; display: flex; align-items: center;
+              justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .topbar h1 { font-size: 1.0625rem; font-weight: 700; }
+    .topbar-right { display: flex; align-items: center; gap: .75rem;
+                    font-size: .8125rem; color: var(--muted); }
+    .btn-sm { padding: .375rem .75rem; background: transparent; color: var(--muted);
+              border: 1px solid var(--border); border-radius: var(--r);
+              cursor: pointer; font-size: .8125rem; width: auto; }
+    .btn-sm:hover { background: var(--bg); }
+
+    .body { padding: 1.5rem; max-width: 1080px; margin: 0 auto; }
+    .sec { margin-bottom: 2rem; }
+    .sec-title { font-size: .6875rem; font-weight: 700; text-transform: uppercase;
+                 letter-spacing: .07em; color: var(--muted); margin-bottom: .75rem; }
+
+    /* KPIs */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: .875rem; }
+    .kpi { background: var(--surface); border: 1px solid var(--border);
+           border-radius: var(--r); padding: 1rem; }
+    .kpi-lbl { font-size: .6875rem; font-weight: 600; text-transform: uppercase;
+               letter-spacing: .05em; color: var(--muted); margin-bottom: .5rem; }
+    .kpi-val { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .kpi-sub { font-size: .75rem; color: var(--muted); margin-top: .25rem; }
+
+    /* Chart */
+    .chart-card { background: var(--surface); border: 1px solid var(--border);
+                  border-radius: var(--r); padding: 1.25rem; }
+    .chart-wrap { overflow-x: auto; }
+    svg.bars { display: block; }
+    .bar-rect { fill: var(--primary); opacity: .75; }
+    .bar-rect:hover { opacity: 1; }
+    .ax { font-size: 9px; fill: var(--muted); }
+
+    /* Loading */
+    .loading { text-align: center; padding: 3rem; color: var(--muted); }
+    .spin { display: inline-block; width: 1.25rem; height: 1.25rem;
+            border: 2px solid var(--border); border-top-color: var(--primary);
+            border-radius: 50%; animation: spin .7s linear infinite;
+            vertical-align: middle; margin-right: .5rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Clube USA Admin</h1>
+    <p class="sub">Painel interno de analytics.</p>
+    <form id="login-form">
+      <div>
+        <label for="f-url">URL da API</label>
+        <input type="text" id="f-url" value="http://localhost:8000" autocomplete="off">
+      </div>
+      <div>
+        <label for="f-key">Admin Key</label>
+        <input type="password" id="f-key" placeholder="••••••••••" autocomplete="off">
+      </div>
+      <button class="btn" type="submit" id="login-btn">Entrar</button>
+      <p class="err" id="login-err"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="dashboard">
+  <div class="topbar">
+    <h1>📊 Clube USA — Analytics</h1>
+    <div class="topbar-right">
+      <span id="ts">—</span>
+      <span id="cd"></span>
+      <button class="btn-sm" id="btn-refresh">↻ Atualizar</button>
+      <button class="btn-sm" id="btn-logout">Sair</button>
+    </div>
+  </div>
+  <div class="body">
+    <div id="content"><div class="loading"><span class="spin"></span> Carregando…</div></div>
+  </div>
+</div>
+
+<script>
+  const INTERVAL = 60;
+  let apiUrl = '', adminKey = '', timer = null, cdTimer = null, cdSec = INTERVAL;
+
+  // ── Login ────────────────────────────────────────────────────────────────
+  document.getElementById('login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const errEl = document.getElementById('login-err');
+    errEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Verificando…';
+
+    apiUrl = document.getElementById('f-url').value.replace(/\/$/, '');
+    adminKey = document.getElementById('f-key').value;
+
+    try {
+      const r = await fetch(`${apiUrl}/admin/analytics/summary`, {
+        headers: { 'X-Admin-Key': adminKey }
+      });
+      if (!r.ok) {
+        const b = await r.json().catch(() => ({}));
+        errEl.textContent = b.detail || `Erro ${r.status}`;
+      } else {
+        sessionStorage.setItem('cusa_key', adminKey);
+        sessionStorage.setItem('cusa_url', apiUrl);
+        showDash();
+        render(await r.json());
+        startAuto();
+      }
+    } catch {
+      errEl.textContent = 'Não foi possível conectar. Verifique a URL da API.';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  });
+
+  document.getElementById('btn-logout').addEventListener('click', logout);
+  document.getElementById('btn-refresh').addEventListener('click', refresh);
+
+  function logout() {
+    sessionStorage.removeItem('cusa_key');
+    sessionStorage.removeItem('cusa_url');
+    clearInterval(timer);
+    clearInterval(cdTimer);
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('f-key').value = '';
+  }
+
+  function showDash() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+  }
+
+  // ── Auto-refresh ─────────────────────────────────────────────────────────
+  function startAuto() {
+    clearInterval(timer);
+    clearInterval(cdTimer);
+    cdSec = INTERVAL;
+    timer = setInterval(refresh, INTERVAL * 1000);
+    cdTimer = setInterval(() => {
+      cdSec--;
+      document.getElementById('cd').textContent = `(próx. ${cdSec}s)`;
+      if (cdSec <= 0) cdSec = INTERVAL;
+    }, 1000);
+  }
+
+  async function refresh() {
+    try {
+      const r = await fetch(`${apiUrl}/admin/analytics/summary`, {
+        headers: { 'X-Admin-Key': adminKey }
+      });
+      if (r.status === 401) { logout(); return; }
+      if (!r.ok) return;
+      render(await r.json());
+    } catch (_) {}
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  function render(d) {
+    document.getElementById('ts').textContent =
+      'Atualizado: ' + new Date().toLocaleString('pt-BR');
+
+    const cvRate = (d.referral_conversion_rate * 100).toFixed(1);
+
+    document.getElementById('content').innerHTML = `
+      <div class="sec">
+        <div class="sec-title">Cadastros</div>
+        <div class="kpi-grid">
+          ${kpi('Hoje', d.signups_today, 'cadastros')}
+          ${kpi('Últimos 7 dias', d.signups_last_7d, 'cadastros')}
+          ${kpi('Últimos 30 dias', d.signups_last_30d, 'cadastros')}
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-title">Logins</div>
+        <div class="kpi-grid">
+          ${kpi('Hoje', d.logins_today, 'logins')}
+          ${kpi('Últimos 7 dias', d.logins_last_7d, 'logins')}
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-title">Referrals — últimos 7 dias</div>
+        <div class="kpi-grid">
+          ${kpi('Cliques', d.referral_clicks_last_7d, 'em links de convite')}
+          ${kpi('Conversões', d.referral_conversions_last_7d, 'cadastros via referral')}
+          ${kpi('Taxa', cvRate + '%', 'clique → cadastro')}
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-title">Cadastros diários — últimos 31 dias</div>
+        <div class="chart-card">
+          <div class="chart-wrap">${barChart(d.daily_signups_last_30d)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function kpi(label, value, sub) {
+    return `<div class="kpi">
+      <div class="kpi-lbl">${label}</div>
+      <div class="kpi-val">${value}</div>
+      <div class="kpi-sub">${sub}</div>
+    </div>`;
+  }
+
+  function barChart(days) {
+    if (!days || !days.length) return '<p style="color:var(--muted);padding:.5rem">Sem dados</p>';
+    const W = Math.max(600, days.length * 22), H = 140;
+    const PL = 28, PR = 8, PT = 8, PB = 28;
+    const cW = W - PL - PR, cH = H - PT - PB;
+    const maxV = Math.max(...days.map(d => d.count), 1);
+    const bW = Math.max(2, Math.floor(cW / days.length) - 2);
+
+    let bars = '', lbls = '';
+    days.forEach((d, i) => {
+      const x = PL + i * (cW / days.length);
+      const bH = Math.round((d.count / maxV) * cH);
+      const y = PT + cH - bH;
+      bars += `<rect class="bar-rect" x="${x+1}" y="${y}" width="${bW}" height="${bH}" rx="2"><title>${d.date}: ${d.count}</title></rect>`;
+      if (i % 7 === 0 || i === days.length - 1) {
+        lbls += `<text class="ax" x="${x + bW/2}" y="${H - 6}" text-anchor="middle">${d.date.slice(5)}</text>`;
+      }
+    });
+
+    const yAx = [0, Math.ceil(maxV / 2), maxV].map(v => {
+      const y = PT + cH - Math.round((v / maxV) * cH);
+      return `<text class="ax" x="${PL - 4}" y="${y + 3}" text-anchor="end">${v}</text>`;
+    }).join('');
+
+    return `<svg class="bars" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${yAx}${bars}${lbls}</svg>`;
+  }
+
+  // ── Session restore ───────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    const k = sessionStorage.getItem('cusa_key');
+    const u = sessionStorage.getItem('cusa_url');
+    if (k && u) {
+      adminKey = k; apiUrl = u;
+      document.getElementById('f-url').value = u;
+      showDash();
+      refresh().then(() => startAuto());
+    }
+  });
+</script>
+</body>
+</html>
