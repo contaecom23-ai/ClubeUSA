@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmando email — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo">🇧🇷 Clube USA</a>
+</header>
+
+<div class="container" style="padding-top:48px; text-align:center;">
+  <div class="card">
+    <div id="loading">
+      <p style="font-size:2rem;">⏳</p>
+      <p style="margin-top:12px; color:var(--muted);">Confirmando seu email...</p>
+    </div>
+
+    <div id="success" style="display:none;">
+      <p style="font-size:2.5rem;">✅</p>
+      <h1 style="margin-top:12px;">Email confirmado!</h1>
+      <p class="subtitle" style="margin-top:8px;">Sua conta está ativa. Redirecionando...</p>
+    </div>
+
+    <div id="error" style="display:none;">
+      <p style="font-size:2.5rem;">❌</p>
+      <h1 style="margin-top:12px;">Link inválido</h1>
+      <p class="subtitle" style="margin-top:8px;" id="errorMsg">
+        Este link de confirmação é inválido ou já expirou.
+      </p>
+      <a href="register.html" class="btn btn-primary" style="display:inline-block; margin-top:20px; width:auto; padding:10px 24px;">
+        Tentar novamente
+      </a>
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+  /**
+   * Supabase envia o link de confirmação para o usuário.
+   * Ao clicar, Supabase processa o token e redireciona aqui com:
+   *   #access_token=...&refresh_token=...&expires_in=...&token_type=bearer
+   *
+   * Esta página lê o hash, salva os tokens e redireciona para o perfil.
+   * Se houver erro no hash, mostra mensagem amigável.
+   */
+  (function () {
+    const { access_token, refresh_token, expires_in, error } = parseHashTokens();
+
+    if (error) {
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("errorMsg").textContent = decodeURIComponent(error);
+      document.getElementById("error").style.display = "block";
+      return;
+    }
+
+    if (access_token && refresh_token) {
+      Auth.save({ access_token, refresh_token, expires_in });
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("success").style.display = "block";
+      // Limpa o hash da URL antes de redirecionar (evita reutilização acidental)
+      history.replaceState(null, "", window.location.pathname);
+      setTimeout(() => { window.location.href = "profile.html"; }, 1500);
+    } else {
+      // Hash vazio — alguém acessou /confirm.html diretamente
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("errorMsg").textContent =
+        "Link de confirmação não encontrado. Verifique seu email.";
+      document.getElementById("error").style.display = "block";
+    }
+  })();
+</script>
+</body>
+</html>
