@@ -75,9 +75,13 @@ class TestRegister:
 
         client.post("/auth/register", json=VALID_REGISTER_PAYLOAD)
 
-        call_args = table_mock.insert.call_args[0][0]
-        assert call_args["id"] == "uid-999"
-        assert call_args["first_name"] == "João"
+        # register_user faz múltiplos inserts (perfil + evento analytics).
+        # Buscamos o insert que contém 'id' (o do perfil).
+        all_inserts = [call[0][0] for call in table_mock.insert.call_args_list]
+        profile_insert = next((d for d in all_inserts if "id" in d), None)
+        assert profile_insert is not None, "Insert de perfil não encontrado"
+        assert profile_insert["id"] == "uid-999"
+        assert profile_insert["first_name"] == "João"
 
     def test_register_weak_password(self, client, mock_supabase):
         payload = {**VALID_REGISTER_PAYLOAD, "password": "123"}

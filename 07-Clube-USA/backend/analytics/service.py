@@ -3,10 +3,16 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 from supabase import Client
+from validation.service import count_valid_registrations_approx
 
 logger = logging.getLogger(__name__)
 
-VALID_EVENT_TYPES = frozenset({"user.registered", "user.logged_in", "referral.converted"})
+VALID_EVENT_TYPES = frozenset({
+    "user.registered",
+    "user.logged_in",
+    "referral.converted",
+    "registration.blocked",  # tentativa bloqueada por anti-fraude (email descartável etc)
+})
 
 
 def track_event(
@@ -91,6 +97,8 @@ def get_summary(supabase: Client) -> dict:
         day = (now - timedelta(days=i)).date().isoformat()
         daily_list.append({"date": day, "count": daily_counts.get(day, 0)})
 
+    valid_registrations_approx = count_valid_registrations_approx(supabase)
+
     return {
         "signups_today": signups_today,
         "signups_last_7d": signups_7d,
@@ -101,4 +109,5 @@ def get_summary(supabase: Client) -> dict:
         "referral_conversions_last_7d": conversions_7d,
         "referral_conversion_rate": conversion_rate,
         "daily_signups_last_30d": daily_list,
+        "valid_registrations_approx": valid_registrations_approx,
     }

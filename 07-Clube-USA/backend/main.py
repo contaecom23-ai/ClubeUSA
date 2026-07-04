@@ -13,7 +13,7 @@ from users.router import router as users_router
 
 app = FastAPI(
     title="Clube USA API",
-    version="0.3.0",
+    version="0.4.0",
     docs_url="/docs" if settings.ENVIRONMENT == "development" else None,
     redoc_url=None,
 )
@@ -38,7 +38,7 @@ app.include_router(analytics_router)
 
 @app.get("/", tags=["health"])
 def root():
-    return {"product": "Clube USA", "version": "0.3.0"}
+    return {"product": "Clube USA", "version": "0.4.0"}
 
 
 @app.get("/health", tags=["health"])
