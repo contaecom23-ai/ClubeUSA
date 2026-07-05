@@ -1,0 +1,15 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+asyncpg==0.30.0
+passlib[bcrypt]==1.7.4
+PyJWT==2.10.1
+pydantic==2.10.3
+pydantic-settings==2.7.0
+slowapi==0.1.9
+aiosmtplib==3.0.2
+python-multipart==0.0.20
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+httpx==0.28.1
