@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clube USA — A Plataforma do Imigrante Brasileiro</title>
+  <meta name="description" content="Organize sua vida nos EUA: empregos, moradia, promoções e serviços em um só lugar." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue: #1a56db;
+      --blue-dark: #1241b0;
+      --green: #057a55;
+      --text: #111928;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --bg: #f9fafb;
+      --white: #ffffff;
+      --radius: 8px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text); background: var(--white); line-height: 1.6; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--border); max-width: 1100px; margin: 0 auto; }
+    .logo { font-size: 1.4rem; font-weight: 700; color: var(--blue); letter-spacing: -0.5px; }
+    .logo span { color: var(--green); }
+    .nav-links { display: flex; gap: 12px; }
+    .btn { display: inline-block; padding: 10px 20px; border-radius: var(--radius); font-size: 0.95rem; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; }
+    .btn:hover { opacity: 0.88; text-decoration: none; }
+    .btn-outline { background: transparent; border: 2px solid var(--blue); color: var(--blue); }
+    .btn-primary { background: var(--blue); color: var(--white); }
+    .btn-lg { padding: 14px 32px; font-size: 1.05rem; }
+
+    /* Hero */
+    .hero { max-width: 780px; margin: 64px auto 80px; text-align: center; padding: 0 24px; }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; line-height: 1.15; margin-bottom: 20px; }
+    .hero h1 span { color: var(--blue); }
+    .hero p { font-size: 1.15rem; color: var(--muted); max-width: 600px; margin: 0 auto 36px; }
+    .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .badge { display: inline-block; background: #e0edff; color: var(--blue); font-size: 0.8rem; font-weight: 600; padding: 4px 12px; border-radius: 100px; margin-bottom: 20px; }
+
+    /* Features */
+    .features { background: var(--bg); padding: 64px 24px; }
+    .features-inner { max-width: 1100px; margin: 0 auto; }
+    .features h2 { text-align: center; font-size: 1.8rem; font-weight: 700; margin-bottom: 40px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px; }
+    .card-icon { font-size: 2rem; margin-bottom: 12px; }
+    .card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+    .card p { color: var(--muted); font-size: 0.95rem; }
+
+    /* CTA banner */
+    .cta-banner { text-align: center; padding: 72px 24px; }
+    .cta-banner h2 { font-size: 1.9rem; font-weight: 700; margin-bottom: 16px; }
+    .cta-banner p { color: var(--muted); font-size: 1.05rem; margin-bottom: 32px; }
+
+    /* Footer */
+    footer { border-top: 1px solid var(--border); padding: 24px; text-align: center; color: var(--muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="logo">Clube<span>USA</span></div>
+    <div class="nav-links">
+      <a href="login.html" class="btn btn-outline">Entrar</a>
+      <a href="register.html" class="btn btn-primary">Cadastrar grátis</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="badge">🇧🇷 Para brasileiros nos EUA</div>
+    <h1>Organize sua vida nos <span>Estados Unidos</span></h1>
+    <p>Empregos, moradia, promoções e serviços essenciais — tudo em um único lugar, pensado para você.</p>
+    <div class="hero-cta">
+      <a href="register.html" class="btn btn-primary btn-lg">Criar conta grátis</a>
+      <a href="login.html" class="btn btn-outline btn-lg">Já tenho conta</a>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="features-inner">
+      <h2>O que você encontra aqui</h2>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">🏷️</div>
+          <h3>Promoções e Achados</h3>
+          <p>Melhores ofertas curadas para imigrantes — supermercados, eletrônicos, viagens e mais.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">💼</div>
+          <h3>Empregos</h3>
+          <p>Vagas abertas perto de você, filtradas por ZIP code e área de atuação.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🏠</div>
+          <h3>Moradia</h3>
+          <p>Quartos, roommates e casas — encontre o lugar certo para morar nos EUA.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🤝</div>
+          <h3>Comunidade</h3>
+          <p>Rede de brasileiros que já passaram pelo que você está vivendo. Perguntas, dicas e suporte.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-banner">
+    <h2>Pronto para organizar sua vida nos EUA?</h2>
+    <p>Cadastro gratuito, sem cartão de crédito. Comece agora.</p>
+    <a href="register.html" class="btn btn-primary btn-lg">Criar minha conta</a>
+  </section>
+
+  <footer>
+    <p>© 2025 Clube USA. Feito com ❤️ para brasileiros nos EUA.</p>
+  </footer>
+
+</body>
+</html>
