@@ -1,15 +1,40 @@
 # ROADMAP — Clube USA
 
 > Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
+> **IMPORTANTE:** itens marcados `[~]` = código pronto em PR, aguardando merge + deploy.
+
+---
+
+## ESTADO ATUAL DOS PRs (2026-07-06)
+
+A Fase 0 está **totalmente codificada** em uma cadeia de PRs. Nenhum foi merged ainda.
+**Ordem obrigatória de merge (cada um depende do anterior):**
+
+| PR | Branch | Conteúdo | Status |
+|----|--------|----------|--------|
+| **#2** | `claude/fase-0.1-cadastro-perfil-email` | Fase 0.1 — auth, perfil, email | Draft, aguardando review |
+| **#3** | `claude/fase-0.2-referral` | Fase 0.2 — referral rastreável | Draft, base no PR#2 |
+| **#4** | `claude/fase-0.3-analytics` | Fase 0.3 — analytics server-side | Draft, base no PR#3 |
+| **#5** | `claude/fase-0.4-valid-registration` | Fase 0.4 — cadastro válido + anti-fraude | Draft, base no PR#4 |
+
+**PRs redundantes (podem ser fechados):**
+- PR #1 (`claude/fase-0-cadastro-email`): implementação mais antiga da 0.1, supersedida pelo #2
+- PR #6 (`claude/fase-0.1-cadastro-email-confirmado`): outra implementação da 0.1, supersedida pelo #2
+- PR #7 (`feat/fase-0.1-cadastro-perfil-email`): implementação mais recente da 0.1, isolada — a cadeia #2-5 cobre tudo
+
+**Por que 3 PRs redundantes de 0.1?** Cada sessão autônoma lia o ROADMAP.md no main (que mostrava `[ ]`), concluía que 0.1 não estava feita, e re-implementava. Este arquivo corrige isso.
+
+**Bloqueio real para avançar:** infraestrutura — Supabase, email, hosting, domínio.
+Ver DECISOES.md para todas as decisões pendentes.
 
 ---
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- [~] **0.1** Cadastro + perfil mínimo + email confirmado *(código pronto em PR #2; aguarda merge + Supabase setup)*
+- [~] **0.2** Sistema de REFERRAL rastreável (link único `?ref=joao-x7k2` + atribuição) *(código pronto em PR #3; aguarda merge do #2)*
+- [~] **0.3** Analytics básico (tracking server-side + painel admin) *(código pronto em PR #4; aguarda merge do #3)*
+- [~] **0.4** Cadastro válido verificável (email confirmado + ≥1 ação real) + anti-fraude (bloqueio de emails descartáveis) *(código pronto em PR #5; aguarda merge do #4)*
 
 ---
 
@@ -65,4 +90,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-07-06 — Fase 0 toda codificada em PRs #2-5; aguardando review do dono e decisões de infra*
