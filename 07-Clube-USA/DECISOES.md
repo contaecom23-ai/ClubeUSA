@@ -16,128 +16,162 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
-### [2026-07-03] Configuração do projeto Supabase (BLOQUEANTE para deploy do 0.1)
+### [2026-07-03] D-001: Merge order dos PRs de Fase 0 (ação imediata)
 
-**Contexto:** A Fase 0.1 está com o código completo (backend FastAPI + frontend HTML + migration SQL). Para rodar o sistema, o projeto precisa de um projeto Supabase real com as credenciais configuradas.
+**Contexto:** Existem 8 PRs abertos. 4 formam a cadeia completa da Fase 0 (64 testes passando); 3 são implementações redundantes que podem ser fechadas; 1 é sync de docs.
 
-**Pergunta:** Você já tem um projeto Supabase criado para o Clube USA? Se não, qual é o plano para criá-lo?
+**Ação recomendada:**
+1. Fechar PR #1 (supersedido pelo #2, mais antigo)
+2. Fechar PR #6 (implementação alternativa da 0.1, supersedida)
+3. Fechar PR #7 (implementação mais recente da 0.1, mas isolada — a cadeia #2-5 cobre tudo)
+4. Fazer review e merge em ordem: **PR #8 → PR #2 → PR #3 → PR #4 → PR #5**
+5. Após merge do #5: PR de polimento de segurança (`claude/fase-0-security-polish`) pode ser mergeado também.
 
-**O que é preciso fazer (ação do dono):**
+**Risco:** Baixo. Fechar redundantes é reversível. Merge em ordem evita conflito.
 
-1. **Criar projeto no Supabase** (https://supabase.com) — plano gratuito serve para os primeiros 1.000 usuários.
+**Status:** PENDENTE
 
-2. **Rodar a migration** no SQL Editor do Supabase:
-   - Copiar e executar o conteúdo de `07-Clube-USA/supabase/migrations/001_profiles.sql`
+---
 
-3. **Coletar as credenciais** do painel (Settings > API):
+### [2026-07-03] D-002: Configuração do projeto Supabase (BLOQUEANTE para deploy)
+
+**Contexto:** A Fase 0 (auth, referral, analytics, validação) usa Supabase como banco. Código pronto, mas não tem banco para rodar.
+
+**O que fazer:**
+1. Criar projeto em https://supabase.com — plano gratuito cobre os primeiros 1.000 usuários
+2. Rodar as migrations em ordem no SQL Editor do Supabase:
+   - `07-Clube-USA/supabase/migrations/001_profiles.sql`
+   - `07-Clube-USA/supabase/migrations/002_referrals.sql`
+   - `07-Clube-USA/supabase/migrations/003_analytics.sql`
+3. Coletar as credenciais (Settings > API):
    - `SUPABASE_URL` (ex: `https://abcxyz.supabase.co`)
-   - `SUPABASE_SERVICE_ROLE_KEY` (key secreta, não a anon key)
+   - `SUPABASE_SERVICE_ROLE_KEY` (key secreta — não a anon key)
    - `SUPABASE_JWT_SECRET` (Settings > API > JWT Secret)
-
-4. **Configurar email confirmation** (Authentication > URL Configuration):
-   - Site URL: URL onde o frontend ficará hospedado
+4. Configurar email confirmation (Authentication > URL Configuration):
+   - Site URL: URL do frontend
    - Redirect URL permitida: `https://seusite.com/confirm.html`
 
-5. **Criar o `.env`** na pasta `07-Clube-USA/backend/` baseado no `.env.example`
-
-**Opções de hospedagem do backend (para você decidir depois):**
-- **Railway** (recomendado para começar): ~$5/mês, deploy via GitHub, simples
-- **Render**: plano grátis com cold start de 50s (ruim para UX), pago ~$7/mês sem cold start
-- **Fly.io**: mais controle, curva maior
-
-**Opções de hospedagem do frontend (HTML estático):**
-- **GitHub Pages**: grátis, integrado ao repo — recomendado para começar
-- **Vercel/Netlify**: grátis, mais recursos (redirects, edge)
-
-**Recomendação:** Supabase gratuito + Railway $5/mês + GitHub Pages grátis = ~$5/mês total para os primeiros 1.000 usuários. Baixo risco, reversível, sem lock-in pesado.
+**Custo:** $0 no plano gratuito (até 500MB banco, 50k auth users)
 
 **Status:** PENDENTE
 
 ---
 
-### [2026-07-03] Provedor de email para confirmação de cadastro
+### [2026-07-03] D-003: Provedor de email transacional
 
-**Contexto:** Supabase inclui envio de email nativo (via Inbucket em dev, via SMTP externo em prod). O plano gratuito do Supabase tem limite de 3 emails/hora. Para produção com volume real isso é insuficiente.
-
-**Pergunta:** Qual provedor de email transacional usar para envio de confirmação de cadastro?
+**Contexto:** Supabase gratuito limita a 3 emails/hora — inaceitável para lançamento. Precisamos de SMTP externo configurado no Supabase.
 
 **Opções:**
-- **Supabase built-in (Resend)**: Supabase integra nativamente com Resend; plano gratuito do Resend = 3.000 emails/mês. Pros: zero config extra. Contras: limitado.
-- **Resend.com direto**: $0 até 3.000/mês, depois $20/mês para 50.000. API simples. Pros: escala, boa reputação. Recomendado.
-- **SendGrid**: mais complexo, free tier menor hoje. Não recomendado para começar.
-- **AWS SES**: baratíssimo em escala ($0,10/1.000 emails), mas precisa verificar domínio e tem processo de saída de sandbox. Endgame para 100k+ usuários.
+- **Resend.com** (recomendado): $0 até 3.000 emails/mês, integra direto no Supabase (Settings > Auth > SMTP). Suficiente para os primeiros 6-12 meses.
+- **AWS SES**: $0,10/1.000 emails (baratíssimo em escala), mas tem processo de saída de sandbox. Endgame para 100k+ usuários/mês.
 
-**Recomendação:** Começar com Resend integrado via Supabase (Settings > Auth > SMTP). Grátis até 3.000/mês, suficiente para os primeiros meses. Migrar para SES quando ultrapassar 10k usuários/mês.
+**Recomendação:** Resend agora → migrar para SES quando ultrapassar 3.000 emails/mês.
+
+**Custo:** $0 até 3.000/mês (Resend free)
 
 **Status:** PENDENTE
 
 ---
 
-### [2026-07-03] Domínio do Clube USA
-
-**Contexto:** Para configurar CORS, email de confirmação e identidade da marca, precisamos de um domínio.
-
-**Pergunta:** Você já tem um domínio para o Clube USA? (ex: clubeusa.com, clube.us, etc.)
+### [2026-07-03] D-004: Hospedagem do backend FastAPI
 
 **Opções:**
-- Registrar `clubeusa.com` (~$12/ano no Namecheap/Cloudflare Registrar) — recomendado
-- Usar subdomínio temporário do Railway/Vercel enquanto decide
+- **Railway** (recomendado): ~$5/mês, deploy via GitHub em 5 minutos, zero cold start.
+- **Render**: plano grátis tem cold start de 50s (péssimo para UX), pago $7/mês sem cold start.
+- **Fly.io**: mais controle, curva de aprendizado maior. Vale quando escalar para 10k+.
 
-**Recomendação:** Registrar o domínio antes do lançamento. Cloudflare Registrar tem os menores preços e já inclui proteção DDoS/CDN grátis. Importante para credibilidade com os primeiros usuários.
+**Recomendação:** Railway $5/mês para começar. Reversível quando necessário.
+
+**Custo:** ~$5/mês
 
 **Status:** PENDENTE
 
 ---
 
----
+### [2026-07-03] D-005: Domínio do Clube USA
 
-### [2026-07-04] Definição final de "ação real" para cadastro válido (Fase 1.3)
-
-**Contexto:** A Fase 0.4 implementou `is_valid_registration()` com critério provisório: email confirmado + ZIP preenchido. ZIP é coletado no cadastro e é um sinal fraco — qualquer um pode inventar um ZIP. Quando a Fase 1.3 (pagamento de influenciadores por cadastro válido) for lançada, precisamos de critério mais robusto.
-
-**Pergunta:** O que deve contar como "ação real" para validar um cadastro para fins de pagamento de influenciadores?
+**Contexto:** CORS, links de email de confirmação e credibilidade da marca dependem de um domínio real.
 
 **Opções:**
+- Registrar `clubeusa.com` (~$12/ano no Cloudflare Registrar) — recomendado
+- Usar subdomínio temporário do Railway/Vercel enquanto decide (gratuito, mas links de email ficam feios)
 
-- **Opção A — ZIP preenchido (critério atual, provisório):** Manter. Fácil de fraudar. Zero fricção.
-  - *Pros:* Simples, zero fricção.
-  - *Contras:* Influenciadores podem criar contas em massa com ZIPs fictícios e custo pode disparar.
+**Recomendação:** Registrar domínio antes do lançamento. Cloudflare Registrar tem os menores preços e inclui proteção DDoS/CDN grátis.
 
-- **Opção B — Só email confirmado:** Exigir apenas que o email seja confirmado. Mais robusto que ZIP.
-  - *Pros:* Sinal mais forte (exige caixa de email real). Já verificado pelo Supabase Auth. Zero custo.
-  - *Contras:* Ainda possível criar contas bulk com emails comprados.
+**Custo:** ~$12/ano
 
-- **Opção C — Email confirmado + >=1 interação na plataforma (após Phase 1.1):** Visualizar/salvar >=1 promoção.
-  - *Pros:* Sinal de engajamento genuíno. Muito mais difícil de fraudar em massa.
-  - *Contras:* Requer Phase 1.1 pronto. Mais fricção para usuários reais.
+**Status:** PENDENTE
 
-- **Opção D — Email confirmado + telefone verificado (SMS OTP):** Máximo anti-fraude.
-  - *Pros:* Padrão da indústria, muito difícil fraudar em escala.
-  - *Contras:* Custo (~$0.01/SMS via Twilio). Exclui usuários sem telefone americano. Alta fricção.
+---
 
-**Recomendação:** Migrar para **Opção B** agora (só email confirmado é mais defensável que ZIP), depois **Opção C** quando Phase 1.1 lançar. Opção D somente se fraude for detectada em escala. A mudança é de 1 linha em `validation/service.py`.
+### [2026-07-04] D-006: Definição final de "ação real" para cadastro válido (pré-Fase 1.3)
+
+**Contexto:** Fase 0.4 implementou `is_valid_registration()` com critério provisório: email confirmado + ZIP preenchido. ZIP é um sinal fraco. Quando a Fase 1.3 (pagamento de influenciadores por cadastro válido) for lançada, precisa de critério mais robusto para evitar fraude.
+
+**Opções:**
+- **A — ZIP preenchido (atual, provisório):** Fácil de fraudar. Não recomendado para 1.3.
+- **B — Só email confirmado:** Sinal mais forte. Mudança de 1 linha. *Recomendado como próximo passo imediato.*
+- **C — Email confirmado + ≥1 interação na plataforma:** Visualizar/salvar ≥1 promoção. Muito mais difícil de fraudar. Requer Fase 1.1 pronta. *Recomendado para quando 1.1 lançar.*
+- **D — Email + SMS OTP:** Máximo anti-fraude. Custo ~$0.01/SMS, alta fricção.
+
+**Recomendação:** Migrar para B agora (1 linha de código), depois C quando Fase 1.1 lançar.
 
 **Status:** PENDENTE — decidir antes de lançar Fase 1.3
 
 ---
 
-### [2026-07-04] Valor por cadastro válido e teto orçamentário — Programa de Influenciadores (Fase 1.3)
+### [2026-07-04] D-007: Valor por cadastro válido e teto orçamentário — Programa de Influenciadores (pré-Fase 1.3)
 
-**Contexto:** A Fase 1.3 paga influenciadores por cadastro válido com teto orçamentário. Precisamos definir o valor e o teto antes de implementar o sistema de pagamento e os selos (Parceiro 50 / Embaixador 250 / Hall da Fama 1000).
-
-**Pergunta:** Qual o valor por cadastro válido e qual o teto mensal?
+**Contexto:** A Fase 1.3 paga influenciadores por cadastro válido com teto orçamentário. Precisamos de números reais antes de implementar o sistema de pagamento e os selos (Parceiro 50 / Embaixador 250 / Hall da Fama 1000).
 
 **Opções:**
+- $1/cadastro, teto $50/mês: Conservador, baixo risco.
+- $2/cadastro, teto $100/mês: Razoável para beta. *Recomendado.*
+- $3–5/cadastro, teto $500/mês: Competitivo, alto risco de fraude sem anti-fraude robusto.
+- Sem teto: Não. Risco financeiro aberto sem validação prévia.
 
-- $1/cadastro, teto $50/mês: Conservador, baixo risco, testa o canal.
-- $2/cadastro, teto $100/mês: Razoável para beta. Incentiva, mas controla gasto.
-- $3–5/cadastro, teto $500/mês: Competitivo, atrai influenciadores maiores.
-- Sem teto: Risco financeiro aberto. Não recomendado sem validação de fraude robusta.
-
-**Recomendação:** Começar com **$2/cadastro válido, teto $100/mês por influenciador** na fase beta. Subir quando validar anti-fraude e ROI. Nunca sem teto.
+**Recomendação:** $2/cadastro válido, teto $100/mês por influenciador na fase beta.
 
 **Status:** PENDENTE — aprovação do dono + orçamento definido antes da Fase 1.3
 
 ---
 
-*Atualizado em: 2026-07-04 (Fase 0 completa; decisões pendentes para Fase 1.3)*
+### [2026-07-06] D-008: Perguntas de produto para iniciar Fase 1.1 — PROMOÇÕES/ACHADOS
+
+**Contexto:** Fase 1.1 é o carro-chefe da plataforma. Código pode começar quando infra estiver pronta (D-002 a D-005 resolvidos), mas antes precisamos dessas decisões de produto para implementar certo da primeira vez.
+
+**Perguntas (responda todas antes do Claude iniciar a Fase 1.1):**
+
+**1. Quem cria as promoções?**
+- Só admins (curadoria total) — mais controle, menos escala
+- Empresas com conta premium (self-service) — mais escala, risco de spam
+- Ambos (admin cura, empresas submetem para aprovação) — *recomendado*
+
+**2. Quais campos uma promoção tem?**
+- Título, descrição, preço original, preço com desconto, prazo de validade, link externo, ZIP alvo, categoria — é isso ou falta algo?
+- Há upload de imagem? (adiciona complexidade — storage no Supabase ou S3)
+- Há cupom/código de desconto?
+
+**3. Como funciona a "urgência"?**
+- Badge automático quando falta < X horas para expirar
+- Campo manual "destaque/urgente" marcado pelo admin
+- Quantidade limitada ("só 50 disponíveis") — requer controle de estoque
+
+**4. Modelo de dados geográfico:**
+- Promoção com ZIP único vs. lista de ZIPs vs. raio em milhas de um ponto central
+- Promoção nacional (sem filtro geográfico) é caso válido?
+
+**5. Descoberta inicial (pré-Fase 1.2):**
+- Feed cronológico simples (mais novo primeiro)
+- Feed curado pelo admin (posição manual)
+- Ambos com aba separada
+
+**Recomendação do builder:**
+- MVP mínimo: admin cria promoções via painel, campos simples (sem imagem por enquanto), badge de urgência automático por prazo, ZIP único, feed cronológico. Imagem e self-service de empresas entram na Fase 2.1.
+- Não implementar filtro geográfico avançado agora (isso é Fase 1.2).
+
+**Status:** PENDENTE — responder antes que o builder inicie a Fase 1.1
+
+---
+
+*Atualizado em: 2026-07-06 — polimento de segurança (D-008 adicionado; password + security headers no branch claude/fase-0-security-polish)*

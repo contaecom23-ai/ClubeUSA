@@ -2,7 +2,7 @@
 Testes de autenticação — Fase 0.1.
 
 Cobertura:
-- Cadastro: caminho feliz, senha fraca, ZIP inválido
+- Cadastro: caminho feliz, senha fraca, senha sem maiúscula, senha sem dígito, ZIP inválido
 - Login: caminho feliz, credenciais erradas, email não confirmado
 - Refresh: caminho feliz, token inválido
 - Rate limit: resposta 429 após limite
@@ -83,8 +83,20 @@ class TestRegister:
         assert profile_insert["id"] == "uid-999"
         assert profile_insert["first_name"] == "João"
 
-    def test_register_weak_password(self, client, mock_supabase):
-        payload = {**VALID_REGISTER_PAYLOAD, "password": "123"}
+    def test_register_weak_password_too_short(self, client, mock_supabase):
+        payload = {**VALID_REGISTER_PAYLOAD, "password": "Ab1"}
+        resp = client.post("/auth/register", json=payload)
+        assert resp.status_code == 422
+
+    def test_register_password_no_uppercase(self, client, mock_supabase):
+        """Senha com 8+ chars e dígito mas sem maiúscula deve ser rejeitada."""
+        payload = {**VALID_REGISTER_PAYLOAD, "password": "senha123"}
+        resp = client.post("/auth/register", json=payload)
+        assert resp.status_code == 422
+
+    def test_register_password_no_digit(self, client, mock_supabase):
+        """Senha com 8+ chars e maiúscula mas sem dígito deve ser rejeitada."""
+        payload = {**VALID_REGISTER_PAYLOAD, "password": "SenhaFort"}
         resp = client.post("/auth/register", json=payload)
         assert resp.status_code == 422
 
@@ -118,6 +130,20 @@ class TestRegister:
         assert resp.status_code == 400
         # Não deve vazar mensagem interna
         assert "Supabase" not in resp.json()["detail"]
+
+    def test_register_security_headers_present(self, client, mock_supabase):
+        """Toda resposta deve incluir headers de segurança."""
+        auth_resp = MagicMock()
+        auth_resp.user = _make_supabase_user()
+        table_mock = MagicMock()
+        table_mock.insert.return_value.execute.return_value = MagicMock()
+        mock_supabase.auth.sign_up.return_value = auth_resp
+        mock_supabase.table.return_value = table_mock
+
+        resp = client.post("/auth/register", json=VALID_REGISTER_PAYLOAD)
+
+        assert resp.headers.get("x-content-type-options") == "nosniff"
+        assert resp.headers.get("x-frame-options") == "DENY"
 
 
 # ───────────────────── /auth/login ──────────────────
