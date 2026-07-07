@@ -1,21 +1,21 @@
 # ROADMAP — Clube USA
 
-> Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
+> Fonte da verdade do projeto. `[x]` = concluído e merged. `[~]` = código pronto, aguardando merge/deploy. `[ ]` = pendente.
 
 ---
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
 - [x] **0.1** Cadastro + perfil mínimo + email confirmado *(código completo — deploy aguarda Supabase setup, ver DECISOES.md)*
-- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/register.html?ref=joao-x7k2 + atribuição de qual cadastro veio de qual link) *(código completo — deploy aguarda infra do 0.1, ver DECISOES.md)*
-- [x] **0.3** Analytics básico *(código completo — tracking de eventos server-side + painel admin, ver PR #4)*
-- [x] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude *(código completo — bloqueio de emails descartáveis + endpoint /users/me/validation-status, ver PR #5)*
+- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/register.html?ref=joao-x7k2 + atribuição de qual cadastro veio de qual link) *(código completo — deploy aguarda infra do 0.1)*
+- [x] **0.3** Analytics básico *(código completo — tracking de eventos server-side + painel admin)*
+- [x] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude *(código completo — bloqueio de emails descartáveis + endpoint /users/me/validation-status)*
 
 ---
 
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
-- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
+- [~] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência) *(código pronto — branch claude/fase-1.1-promocoes; aguarda merge da cadeia Fase 0 + migration 004)*
 - [ ] **1.2** Busca por ZIP + raio 1–5 milhas
 - [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
 - [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
@@ -65,4 +65,4 @@
 
 ---
 
-*Atualizado em: 2026-07-04 (0.4 completo — Fase 0 toda implementada, aguarda merge dos PRs e deploy)*
+*Atualizado em: 2026-07-07 (Fase 1.1 completa — aguarda merge da cadeia Fase 0)*
