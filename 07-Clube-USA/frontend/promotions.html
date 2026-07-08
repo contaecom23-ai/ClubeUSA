@@ -179,6 +179,50 @@
     .pagination button:disabled { opacity: 0.4; cursor: default; }
     .pagination button:not(:disabled):hover { border-color: var(--green); color: var(--green); }
     .pagination .page-info { font-size: 0.9rem; color: var(--muted); }
+    /* ── Filtro ZIP ── */
+    .zip-filter {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .zip-filter label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+    .zip-filter input, .zip-filter select {
+      padding: 0.5rem 0.75rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .zip-filter input:focus, .zip-filter select:focus { border-color: var(--green); }
+    .zip-filter input { width: 120px; }
+    .zip-filter select { width: 150px; }
+    .zip-filter .filter-actions { display: flex; gap: 0.5rem; margin-top: 0; align-self: flex-end; }
+    .search-context {
+      margin-bottom: 1rem;
+      padding: 0.65rem 1rem;
+      background: #e8f5e9;
+      border-left: 3px solid var(--green);
+      border-radius: 0 8px 8px 0;
+      font-size: 0.9rem;
+      color: #1b5e20;
+      display: none;
+    }
+    .badge-distance { background: #dcfce7; color: #15803d; }
     /* ── Toast ── */
     .toast {
       position: fixed;
@@ -221,6 +265,32 @@
 </div>
 
 <main>
+  <!-- Filtro ZIP -->
+  <div class="zip-filter">
+    <div>
+      <label for="zip-input">Meu ZIP code</label>
+      <input id="zip-input" type="text" inputmode="numeric" pattern="\d{5}" maxlength="5"
+             placeholder="Ex: 33130" autocomplete="postal-code">
+    </div>
+    <div>
+      <label for="radius-select">Raio de busca</label>
+      <select id="radius-select">
+        <option value="1">1 milha</option>
+        <option value="2">2 milhas</option>
+        <option value="5" selected>5 milhas</option>
+        <option value="10">10 milhas</option>
+        <option value="25">25 milhas</option>
+        <option value="50">50 milhas</option>
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" onclick="applyZipFilter()">Buscar</button>
+      <button class="btn btn-outline" id="btn-clear-filter" onclick="clearZipFilter()" style="display:none">Limpar</button>
+    </div>
+  </div>
+
+  <div id="search-context" class="search-context"></div>
+
   <div id="loading" class="state-box">
     <span class="icon">⏳</span>
     <h2>Carregando promoções...</h2>
@@ -254,6 +324,8 @@
   const PAGE_SIZE = 20;
   let currentPage = 1;
   let totalPages = 1;
+  let activeZip = null;
+  let activeRadius = 5;
 
   const CATEGORY_LABELS = {
     alimentacao: 'Alimentação', compras: 'Compras', saude: 'Saúde',
@@ -301,6 +373,9 @@
   function renderCard(p) {
     const catLabel = CATEGORY_LABELS[p.category] || p.category;
     const expBadge = expiryBadge(p.expires_at);
+    const distBadge = (p.distance_miles != null)
+      ? `<span class="badge badge-distance">📍 ${p.distance_miles.toFixed(1)} mi</span>`
+      : '';
     const imageSection = p.image_url
       ? `<div class="card-image"><img src="${escHtml(p.image_url)}" alt="" loading="lazy"></div>`
       : `<div class="card-image">🛍️</div>`;
@@ -327,6 +402,7 @@
           <div class="card-meta">
             <span class="badge badge-category">${escHtml(catLabel)}</span>
             ${expBadge}
+            ${distBadge}
             <span class="store-name">${escHtml(p.store)}</span>
           </div>
           <h2 class="card-title">${escHtml(p.title)}</h2>
@@ -349,12 +425,42 @@
     return String(s || '').replace(/'/g, '&#39;');
   }
 
+  function applyZipFilter() {
+    const zip = document.getElementById('zip-input').value.trim();
+    if (!/^\d{5}$/.test(zip)) {
+      showToast('Digite um ZIP code válido (5 números)');
+      return;
+    }
+    activeZip = zip;
+    activeRadius = parseFloat(document.getElementById('radius-select').value);
+    document.getElementById('btn-clear-filter').style.display = '';
+    currentPage = 1;
+    loadPromotions(1);
+  }
+
+  function clearZipFilter() {
+    activeZip = null;
+    activeRadius = 5;
+    document.getElementById('zip-input').value = '';
+    document.getElementById('radius-select').value = '5';
+    document.getElementById('btn-clear-filter').style.display = 'none';
+    document.getElementById('search-context').style.display = 'none';
+    currentPage = 1;
+    loadPromotions(1);
+  }
+
+  // Permite buscar pressionando Enter no campo ZIP
+  document.getElementById('zip-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') applyZipFilter();
+  });
+
   async function loadPromotions(page) {
     const grid = document.getElementById('promo-grid');
     const loading = document.getElementById('loading');
     const empty = document.getElementById('empty');
     const error = document.getElementById('error');
     const pagination = document.getElementById('pagination');
+    const searchCtx = document.getElementById('search-context');
 
     grid.style.display = 'none';
     empty.style.display = 'none';
@@ -363,13 +469,32 @@
     loading.style.display = '';
 
     try {
-      const res = await fetch(
-        `${API_URL}/promotions?page=${page}&page_size=${PAGE_SIZE}`
-      );
-      if (!res.ok) throw new Error('API error ' + res.status);
+      let url = `${API_URL}/promotions?page=${page}&page_size=${PAGE_SIZE}`;
+      if (activeZip) url += `&zip=${encodeURIComponent(activeZip)}&radius=${activeRadius}`;
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 422 && body.detail && body.detail.includes('não encontrado')) {
+          showToast('ZIP não encontrado na base de dados. Tente outro.');
+          loading.style.display = 'none';
+          error.style.display = '';
+          return;
+        }
+        throw new Error('API error ' + res.status);
+      }
       const data = await res.json();
 
       loading.style.display = 'none';
+
+      // Contexto da busca
+      if (activeZip && data.search_zip) {
+        searchCtx.textContent =
+          `Mostrando ${data.total} oferta${data.total !== 1 ? 's' : ''} próximas ao ZIP ${data.search_zip} (raio ${data.radius_miles} mi) — nacionais incluídas`;
+        searchCtx.style.display = '';
+      } else {
+        searchCtx.style.display = 'none';
+      }
 
       if (data.items.length === 0) {
         empty.style.display = '';

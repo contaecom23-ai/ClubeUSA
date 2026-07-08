@@ -3,12 +3,18 @@ from supabase import Client
 
 from config import settings
 from db.supabase import get_supabase
-from promotions.schemas import PromotionCreate, PromotionListResponse, PromotionResponse
+from promotions.schemas import (
+    PromotionCreate,
+    PromotionListResponse,
+    PromotionResponse,
+    PromotionSearchResponse,
+)
 from promotions.service import (
     create_promotion,
     deactivate_promotion,
     get_promotion,
     list_promotions,
+    search_promotions_by_zip,
 )
 
 router = APIRouter(tags=["promotions"])
@@ -29,15 +35,50 @@ def _require_admin(x_admin_key: str = Header(..., alias="X-Admin-Key")) -> None:
 
 
 @router.get(
+    "/promotions/search",
+    response_model=PromotionSearchResponse,
+    summary="Busca promoções por ZIP + raio (público)",
+)
+def search_promos(
+    zip: str = Query(..., pattern=r"^\d{5}$", description="ZIP code de 5 dígitos"),
+    radius: float = Query(5.0, ge=0.1, le=50.0, description="Raio em milhas (padrão 5)"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    supabase: Client = Depends(get_supabase),
+) -> PromotionSearchResponse:
+    try:
+        return search_promotions_by_zip(
+            supabase, zip_code=zip, radius_miles=radius, page=page, page_size=page_size
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+
+
+@router.get(
     "/promotions",
     response_model=PromotionListResponse,
-    summary="Lista promoções ativas (público)",
+    summary="Lista promoções ativas (público). Use ?zip=XXXXX&radius=5 para filtrar por proximidade.",
 )
 def list_promos(
     page: int = Query(1, ge=1, description="Página (começa em 1)"),
     page_size: int = Query(20, ge=1, le=100, description="Itens por página (máx 100)"),
+    zip: str = Query(None, pattern=r"^\d{5}$", description="ZIP code para filtro geográfico"),
+    radius: float = Query(5.0, ge=0.1, le=50.0, description="Raio em milhas (padrão 5)"),
     supabase: Client = Depends(get_supabase),
-) -> PromotionListResponse:
+):
+    if zip:
+        try:
+            return search_promotions_by_zip(
+                supabase, zip_code=zip, radius_miles=radius, page=page, page_size=page_size
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            )
     return list_promotions(supabase, page=page, page_size=page_size)
 
 

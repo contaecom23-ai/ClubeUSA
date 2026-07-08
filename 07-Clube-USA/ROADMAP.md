@@ -16,7 +16,7 @@
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
 - [~] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência) *(código pronto — branch claude/fase-1.1-promocoes; aguarda merge da cadeia Fase 0 + migration 004)*
-- [ ] **1.2** Busca por ZIP + raio 1–5 milhas
+- [~] **1.2** Busca por ZIP + raio 1–5 milhas *(código pronto — branch claude/fase-1.2-busca-zip; aguarda merge de 1.1 + migration 005 + seed zip_codes)*
 - [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
 - [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
 - [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
@@ -65,4 +65,4 @@
 
 ---
 
-*Atualizado em: 2026-07-07 (Fase 1.1 completa — aguarda merge da cadeia Fase 0)*
+*Atualizado em: 2026-07-08 (Fase 1.2 código pronto — aguarda merge da cadeia 0.x e 1.1)*

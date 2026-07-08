@@ -118,9 +118,25 @@ class PromotionResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PromotionWithDistanceResponse(PromotionResponse):
+    """PromotionResponse com distância em milhas (presente em buscas por ZIP)."""
+    distance_miles: Optional[float] = None
+
+
 class PromotionListResponse(BaseModel):
     items: List[PromotionResponse]
     total: int
     page: int
     page_size: int
     has_more: bool
+
+
+class PromotionSearchResponse(BaseModel):
+    """Resultado de busca geográfica — inclui distância e indica cobertura."""
+    items: List[PromotionWithDistanceResponse]
+    total: int
+    page: int
+    page_size: int
+    has_more: bool
+    search_zip: str
+    radius_miles: float

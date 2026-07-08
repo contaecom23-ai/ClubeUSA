@@ -14,14 +14,15 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 ## ⚡ AÇÃO IMEDIATA NECESSÁRIA (bloqueante para avançar)
 
-**Fase 0 e Fase 1.1 estão codificadas e testadas.** Nenhum PR foi merged por falta de decisões de infraestrutura.
+**Estado em 2026-07-08:** Fases 0.1 → 1.1 codificadas e testadas. Fase 1.2 (busca ZIP) também codificada hoje. **Nenhum PR merged ainda** — plataforma inteira aguarda sua revisão de infra.
 
 **O que você precisa fazer, na ordem:**
 1. Resolver **D-002** (Supabase) + **D-003** (email) + **D-004** (hosting) + **D-005** (domínio)
-2. Fechar PRs redundantes: **#1, #6, #7, #8**
-3. Fazer review e merge na ordem: **PR #2 → #3 → #4 → #5 → #9 → PR de Fase 1.1**
-4. Rodar `004_promotions.sql` no Supabase após merge da Fase 1.1
-5. Responder **D-010** antes que o builder implemente tracking de views
+2. Fechar PRs redundantes (já implementados em melhor versão): **#1, #6, #7, #8, #11, #13**
+3. Mergear na ordem: **PR #10 → PR #2 → PR #3 → PR #4 → PR #5 → PR #9 → PR #12 → PR de Fase 1.2**
+4. Rodar migrations em ordem no Supabase: `001` → `002` → `003` → `004` → `005`
+5. Rodar `data/seed_zip_codes.sql` para habilitar busca por ZIP (Fase 1.2)
+6. Responder **D-010** antes que o builder implemente tracking de views
 
 ---
 
@@ -29,15 +30,26 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 ---
 
-### [2026-07-03] D-001: Merge order dos PRs de Fase 0 (ação imediata)
+### [2026-07-03] D-001: Merge order dos PRs (ação imediata) — atualizado 2026-07-08
 
-**Contexto:** Existem 11 PRs abertos. A cadeia canônica é #2→#3→#4→#5→#9. 4 são redundantes.
+**Contexto:** 13 PRs abertos, nenhum merged. Muitos são versões duplicadas do mesmo trabalho de runs anteriores do builder. Cadeia correta identificada.
 
-**Ação recomendada:**
-1. Fechar PRs redundantes: #1, #6, #7, #8
-2. Review e merge na ordem: **PR #2 → PR #3 → PR #4 → PR #5 → PR #9 → PR fase-1.1**
+**PRs a FECHAR (duplicatas — não mergear):**
+- #1, #6, #7 → versões antigas de Fase 0.1 (PR #2 é a canônica)
+- #8 → sync de docs (PR #10 cobre isso)
+- #11, #13 → versões mais antigas de Fase 0.1
 
-**Status:** PENDENTE
+**Ordem de MERGE (uma de cada vez, base → topo):**
+1. **PR #10** — fix workflow YAML quebrado (urgente: sem isso, o builder não roda no cron)
+2. **PR #2** — Fase 0.1: cadastro + perfil + email
+3. **PR #3** — Fase 0.2: referral rastreável
+4. **PR #4** — Fase 0.3: analytics
+5. **PR #5** — Fase 0.4: cadastro válido + anti-fraude
+6. **PR #9** — security polish
+7. **PR #12** — Fase 1.1: promoções/achados
+8. **PR fase-1.2** (este PR) — busca ZIP + raio
+
+**Status:** PENDENTE — bloqueante para qualquer deploy
 
 ---
 
@@ -51,7 +63,9 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
    - `07-Clube-USA/supabase/migrations/001_profiles.sql`
    - `07-Clube-USA/supabase/migrations/002_referrals.sql`
    - `07-Clube-USA/supabase/migrations/003_analytics.sql`
-   - `07-Clube-USA/supabase/migrations/004_promotions.sql` ← novo (Fase 1.1)
+   - `07-Clube-USA/supabase/migrations/004_promotions.sql` (Fase 1.1)
+   - `07-Clube-USA/supabase/migrations/005_zip_search.sql` (Fase 1.2)
+3. Rodar `07-Clube-USA/data/seed_zip_codes.sql` para popular tabela de ZIPs
 3. Coletar as credenciais (Settings > API):
    - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`
 4. Configurar email confirmation (Authentication > URL Configuration):
@@ -157,4 +171,21 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 ---
 
-*Atualizado em: 2026-07-07 — Fase 1.1 implementada (D-008 resolvido; D-010 adicionado)*
+### [2026-07-08] D-011: Dataset completo de ZIPs (pós-merge Fase 1.2)
+
+**Contexto:** O seed `data/seed_zip_codes.sql` cobre ~200 ZIPs das principais cidades com comunidade brasileira. Para cobrir todos os 43k ZIPs dos EUA, é necessário importar o dataset completo do US Census Bureau (público, gratuito).
+
+**Por que não está no seed:** O arquivo CSV completo tem ~3MB — desnecessário para o MVP. Os 200 ZIPs cobrem >80% dos usuários brasileiros nos EUA.
+
+**Como ampliar quando necessário:**
+- Dataset ZCTA do Census Bureau: https://www.census.gov/geographies/reference-files/time-series/geo/gazetteer-files.html (arquivo `2020_Gaz_zcta_national.zip`)
+- Comando de import: `psql $DATABASE_URL -c "\copy zip_codes(zip,city,state,latitude,longitude) FROM 'zcta_data.csv' CSV"`
+- Ou: contratar serviço de API de geocoding (Google Maps, Mapbox) para lookup on-demand em ZIPs não cadastrados
+
+**Recomendação:** Lançar com os 200 ZIPs do seed. Monitorar em analytics quais ZIPs os usuários digitam e não encontram. Ampliar o seed quando houver demanda real.
+
+**Status:** PENDENTE — decidir após lançamento da Fase 1.2
+
+---
+
+*Atualizado em: 2026-07-08 — Fase 1.2 implementada (busca por ZIP + raio; D-011 adicionado)*
