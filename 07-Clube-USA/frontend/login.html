@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar — Clube USA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+  <nav class="bg-white border-b border-slate-200 px-6 py-4">
+    <a href="index.html" class="text-blue-800 font-bold text-xl tracking-tight">Clube USA</a>
+  </nav>
+
+  <main class="flex-1 flex items-center justify-center px-4 py-12">
+    <div class="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+      <h1 class="text-2xl font-bold text-blue-900 mb-1">Entrar</h1>
+      <p class="text-sm text-slate-500 mb-6">
+        Não tem conta? <a href="register.html" class="text-blue-600 hover:underline">Criar grátis</a>
+      </p>
+
+      <div id="error-msg" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-sm text-red-800"></div>
+
+      <!-- Banner: email não confirmado -->
+      <div id="unverified-msg" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">
+        Seu email ainda não foi confirmado.
+        <button id="resend-btn" class="underline font-medium ml-1">Reenviar email</button>
+      </div>
+
+      <form id="login-form" class="space-y-4" novalidate>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+          <input id="email" type="email" autocomplete="email" required
+                 placeholder="joao@email.com"
+                 class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+          <input id="password" type="password" autocomplete="current-password" required
+                 placeholder="••••••••"
+                 class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+
+        <button type="submit" id="submit-btn"
+                class="w-full py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg text-sm transition disabled:opacity-50">
+          Entrar
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    const sb = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.href = 'profile.html';
+    });
+
+    let _pendingEmail = '';
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const errEl    = document.getElementById('error-msg');
+      const btn      = document.getElementById('submit-btn');
+
+      errEl.classList.add('hidden');
+      document.getElementById('unverified-msg').classList.add('hidden');
+
+      if (!email || !password) {
+        errEl.textContent = 'Preencha email e senha.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Entrando…';
+
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+
+      if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          _pendingEmail = email;
+          document.getElementById('unverified-msg').classList.remove('hidden');
+        } else {
+          errEl.textContent = _translateError(error.message);
+          errEl.classList.remove('hidden');
+        }
+      } else {
+        window.location.href = 'profile.html';
+      }
+    });
+
+    document.getElementById('resend-btn').addEventListener('click', async () => {
+      if (!_pendingEmail) return;
+      const { error } = await sb.auth.resend({
+        type: 'signup',
+        email: _pendingEmail,
+        options: { emailRedirectTo: `${window.location.origin}/verify-email.html` },
+      });
+      const btn = document.getElementById('resend-btn');
+      btn.textContent = error ? 'Erro ao reenviar' : 'Email reenviado!';
+      btn.disabled = true;
+    });
+
+    function _translateError(msg) {
+      if (msg.includes('Invalid login credentials')) return 'Email ou senha incorretos.';
+      if (msg.includes('rate limit'))               return 'Muitas tentativas. Aguarde alguns minutos.';
+      return 'Erro ao entrar. Tente novamente.';
+    }
+  </script>
+</body>
+</html>
