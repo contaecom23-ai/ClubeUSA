@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — A plataforma do imigrante brasileiro nos EUA</title>
+  <meta name="description" content="Organize sua vida nos EUA: promoções, empregos, moradia e comunidade para brasileiros.">
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    body { margin: 0; }
+    .hero {
+      background: linear-gradient(135deg, var(--blue) 0%, #003a9b 100%);
+      color: #fff;
+      padding: 4rem 1.5rem 3rem;
+      text-align: center;
+    }
+    .hero .logo { justify-content: center; color: #fff; margin-bottom: 1rem; font-size: 1.8rem; }
+    .hero h1 { font-size: clamp(1.5rem, 4vw, 2.4rem); margin-bottom: .75rem; line-height: 1.2; }
+    .hero p { font-size: 1.05rem; color: #c7d7ff; max-width: 520px; margin: 0 auto 2rem; }
+    .hero-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-hero { padding: .75rem 1.75rem; border-radius: var(--radius); font-weight: 600; font-size: 1rem; cursor: pointer; text-decoration: none; border: none; }
+    .btn-hero-primary { background: var(--green); color: #fff; }
+    .btn-hero-secondary { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,.5); }
+    .features { padding: 3rem 1.5rem; max-width: 900px; margin: 0 auto; }
+    .features h2 { text-align: center; font-size: 1.4rem; margin-bottom: 2rem; color: var(--blue); }
+    .feature-grid { display: grid; gap: 1.5rem; }
+    @media (min-width: 600px) { .feature-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 900px) { .feature-grid { grid-template-columns: repeat(3, 1fr); } }
+    .feature-card { background: var(--bg-card); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); }
+    .feature-card .icon { font-size: 2rem; margin-bottom: .75rem; }
+    .feature-card h3 { font-size: 1rem; margin-bottom: .5rem; color: var(--blue); }
+    .feature-card p { font-size: .875rem; color: var(--text-muted); }
+    .cta-bottom { text-align: center; padding: 3rem 1.5rem; background: var(--bg-card); }
+    .cta-bottom h2 { font-size: 1.4rem; margin-bottom: 1rem; }
+    footer { text-align: center; padding: 1.5rem; font-size: .8rem; color: var(--text-muted); border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="nav-logo">🇧🇷🇺🇸 Clube USA</span>
+  <div class="nav-links">
+    <a href="/login.html">Entrar</a>
+    <a href="/register.html" style="background:var(--green);color:#fff;padding:.35rem .9rem;border-radius:var(--radius);">Cadastrar</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="logo"><span class="flag">🇧🇷🇺🇸</span> Clube USA</div>
+  <h1>Sua vida nos EUA<br>organizada em um só lugar</h1>
+  <p>Promoções, empregos, moradia, comunidade e muito mais para brasileiros nos Estados Unidos.</p>
+  <div class="hero-ctas">
+    <a href="/register.html" class="btn-hero btn-hero-primary">Criar conta grátis</a>
+    <a href="/login.html" class="btn-hero btn-hero-secondary">Já tenho conta</a>
+  </div>
+</section>
+
+<section class="features">
+  <h2>Tudo que você precisa para viver bem nos EUA</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon">🏷️</div>
+      <h3>Promoções &amp; Achados</h3>
+      <p>As melhores ofertas perto de você, filtradas por ZIP code.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">💼</div>
+      <h3>Empregos</h3>
+      <p>Vagas selecionadas para a comunidade brasileira nos EUA.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🏠</div>
+      <h3>Moradia</h3>
+      <p>Quartos, roommates e casas perto de você.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🤝</div>
+      <h3>Comunidade</h3>
+      <p>Tire dúvidas e ajude quem chegou agora.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🏢</div>
+      <h3>Diretório de Negócios</h3>
+      <p>Empresas brasileiras e para brasileiros perto de você.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🤖</div>
+      <h3>IA Concierge</h3>
+      <p>Um assistente que entende sua vida de imigrante. Em breve.</p>
+    </div>
+  </div>
+</section>
+
+<section class="cta-bottom">
+  <h2>Junte-se à comunidade brasileira nos EUA</h2>
+  <p style="color:var(--text-muted);margin-bottom:1.5rem;">Cadastro gratuito. Sem cartão de crédito.</p>
+  <a href="/register.html" class="btn btn-primary" style="display:inline-block;width:auto;padding:.75rem 2rem;">Criar conta grátis</a>
+</section>
+
+<footer>
+  &copy; 2026 Clube USA. Todos os direitos reservados.
+</footer>
+
+<script src="/assets/app.js"></script>
+<script>
+  // If already logged in, show profile link in nav
+  if (isLoggedIn()) {
+    document.querySelector('.nav-links').innerHTML =
+      '<a href="/profile.html">Meu Perfil</a>' +
+      '<a href="#" onclick="clearSession();location.href=\'/\'" style="color:#fca5a5">Sair</a>';
+  }
+</script>
+
+</body>
+</html>

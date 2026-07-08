@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Clube USA</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="page-center">
+  <div class="card">
+
+    <div class="logo"><span class="flag">🇧🇷🇺🇸</span> Clube USA</div>
+    <h1>Criar conta</h1>
+    <p class="subtitle">Grátis. Sem cartão de crédito.</p>
+
+    <div class="alert alert-error" id="alert" role="alert"></div>
+    <div class="alert alert-success" id="success" role="status"></div>
+
+    <form id="registerForm" novalidate>
+      <div class="field">
+        <label for="full_name">Nome completo</label>
+        <input type="text" id="full_name" name="full_name" autocomplete="name"
+               placeholder="Ex: Maria da Silva" required minlength="2" maxlength="100">
+        <div class="field-error" id="err_name">Nome deve ter pelo menos 2 caracteres.</div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="email"
+               placeholder="seu@email.com" required>
+        <div class="field-error" id="err_email">Email inválido.</div>
+      </div>
+
+      <div class="field">
+        <label for="password">Senha</label>
+        <div class="password-wrap">
+          <input type="password" id="password" name="password" autocomplete="new-password"
+                 placeholder="Mínimo 8 caracteres" required minlength="8">
+          <button type="button" class="toggle-pw" onclick="togglePassword('password', this)" aria-label="Mostrar senha">👁</button>
+        </div>
+        <div class="field-error" id="err_password">Senha deve ter pelo menos 8 caracteres.</div>
+      </div>
+
+      <div class="field">
+        <label for="confirm_password">Confirmar senha</label>
+        <div class="password-wrap">
+          <input type="password" id="confirm_password" autocomplete="new-password"
+                 placeholder="Repita a senha" required>
+          <button type="button" class="toggle-pw" onclick="togglePassword('confirm_password', this)" aria-label="Mostrar senha">👁</button>
+        </div>
+        <div class="field-error" id="err_confirm">As senhas não coincidem.</div>
+      </div>
+
+      <div class="field">
+        <label for="zip_code">ZIP Code (onde você mora nos EUA)</label>
+        <input type="text" id="zip_code" name="zip_code" autocomplete="postal-code"
+               placeholder="Ex: 33101" required pattern="\d{5}(-\d{4})?" maxlength="10">
+        <div class="field-hint">Formato: 12345 ou 12345-6789</div>
+        <div class="field-error" id="err_zip">ZIP inválido. Use formato 12345.</div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">Criar conta</button>
+    </form>
+
+    <div class="or-divider">ou</div>
+    <p class="text-center text-sm text-muted">
+      Já tem uma conta? <a href="/login.html">Entrar</a>
+    </p>
+
+  </div>
+</div>
+
+<script src="/assets/app.js"></script>
+<script>
+requireGuest();
+
+const form = document.getElementById("registerForm");
+const alertEl = document.getElementById("alert");
+const successEl = document.getElementById("success");
+const submitBtn = document.getElementById("submitBtn");
+
+function showFieldError(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.className = "field-error" + (show ? " visible" : "");
+}
+
+form.addEventListener("submit", async function (e) {
+  e.preventDefault();
+  hideAlert(alertEl);
+  hideAlert(successEl);
+
+  const name = document.getElementById("full_name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const confirm = document.getElementById("confirm_password").value;
+  const zip = document.getElementById("zip_code").value.trim();
+
+  let valid = true;
+
+  showFieldError("err_name", name.length < 2);
+  if (name.length < 2) valid = false;
+
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  showFieldError("err_email", !emailRe.test(email));
+  if (!emailRe.test(email)) valid = false;
+
+  showFieldError("err_password", password.length < 8);
+  if (password.length < 8) valid = false;
+
+  showFieldError("err_confirm", password !== confirm);
+  if (password !== confirm) valid = false;
+
+  const zipRe = /^\d{5}(-\d{4})?$/;
+  showFieldError("err_zip", !zipRe.test(zip));
+  if (!zipRe.test(zip)) valid = false;
+
+  if (!valid) return;
+
+  setLoading(submitBtn, true);
+
+  try {
+    const resp = await fetch(API_BASE + "/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name: name, email, password, zip_code: zip }),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showAlert(alertEl, data.detail || "Erro ao criar conta. Tente novamente.");
+      return;
+    }
+
+    form.style.display = "none";
+    showAlert(
+      successEl,
+      "✅ Conta criada! Enviamos um email de confirmação para " +
+        escapeHtml(email) + ". Clique no link para ativar sua conta.",
+      "success"
+    );
+  } catch {
+    showAlert(alertEl, "Erro de conexão. Verifique sua internet e tente novamente.");
+  } finally {
+    setLoading(submitBtn, false);
+  }
+});
+</script>
+</body>
+</html>

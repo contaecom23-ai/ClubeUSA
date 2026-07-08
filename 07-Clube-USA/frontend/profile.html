@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    main { max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    .section-title { font-size: 1rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1rem; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="nav-logo">🇧🇷🇺🇸 Clube USA</span>
+  <div class="nav-links" id="navLinks">
+    <a href="/profile.html">Perfil</a>
+    <a href="#" id="logoutLink" style="color:#fca5a5">Sair</a>
+  </div>
+</nav>
+
+<main>
+  <!-- Loading state -->
+  <div id="loadingState" style="text-align:center;padding:3rem">
+    <p style="color:var(--text-muted)">Carregando perfil…</p>
+  </div>
+
+  <!-- Profile view -->
+  <div id="profileView" style="display:none">
+    <div class="profile-header">
+      <div>
+        <h1 id="profileName">—</h1>
+        <span id="emailBadge" class="badge"></span>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="showEditMode()">Editar</button>
+    </div>
+
+    <div class="card" style="margin-bottom:1.5rem">
+      <p class="section-title">Informações da conta</p>
+      <div class="profile-grid">
+        <div class="profile-field">
+          <label>Email</label>
+          <div class="value" id="profileEmail">—</div>
+        </div>
+        <div class="profile-field">
+          <label>ZIP Code</label>
+          <div class="value" id="profileZip">—</div>
+        </div>
+        <div class="profile-field">
+          <label>Estado</label>
+          <div class="value" id="profileState">—</div>
+        </div>
+        <div class="profile-field">
+          <label>Cidade</label>
+          <div class="value" id="profileCity">—</div>
+        </div>
+        <div class="profile-field">
+          <label>WhatsApp</label>
+          <div class="value" id="profileWhatsapp">—</div>
+        </div>
+        <div class="profile-field">
+          <label>Membro desde</label>
+          <div class="value" id="profileCreatedAt">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit form -->
+  <div id="editView" style="display:none">
+    <div class="profile-header">
+      <h1>Editar perfil</h1>
+      <button class="btn btn-primary btn-sm" style="background:var(--border);color:var(--text)" onclick="cancelEdit()">Cancelar</button>
+    </div>
+
+    <div class="card">
+      <div class="alert alert-error" id="editAlert" role="alert"></div>
+      <div class="alert alert-success" id="editSuccess" role="status"></div>
+
+      <div class="field">
+        <label for="edit_name">Nome completo</label>
+        <input type="text" id="edit_name" minlength="2" maxlength="100">
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="edit_zip">ZIP Code</label>
+          <input type="text" id="edit_zip" placeholder="12345" maxlength="10">
+        </div>
+        <div class="field">
+          <label for="edit_state">Estado</label>
+          <input type="text" id="edit_state" placeholder="Ex: FL" maxlength="2">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="edit_city">Cidade</label>
+        <input type="text" id="edit_city" placeholder="Ex: Miami">
+      </div>
+
+      <div class="field">
+        <label for="edit_whatsapp">WhatsApp (com DDI, ex: 13051234567)</label>
+        <input type="text" id="edit_whatsapp" placeholder="13051234567">
+      </div>
+
+      <button class="btn btn-primary" id="saveBtn" onclick="saveProfile()">Salvar alterações</button>
+    </div>
+  </div>
+
+  <div id="errorState" style="display:none;text-align:center;padding:3rem">
+    <p style="color:var(--error)">Erro ao carregar perfil. <a href="/login.html">Fazer login novamente.</a></p>
+  </div>
+</main>
+
+<script src="/assets/app.js"></script>
+<script>
+requireAuth();
+
+let currentProfile = null;
+
+document.getElementById("logoutLink").addEventListener("click", function (e) {
+  e.preventDefault();
+  clearSession();
+  window.location.href = "/";
+});
+
+async function loadProfile() {
+  try {
+    const resp = await apiFetch("/profile");
+    if (!resp.ok) {
+      if (resp.status === 401) { clearSession(); window.location.href = "/login.html"; return; }
+      show("errorState"); return;
+    }
+    currentProfile = await resp.json();
+    renderProfile(currentProfile);
+    show("profileView");
+  } catch {
+    show("errorState");
+  }
+}
+
+function renderProfile(p) {
+  document.getElementById("profileName").textContent = escapeHtml(p.full_name);
+  document.getElementById("profileEmail").textContent = escapeHtml(p.email);
+  document.getElementById("profileZip").textContent = p.zip_code || "—";
+  document.getElementById("profileState").textContent = p.state_us || "—";
+  document.getElementById("profileCity").textContent = p.city ? escapeHtml(p.city) : "—";
+  document.getElementById("profileWhatsapp").textContent = p.whatsapp ? escapeHtml(p.whatsapp) : "—";
+  document.getElementById("profileCreatedAt").textContent = new Date(p.created_at).toLocaleDateString("pt-BR");
+
+  const badge = document.getElementById("emailBadge");
+  if (p.email_confirmed) {
+    badge.textContent = "✓ Email confirmado";
+    badge.className = "badge badge-green";
+  } else {
+    badge.textContent = "⚠ Email não confirmado";
+    badge.className = "badge badge-yellow";
+  }
+}
+
+function showEditMode() {
+  if (!currentProfile) return;
+  document.getElementById("edit_name").value = currentProfile.full_name || "";
+  document.getElementById("edit_zip").value = currentProfile.zip_code || "";
+  document.getElementById("edit_state").value = currentProfile.state_us || "";
+  document.getElementById("edit_city").value = currentProfile.city || "";
+  document.getElementById("edit_whatsapp").value = currentProfile.whatsapp || "";
+  hideAlert(document.getElementById("editAlert"));
+  hideAlert(document.getElementById("editSuccess"));
+  show("editView");
+}
+
+function cancelEdit() { show("profileView"); }
+
+async function saveProfile() {
+  const alertEl = document.getElementById("editAlert");
+  const successEl = document.getElementById("editSuccess");
+  const saveBtn = document.getElementById("saveBtn");
+
+  hideAlert(alertEl);
+  hideAlert(successEl);
+
+  const updates = {};
+  const name = document.getElementById("edit_name").value.trim();
+  const zip = document.getElementById("edit_zip").value.trim();
+  const state = document.getElementById("edit_state").value.trim().toUpperCase();
+  const city = document.getElementById("edit_city").value.trim();
+  const wa = document.getElementById("edit_whatsapp").value.trim();
+
+  if (name) updates.full_name = name;
+  if (zip) updates.zip_code = zip;
+  if (state) updates.state_us = state;
+  if (city) updates.city = city;
+  if (wa) updates.whatsapp = wa;
+
+  if (Object.keys(updates).length === 0) {
+    showAlert(alertEl, "Nenhuma alteração a salvar.");
+    return;
+  }
+
+  setLoading(saveBtn, true);
+  try {
+    const resp = await apiFetch("/profile", {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      showAlert(alertEl, data.detail || "Erro ao salvar. Tente novamente.");
+      return;
+    }
+    currentProfile = data;
+    renderProfile(data);
+    showAlert(successEl, "Perfil atualizado com sucesso!", "success");
+    setTimeout(function () { show("profileView"); }, 1200);
+  } catch {
+    showAlert(alertEl, "Erro de conexão. Tente novamente.");
+  } finally {
+    setLoading(saveBtn, false);
+  }
+}
+
+function show(id) {
+  ["loadingState", "profileView", "editView", "errorState"].forEach(function (s) {
+    document.getElementById(s).style.display = s === id ? "block" : "none";
+  });
+}
+
+loadProfile();
+</script>
+</body>
+</html>

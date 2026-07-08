@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="page-center">
+  <div class="card">
+
+    <div class="logo"><span class="flag">🇧🇷🇺🇸</span> Clube USA</div>
+    <h1>Entrar</h1>
+    <p class="subtitle">Bem-vindo de volta!</p>
+
+    <div class="alert alert-error" id="alert" role="alert"></div>
+    <div class="alert alert-info" id="info" role="status"></div>
+
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="email"
+               placeholder="seu@email.com" required>
+      </div>
+
+      <div class="field">
+        <label for="password">Senha</label>
+        <div class="password-wrap">
+          <input type="password" id="password" name="password" autocomplete="current-password"
+                 placeholder="Sua senha" required>
+          <button type="button" class="toggle-pw" onclick="togglePassword('password', this)" aria-label="Mostrar senha">👁</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">Entrar</button>
+    </form>
+
+    <div class="or-divider">ou</div>
+    <p class="text-center text-sm text-muted">
+      Não tem conta? <a href="/register.html">Criar conta grátis</a>
+    </p>
+
+  </div>
+</div>
+
+<script src="/assets/app.js"></script>
+<script>
+requireGuest();
+
+const form = document.getElementById("loginForm");
+const alertEl = document.getElementById("alert");
+const infoEl = document.getElementById("info");
+const submitBtn = document.getElementById("submitBtn");
+
+// Show helpful message if redirected from a protected page
+const params = new URLSearchParams(window.location.search);
+if (params.get("next")) {
+  showAlert(infoEl, "Faça login para continuar.", "info");
+}
+
+form.addEventListener("submit", async function (e) {
+  e.preventDefault();
+  hideAlert(alertEl);
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  if (!email || !password) {
+    showAlert(alertEl, "Preencha email e senha.");
+    return;
+  }
+
+  setLoading(submitBtn, true);
+
+  try {
+    const resp = await fetch(API_BASE + "/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      if (resp.status === 403) {
+        showAlert(alertEl, "Email não confirmado. Verifique sua caixa de entrada e clique no link de confirmação.");
+      } else {
+        showAlert(alertEl, data.detail || "Email ou senha inválidos.");
+      }
+      return;
+    }
+
+    saveSession(data);
+
+    const next = params.get("next");
+    window.location.href = next && next.startsWith("/") ? next : "/profile.html";
+
+  } catch {
+    showAlert(alertEl, "Erro de conexão. Verifique sua internet e tente novamente.");
+  } finally {
+    setLoading(submitBtn, false);
+  }
+});
+</script>
+</body>
+</html>
