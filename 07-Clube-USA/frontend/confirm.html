@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmação de Email — Clube USA</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <style>
+    .confirm-icon { font-size: 3rem; text-align: center; margin-bottom: 1rem; }
+    .card { text-align: center; }
+  </style>
+</head>
+<body>
+<div class="page-center">
+  <div class="card">
+    <div class="logo" style="justify-content:center">🇧🇷🇺🇸 Clube USA</div>
+
+    <div id="stateLoading">
+      <div class="confirm-icon">⏳</div>
+      <h1>Confirmando seu email…</h1>
+      <p class="subtitle">Aguarde um momento.</p>
+    </div>
+
+    <div id="stateSuccess" style="display:none">
+      <div class="confirm-icon">✅</div>
+      <h1>Email confirmado!</h1>
+      <p class="subtitle" style="margin-bottom:1.5rem">Sua conta está ativa. Você será redirecionado em breve.</p>
+      <a href="/profile.html" class="btn btn-primary">Ir para meu perfil</a>
+    </div>
+
+    <div id="stateError" style="display:none">
+      <div class="confirm-icon">❌</div>
+      <h1>Link inválido ou expirado</h1>
+      <p class="subtitle" style="margin-bottom:1.5rem">O link de confirmação pode ter expirado. Tente fazer login — se o email ainda não foi confirmado, você receberá instruções.</p>
+      <a href="/login.html" class="btn btn-primary">Ir para o login</a>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/app.js"></script>
+<script>
+/**
+ * Supabase redirects here after email confirmation with tokens in the URL hash:
+ * /confirm.html#access_token=...&refresh_token=...&type=signup
+ *
+ * We parse the hash, store the session, and redirect to profile.
+ */
+(function () {
+  const hash = window.location.hash.slice(1);
+  const params = new URLSearchParams(hash);
+
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  const type = params.get("type");
+  const errorCode = params.get("error_code") || params.get("error");
+
+  if (errorCode) {
+    show("stateError");
+    return;
+  }
+
+  if (!accessToken || !refreshToken) {
+    show("stateError");
+    return;
+  }
+
+  // Store session
+  saveSession({ access_token: accessToken, refresh_token: refreshToken });
+
+  show("stateSuccess");
+
+  // Auto-redirect after 2 seconds
+  setTimeout(function () {
+    window.location.href = "/profile.html";
+  }, 2000);
+
+  function show(id) {
+    ["stateLoading", "stateSuccess", "stateError"].forEach(function (s) {
+      document.getElementById(s).style.display = s === id ? "block" : "none";
+    });
+  }
+})();
+</script>
+</body>
+</html>
