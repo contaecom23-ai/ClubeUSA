@@ -12,16 +12,33 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 ---
 
-## ⚡ AÇÃO IMEDIATA NECESSÁRIA (bloqueante para avançar)
+## ⚡ AÇÃO IMEDIATA NECESSÁRIA — atualizado 2026-07-09
 
-A **Fase 0 está codificada e testada** (66 testes passando nos PRs #2–#5 + #9), mas não pode ser deployada sem as decisões abaixo. Enquanto isso não for resolvido, o builder não tem como avançar para Fase 1 de forma útil.
+**Situação crítica:** 16 PRs abertos, nenhum merged. A Fase 0 está codificada e testada (66 testes passando) mas o ROADMAP no main ainda mostra `[ ]` porque este PR (#10) não foi merged. Cada nova rodada do builder cria PRs duplicados. O ROADMAP do main é a raiz do problema.
 
-**Resumo do que precisa acontecer (na ordem):**
-1. Você resolve D-002 (Supabase) + D-003 (email) + D-004 (hosting) + D-005 (domínio)
-2. Fecha PRs redundantes: #1, #6, #7, #8
-3. Faz review e merge em ordem: **PR #2 → #3 → #4 → #5 → #9**
-4. Responde D-006 e D-007 antes de lançar Fase 1.3
-5. Builder retoma com Fase 1.1 (Promoções/Achados), mas precisa de D-008 respondido primeiro
+**Impacto se não agir:** O builder vai continuar abrindo PRs duplicados toda rodada. Já foram criados 3 duplicatas de 0.1 desde 2026-07-07 (#11, #13, #15).
+
+**Plano de ação (60 minutos do seu tempo):**
+1. **Fechar PRs redundantes:** #1, #6, #7, #8, #11, #13, #15 (todos duplicatas de 0.1)
+2. **Mergear ESTE PR #10 primeiro** — corrige o YAML do workflow e atualiza o ROADMAP no main. Resolve a causa raiz dos duplicados.
+3. **Resolver D-002** (criar projeto Supabase — grátis, ~10 min) — desbloqueia deploy
+4. **Mergear em ordem:** PR #2 → #3 → #4 → #5 → #9 (Fase 0 completa)
+5. **Responder D-008** (produto para 1.1 Promoções) — uma resposta de 2 minutos desbloqueia semanas de trabalho do builder
+6. **Avaliar PRs #12, #14, #16** (Fase 1.1, 1.2, 1.3) — ver D-010
+
+**Resumo de PRs:**
+| PR | Ação | Prioridade |
+|----|------|-----------|
+| **#10** (este) | Mergear 1º — corrige workflow + ROADMAP | 🔴 Urgente |
+| **#2** | Mergear 2º — Fase 0.1 auth | 🔴 Urgente |
+| **#3** | Mergear 3º — Fase 0.2 referral | 🔴 Urgente |
+| **#4** | Mergear 4º — Fase 0.3 analytics | 🔴 Urgente |
+| **#5** | Mergear 5º — Fase 0.4 anti-fraude | 🔴 Urgente |
+| **#9** | Mergear 6º — security polish | 🟡 Normal |
+| #12 | Avaliar — Fase 1.1 Promoções (ver D-010) | 🟡 Depois |
+| #14 | Avaliar — Fase 1.2 Busca ZIP (ver D-010) | 🟡 Depois |
+| #16 | Avaliar — Fase 1.3 Influenciadores (ver D-010) | 🟡 Depois |
+| #1, #6, #7, #8, #11, #13, #15 | **Fechar** — duplicatas | ❌ Fechar |
 
 ---
 
@@ -29,15 +46,16 @@ A **Fase 0 está codificada e testada** (66 testes passando nos PRs #2–#5 + #9
 
 ---
 
-### [2026-07-03] D-001: Merge order dos PRs de Fase 0
+### [2026-07-03 → atualizado 2026-07-09] D-001: Merge order dos PRs
 
-**Contexto:** Existem 9 PRs abertos. 4 formam a cadeia principal da Fase 0; 4 são redundantes (podem ser fechados); 1 é este PR de docs.
+**Contexto:** Existem agora 16 PRs abertos (era 9 em 2026-07-07). 7 são duplicatas de 0.1; 3 são Fase 1.x construídos sem Fase 0 merged.
 
 **Ação recomendada:**
-1. Fechar PRs redundantes: #1, #6, #7, #8 (supersedidos pela cadeia principal)
-2. Review e merge na ordem: **PR #2 → PR #3 → PR #4 → PR #5 → PR #9**
+1. Fechar duplicatas: #1, #6, #7, #8, #11, #13, #15
+2. Review e merge na ordem: **#10 → #2 → #3 → #4 → #5 → #9**
+3. Avaliar #12, #14, #16 (ver D-010)
 
-**Status:** PENDENTE
+**Status:** PENDENTE — atenção redobrada, situação piorou desde 2026-07-07
 
 ---
 
@@ -192,4 +210,28 @@ A **Fase 0 está codificada e testada** (66 testes passando nos PRs #2–#5 + #9
 
 ---
 
-*Atualizado em: 2026-07-07*
+---
+
+### [2026-07-09] D-010: PRs de Fase 1 construídos antes de Fase 0 ser deployed
+
+**Contexto:** Entre 2026-07-07 e 2026-07-09, o builder ignorou o bloqueio em D-008 e construiu PRs de Fase 1:
+- **PR #12** (`claude/fase-1.1-promocoes`): Fase 1.1 — PROMOÇÕES/ACHADOS
+- **PR #14** (`claude/fase-1.2-busca-zip`): Fase 1.2 — busca por ZIP
+- **PR #16** (`claude/fase-1.3-influenciadores`): Fase 1.3 — programa de influenciadores
+
+**Problema:** Esses PRs foram construídos sem a Fase 0 deployed/testada, sem as decisões de produto (D-008 para 1.1) e sem orçamento definido (D-007 para 1.3). Podem ter escolhas de produto incorretas.
+
+**Opções:**
+- **A — Manter e revisar:** Os PRs podem estar tecnicamente corretos mesmo sem deploy de Fase 0. Revisar se as escolhas de produto fazem sentido. Ajustar o que precisar. *Mais rápido.*
+- **B — Descartar e rebuild depois:** Fechar #12, #14, #16 agora. Builder reconstrói depois com D-008 respondido. *Mais correto, mas perde o trabalho feito.*
+- **C — Manter mas não mergear até Fase 0 estar em produção:** Não fechar, não mergear ainda. Revisar quando Fase 0 for ao ar. *Recomendado — não perde trabalho, não apressa o processo.*
+
+**Recomendação:** Opção C. Manter PRs #12, #14, #16 abertos para revisão futura, mas NÃO mergear antes de Fase 0 estar deployed e D-008 respondido. Revisar D-008 respondendo as 5 perguntas de produto — o builder adapta o código se necessário.
+
+**Impacto se D-008 não for respondido:** Builder vai continuar não sabendo como implementar 1.1 corretamente e pode criar mais PRs inconsistentes.
+
+**Status:** PENDENTE — decida A, B ou C e responda D-008
+
+---
+
+*Atualizado em: 2026-07-09*
