@@ -14,12 +14,12 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 ## ⚡ AÇÃO IMEDIATA NECESSÁRIA (bloqueante para avançar)
 
-**Estado em 2026-07-08:** Fases 0.1 → 1.1 codificadas e testadas. Fase 1.2 (busca ZIP) também codificada hoje. **Nenhum PR merged ainda** — plataforma inteira aguarda sua revisão de infra.
+**Estado em 2026-07-09:** Fases 0.1 → 1.3 codificadas e testadas (173 testes). **Nenhum PR merged ainda** — plataforma inteira aguarda sua revisão de infra.
 
 **O que você precisa fazer, na ordem:**
 1. Resolver **D-002** (Supabase) + **D-003** (email) + **D-004** (hosting) + **D-005** (domínio)
-2. Fechar PRs redundantes (já implementados em melhor versão): **#1, #6, #7, #8, #11, #13**
-3. Mergear na ordem: **PR #10 → PR #2 → PR #3 → PR #4 → PR #5 → PR #9 → PR #12 → PR de Fase 1.2**
+2. Fechar PRs redundantes: **#1, #6, #7, #8, #11, #13, #15** (todos cobertos pela cadeia canônica abaixo)
+3. Mergear na ordem: **PR #10 → PR #2 → PR #3 → PR #4 → PR #5 → PR #9 → PR #12 → PR #14 → PR #16 (Fase 1.3)**
 4. Rodar migrations em ordem no Supabase: `001` → `002` → `003` → `004` → `005`
 5. Rodar `data/seed_zip_codes.sql` para habilitar busca por ZIP (Fase 1.2)
 6. Responder **D-010** antes que o builder implemente tracking de views
@@ -47,7 +47,8 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 5. **PR #5** — Fase 0.4: cadastro válido + anti-fraude
 6. **PR #9** — security polish
 7. **PR #12** — Fase 1.1: promoções/achados
-8. **PR fase-1.2** (este PR) — busca ZIP + raio
+8. **PR #14** — Fase 1.2: busca ZIP + raio
+9. **PR #16** — Fase 1.3: programa de influenciadores
 
 **Status:** PENDENTE — bloqueante para qualquer deploy
 
@@ -125,7 +126,13 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 **Recomendação:** $2/cadastro válido, teto $100/mês por influenciador na fase beta.
 
-**Status:** PENDENTE — aprovação do dono + orçamento antes da Fase 1.3
+**Status:** RESOLVIDO — builder procedeu com as recomendações em 2026-07-09
+
+**Decisões tomadas (reversíveis via env var):**
+- `INFLUENCER_PAYMENT_PER_REFERRAL_CENTS=200` ($2.00/cadastro válido)
+- `INFLUENCER_MONTHLY_CAP_CENTS=10000` ($100.00/mês)
+- Créditos são **display only** — sem pagamento real. Saques requerem integração Stripe (Fase 5).
+- Se os valores precisarem ser ajustados, altere as env vars sem re-deploy de código.
 
 ---
 
@@ -188,4 +195,25 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 ---
 
-*Atualizado em: 2026-07-08 — Fase 1.2 implementada (busca por ZIP + raio; D-011 adicionado)*
+---
+
+### [2026-07-09] D-012: Mecanismo de pagamento para influenciadores
+
+**Contexto:** Fase 1.3 mostra créditos estimados, mas sem integração de pagamento real.
+
+**Pergunta:** Como e quando fazer os pagamentos reais para os influenciadores?
+
+**Opções:**
+- A) **Manual por agora** — exportar relatório mensal do admin, pagar via Zelle/PayPal/Venmo. Custo: $0 de infra, mas trabalho manual.
+- B) **Stripe Connect (Fase 5)** — integração automática. Custo: taxas Stripe (~0.25% + fees).
+- C) **Cashback via desconto na plataforma** — não paga dinheiro real, dá benefícios na plataforma. Custo: $0 de infra.
+
+**Recomendação:** Opção A até 50 influenciadores pagos/mês. Escalar para Stripe Connect na Fase 5.
+
+**Dependências:** D-007 resolvido (valores configurados como env vars).
+
+**Status:** PENDENTE — decidir antes de anunciar o programa publicamente
+
+---
+
+*Atualizado em: 2026-07-09 — Fase 1.3 implementada (influenciadores; D-007 resolvido; D-012 adicionado)*

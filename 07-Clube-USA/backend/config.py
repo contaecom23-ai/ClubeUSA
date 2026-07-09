@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     # Gerar com: python -c "import secrets; print(secrets.token_urlsafe(32))"
     ADMIN_API_KEY: str = ""
 
+    # Fase 1.3 — Programa de Influenciadores (pago por resultado)
+    # Valores em centavos de USD. Defaults: $2/cadastro, teto $100/mês.
+    # Pagamentos reais dependem de Fase 5 (integração de pagamentos).
+    INFLUENCER_PAYMENT_PER_REFERRAL_CENTS: int = 200   # $2.00
+    INFLUENCER_MONTHLY_CAP_CENTS: int = 10000          # $100.00
+
 
 def _load() -> Settings:
     try:

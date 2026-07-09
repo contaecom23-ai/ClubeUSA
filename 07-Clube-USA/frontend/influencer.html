@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Programa de Influenciadores — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <style>
+    .container { max-width: 600px; }
+
+    /* Tier badge */
+    .tier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: .95rem;
+      margin-bottom: 20px;
+    }
+    .tier-none       { background: #f0f0f0; color: #666; }
+    .tier-parceiro   { background: #e3f2fd; color: #1565c0; }
+    .tier-embaixador { background: #fff8e1; color: #e65100; }
+    .tier-hall_da_fama { background: #fce4ec; color: #880e4f; }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .stat-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--brand); }
+    .stat-label { font-size: .8rem; color: var(--muted); margin-top: 4px; }
+
+    /* Progress bar */
+    .progress-wrap { margin: 20px 0; }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .85rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .progress-bar-bg {
+      background: #e9ecef;
+      border-radius: 8px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--brand);
+      border-radius: 8px;
+      transition: width .5s ease;
+    }
+
+    /* Credits */
+    .credits-box {
+      background: #f0f7ff;
+      border: 1px solid #b3d1f5;
+      border-radius: var(--radius);
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .credits-amount {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--brand);
+    }
+    .credits-note {
+      font-size: .8rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    /* Referral link */
+    .referral-box {
+      margin: 20px 0;
+    }
+    .referral-input-wrap {
+      display: flex;
+      gap: 8px;
+    }
+    .referral-input-wrap input {
+      flex: 1;
+      background: var(--bg);
+      cursor: text;
+    }
+    .btn-copy {
+      white-space: nowrap;
+      padding: 10px 16px;
+      background: var(--brand);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: .9rem;
+    }
+    .btn-copy:hover { background: var(--brand-dark); }
+
+    /* Tier roadmap */
+    .tier-roadmap {
+      margin: 24px 0;
+    }
+    .tier-roadmap h3 { font-size: 1rem; margin-bottom: 12px; }
+    .tier-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tier-row:last-child { border-bottom: none; }
+    .tier-icon { font-size: 1.4rem; width: 32px; text-align: center; }
+    .tier-info { flex: 1; }
+    .tier-name { font-weight: 600; font-size: .95rem; }
+    .tier-req  { font-size: .8rem; color: var(--muted); }
+    .tier-check { color: var(--success); font-weight: 700; }
+
+    .loading { text-align: center; color: var(--muted); padding: 40px 0; }
+    .alert { padding: 12px 16px; border-radius: var(--radius); margin-bottom: 16px; display: none; }
+    .alert-danger { background: #fdecea; color: var(--danger); border: 1px solid #f5c2c0; }
+    .alert-success { background: #e8f5e9; color: var(--success); border: 1px solid #c8e6c9; }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #333; color: #fff; padding: 10px 20px; border-radius: 8px;
+      font-size: .9rem; opacity: 0; transition: opacity .3s;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+<header class="site-header">
+  <span class="logo">🇧🇷 Clube USA</span>
+  <nav>
+    <a href="promotions.html">Promoções</a>
+    <a href="profile.html">Perfil</a>
+    <a href="#" id="nav-logout">Sair</a>
+  </nav>
+</header>
+
+<main class="container">
+  <div id="alert" class="alert"></div>
+
+  <div id="loading" class="loading">Carregando...</div>
+
+  <div id="content" style="display:none">
+    <h1>Programa de Influenciadores</h1>
+    <p class="subtitle">Indique amigos e ganhe créditos por cada cadastro válido.</p>
+
+    <div id="tier-badge" class="tier-badge"></div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-value" id="valid-count">0</div>
+        <div class="stat-label">Cadastros válidos indicados</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="total-count">0</div>
+        <div class="stat-label">Total de cadastros</div>
+      </div>
+    </div>
+
+    <div class="credits-box">
+      <div style="font-size:.9rem;font-weight:600;margin-bottom:4px;">Créditos estimados</div>
+      <div class="credits-amount" id="credits-amount">$0.00</div>
+      <div class="credits-note" id="credits-note"></div>
+    </div>
+
+    <div class="progress-wrap" id="progress-section">
+      <div class="progress-label">
+        <span id="progress-label-left">Progresso</span>
+        <span id="progress-label-right"></span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="referral-box">
+      <label style="font-weight:600;margin-bottom:8px;display:block;">Seu link de indicação</label>
+      <div class="referral-input-wrap">
+        <input type="text" id="referral-link" readonly />
+        <button class="btn-copy" id="btn-copy">Copiar</button>
+      </div>
+    </div>
+
+    <div class="tier-roadmap">
+      <h3>Como funciona</h3>
+      <div class="tier-row">
+        <div class="tier-icon">🤝</div>
+        <div class="tier-info">
+          <div class="tier-name">Parceiro</div>
+          <div class="tier-req">50 cadastros válidos • <span id="rate-label"></span> por cadastro</div>
+        </div>
+        <div id="check-parceiro"></div>
+      </div>
+      <div class="tier-row">
+        <div class="tier-icon">⭐</div>
+        <div class="tier-info">
+          <div class="tier-name">Embaixador</div>
+          <div class="tier-req">250 cadastros válidos</div>
+        </div>
+        <div id="check-embaixador"></div>
+      </div>
+      <div class="tier-row">
+        <div class="tier-icon">🏆</div>
+        <div class="tier-info">
+          <div class="tier-name">Hall da Fama</div>
+          <div class="tier-req">1.000 cadastros válidos</div>
+        </div>
+        <div id="check-hall"></div>
+      </div>
+    </div>
+
+    <p style="font-size:.8rem;color:var(--muted);margin-top:16px;">
+      * Créditos são estimados e sujeitos a verificação. Cadastro válido = email confirmado + perfil preenchido.
+      Pagamentos mensais limitados a <span id="cap-label"></span>/mês. Saques disponíveis na Fase 5 da plataforma.
+    </p>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="assets/app.js"></script>
+<script>
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  const TIER_LABELS = {
+    none: { label: 'Sem selo ainda', cls: 'tier-none', icon: '' },
+    parceiro: { label: 'Parceiro 🤝', cls: 'tier-parceiro', icon: '' },
+    embaixador: { label: 'Embaixador ⭐', cls: 'tier-embaixador', icon: '' },
+    hall_da_fama: { label: 'Hall da Fama 🏆', cls: 'tier-hall_da_fama', icon: '' },
+  };
+
+  async function load() {
+    if (!requireAuth()) return;
+
+    document.getElementById('nav-logout').onclick = e => { e.preventDefault(); Auth.logout(); };
+
+    const res = await apiRequest('/influencer/me', { auth: true });
+    if (!res || !res.ok) {
+      const el = document.getElementById('alert');
+      el.textContent = 'Erro ao carregar dados. Tente novamente.';
+      el.className = 'alert alert-danger';
+      el.style.display = 'block';
+      document.getElementById('loading').style.display = 'none';
+      return;
+    }
+
+    const d = res.data;
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    // Tier badge
+    const tier = d.tier;
+    const tierInfo = TIER_LABELS[tier] || TIER_LABELS.none;
+    const badge = document.getElementById('tier-badge');
+    badge.textContent = tierInfo.label;
+    badge.className = 'tier-badge ' + tierInfo.cls;
+
+    // Stats
+    document.getElementById('valid-count').textContent = d.valid_referral_count;
+    document.getElementById('total-count').textContent = d.total_referral_count;
+
+    // Credits
+    document.getElementById('credits-amount').textContent = '$' + escHtml(d.pending_credits_usd);
+    document.getElementById('credits-note').textContent =
+      '$' + escHtml(d.payment_per_referral_usd) + ' por cadastro válido • teto $' + escHtml(d.monthly_cap_usd) + '/mês';
+
+    document.getElementById('rate-label').textContent = '$' + escHtml(d.payment_per_referral_usd);
+    document.getElementById('cap-label').textContent = '$' + escHtml(d.monthly_cap_usd);
+
+    // Progress bar
+    const prog = d.tier_progress;
+    if (prog.next_tier) {
+      const nextLabels = { parceiro: 'Parceiro (50)', embaixador: 'Embaixador (250)', hall_da_fama: 'Hall da Fama (1000)' };
+      document.getElementById('progress-label-left').textContent =
+        'Progresso para ' + (nextLabels[prog.next_tier] || prog.next_tier);
+      document.getElementById('progress-label-right').textContent =
+        'Faltam ' + prog.referrals_needed + ' cadastro(s)';
+      document.getElementById('progress-bar').style.width = prog.progress_pct + '%';
+    } else {
+      document.getElementById('progress-section').style.display = 'none';
+    }
+
+    // Tier checks
+    const tiers = ['parceiro', 'embaixador', 'hall_da_fama'];
+    const tierOrder = ['none', 'parceiro', 'embaixador', 'hall_da_fama'];
+    const currentIdx = tierOrder.indexOf(tier);
+    tiers.forEach((t, i) => {
+      const el = document.getElementById('check-' + t.replace('_da_fama', '').replace('hall', 'hall'));
+      const checkEl = document.getElementById('check-' + (t === 'hall_da_fama' ? 'hall' : t));
+      if (checkEl && tierOrder.indexOf(t) <= currentIdx) {
+        checkEl.className = 'tier-check';
+        checkEl.textContent = '✓';
+      }
+    });
+
+    // Referral link
+    const slug = d.slug;
+    const linkInput = document.getElementById('referral-link');
+    if (slug) {
+      const base = window.location.origin + window.location.pathname.replace('influencer.html', '');
+      linkInput.value = base + 'register.html?ref=' + encodeURIComponent(slug);
+    } else {
+      linkInput.value = 'Link não disponível — complete seu perfil';
+    }
+
+    // Copy button
+    document.getElementById('btn-copy').addEventListener('click', () => {
+      if (!slug) return;
+      navigator.clipboard.writeText(linkInput.value)
+        .then(() => showToast('Link copiado!'))
+        .catch(() => {
+          linkInput.select();
+          document.execCommand('copy');
+          showToast('Link copiado!');
+        });
+    });
+  }
+
+  load();
+</script>
+</body>
+</html>
