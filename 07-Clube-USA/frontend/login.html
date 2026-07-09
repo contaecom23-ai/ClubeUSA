@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a; color: #f1f5f9;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: #1e293b; border-radius: 12px; padding: 2rem;
+      width: 100%; max-width: 380px; box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    h1 { font-size: 1.6rem; color: #38bdf8; margin-bottom: 0.3rem; }
+    .sub { color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.8rem; }
+    label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.3rem; }
+    input {
+      width: 100%; padding: 0.7rem 0.9rem; border-radius: 8px;
+      border: 1px solid #334155; background: #0f172a; color: #f1f5f9;
+      font-size: 0.95rem; margin-bottom: 1rem; outline: none;
+    }
+    input:focus { border-color: #38bdf8; }
+    .btn {
+      width: 100%; padding: 0.85rem; background: #38bdf8; color: #0f172a;
+      border: none; border-radius: 8px; font-size: 1rem; font-weight: 700;
+      cursor: pointer; margin-top: 0.5rem;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { padding: 0.75rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1rem; display: none; }
+    .msg.error { background: #7f1d1d; color: #fca5a5; display: block; }
+    .link { text-align: center; margin-top: 1.2rem; font-size: 0.88rem; color: #94a3b8; }
+    .link a { color: #38bdf8; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Entrar</h1>
+    <p class="sub">Acesse sua conta no Clube USA</p>
+
+    <div id="msg" class="msg"></div>
+
+    <form id="form" novalidate>
+      <label for="email">E-mail</label>
+      <input id="email" type="email" placeholder="seu@email.com" required />
+
+      <label for="password">Senha</label>
+      <input id="password" type="password" placeholder="Sua senha" required />
+
+      <button class="btn" id="btn" type="submit">Entrar</button>
+    </form>
+
+    <div class="link">
+      Não tem conta? <a href="register.html">Cadastrar</a>
+    </div>
+  </div>
+
+  <script type="module">
+    // =====================================================
+    // CONFIGURAÇÃO — substitua pelos seus valores Supabase
+    // =====================================================
+    const SUPABASE_URL = "SUBSTITUA_AQUI";
+    const SUPABASE_ANON_KEY = "SUBSTITUA_AQUI";
+    // =====================================================
+
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const form = document.getElementById("form");
+    const btn = document.getElementById("btn");
+    const msg = document.getElementById("msg");
+
+    // Redireciona se já logado
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) window.location.href = "profile.html";
+    });
+
+    function showMsg(text) {
+      msg.textContent = text;
+      msg.className = "msg error";
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = "Entrando...";
+      msg.className = "msg";
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        showMsg("E-mail ou senha incorretos.");
+        btn.disabled = false;
+        btn.textContent = "Entrar";
+        return;
+      }
+
+      window.location.href = "profile.html";
+    });
+  </script>
+</body>
+</html>

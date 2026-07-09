@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirmando e-mail — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a; color: #f1f5f9;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: #1e293b; border-radius: 12px; padding: 2.5rem;
+      width: 100%; max-width: 400px; text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.5rem; color: #38bdf8; margin-bottom: 0.75rem; }
+    p { color: #94a3b8; line-height: 1.6; }
+    .btn {
+      display: inline-block; margin-top: 1.8rem; padding: 0.8rem 2rem;
+      background: #38bdf8; color: #0f172a; border-radius: 8px;
+      font-weight: 700; text-decoration: none; font-size: 0.95rem;
+    }
+    .msg-error { color: #fca5a5; background: #7f1d1d; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="icon">⏳</div>
+    <h1>Confirmando seu e-mail...</h1>
+    <p>Aguarde um instante.</p>
+  </div>
+
+  <script type="module">
+    // =====================================================
+    // CONFIGURAÇÃO — substitua pelos seus valores Supabase
+    // =====================================================
+    const SUPABASE_URL = "SUBSTITUA_AQUI";
+    const SUPABASE_ANON_KEY = "SUBSTITUA_AQUI";
+    // =====================================================
+
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function confirm() {
+      const card = document.getElementById("card");
+
+      // Supabase PKCE flow: token_hash + type na URL
+      const params = new URLSearchParams(window.location.search);
+      const tokenHash = params.get("token_hash");
+      const type = params.get("type");
+
+      if (tokenHash && type) {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+        if (!error) {
+          card.innerHTML = `
+            <div class="icon">✅</div>
+            <h1>E-mail confirmado!</h1>
+            <p>Seu cadastro está ativo. Bem-vindo ao Clube USA!</p>
+            <a href="profile.html" class="btn">Ir para meu perfil</a>
+          `;
+          return;
+        }
+      }
+
+      // Fallback: verificar se já tem sessão ativa (link mágico)
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        card.innerHTML = `
+          <div class="icon">✅</div>
+          <h1>E-mail confirmado!</h1>
+          <p>Seu cadastro está ativo. Bem-vindo ao Clube USA!</p>
+          <a href="profile.html" class="btn">Ir para meu perfil</a>
+        `;
+        return;
+      }
+
+      card.innerHTML = `
+        <div class="icon">❌</div>
+        <h1>Link inválido ou expirado</h1>
+        <p>Solicite um novo link de confirmação.</p>
+        <div class="msg-error">O link pode ter expirado (válido por 24h). Tente se cadastrar novamente.</div>
+        <a href="register.html" class="btn">Voltar ao cadastro</a>
+      `;
+    }
+
+    confirm();
+  </script>
+</body>
+</html>

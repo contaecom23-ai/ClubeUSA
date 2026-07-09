@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meu Perfil — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a; color: #f1f5f9;
+      min-height: 100vh; padding: 1.5rem;
+    }
+    header {
+      max-width: 600px; margin: 0 auto 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .logo { font-size: 1.4rem; font-weight: 800; color: #38bdf8; }
+    .logout {
+      background: transparent; border: 1px solid #475569; color: #94a3b8;
+      padding: 0.4rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+    }
+    .logout:hover { border-color: #94a3b8; }
+    .card {
+      background: #1e293b; border-radius: 12px; padding: 2rem;
+      max-width: 600px; margin: 0 auto;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    .email-badge {
+      font-size: 0.85rem; color: #64748b; margin-bottom: 1.5rem;
+    }
+    .section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;
+      color: #64748b; margin: 1.5rem 0 0.75rem; }
+    label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.3rem; }
+    input, select {
+      width: 100%; padding: 0.7rem 0.9rem; border-radius: 8px;
+      border: 1px solid #334155; background: #0f172a; color: #f1f5f9;
+      font-size: 0.95rem; margin-bottom: 1rem; outline: none;
+    }
+    input:focus, select:focus { border-color: #38bdf8; }
+    input[readonly] { color: #64748b; cursor: default; }
+    .btn {
+      padding: 0.75rem 1.8rem; background: #38bdf8; color: #0f172a;
+      border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700;
+      cursor: pointer;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { padding: 0.75rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1rem; display: none; }
+    .msg.error { background: #7f1d1d; color: #fca5a5; display: block; }
+    .msg.success { background: #14532d; color: #86efac; display: block; }
+    .referral-box {
+      background: #0f172a; border: 1px dashed #334155; border-radius: 8px;
+      padding: 1rem; margin-top: 1.5rem;
+    }
+    .referral-box p { font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem; }
+    .referral-code { font-family: monospace; font-size: 1.1rem; color: #38bdf8; }
+    #loading { text-align: center; padding: 3rem; color: #64748b; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">🇧🇷 Clube USA</div>
+    <button class="logout" id="logout-btn">Sair</button>
+  </header>
+
+  <div id="loading">Carregando perfil...</div>
+
+  <div class="card" id="profile-card" style="display:none">
+    <h1 id="display-name">Meu Perfil</h1>
+    <div class="email-badge" id="display-email"></div>
+
+    <div id="msg" class="msg"></div>
+
+    <div class="section-title">Informações pessoais</div>
+
+    <form id="form">
+      <label for="full_name">Nome completo</label>
+      <input id="full_name" type="text" maxlength="100" required />
+
+      <label for="state_us">Estado (EUA)</label>
+      <select id="state_us">
+        <option value="">Selecione...</option>
+        <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+        <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+        <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+        <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+        <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+        <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+        <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+        <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+        <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+        <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+        <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+        <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+        <option>WI</option><option>WY</option>
+      </select>
+
+      <label for="city">Cidade</label>
+      <input id="city" type="text" maxlength="100" />
+
+      <label for="phone">Telefone (opcional)</label>
+      <input id="phone" type="tel" maxlength="20" placeholder="+1 (555) 000-0000" />
+
+      <button class="btn" id="save-btn" type="submit">Salvar</button>
+    </form>
+
+    <div class="referral-box">
+      <p>Seu link de indicação (disponível em breve — Fase 0.2)</p>
+      <span class="referral-code" id="referral-code">—</span>
+    </div>
+  </div>
+
+  <script type="module">
+    // =====================================================
+    // CONFIGURAÇÃO — substitua pelos seus valores Supabase
+    // =====================================================
+    const SUPABASE_URL = "SUBSTITUA_AQUI";
+    const SUPABASE_ANON_KEY = "SUBSTITUA_AQUI";
+    const BACKEND_URL = "http://localhost:8000";
+    // =====================================================
+
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const loading = document.getElementById("loading");
+    const card = document.getElementById("profile-card");
+    const msg = document.getElementById("msg");
+
+    function showMsg(text, type) {
+      msg.textContent = text;
+      msg.className = `msg ${type}`;
+      setTimeout(() => { msg.className = "msg"; }, 4000);
+    }
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      const token = session.access_token;
+
+      // Busca perfil do backend (token sempre validado server-side)
+      const res = await fetch(`${BACKEND_URL}/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      loading.style.display = "none";
+
+      if (!res.ok) {
+        card.style.display = "block";
+        showMsg("Erro ao carregar perfil. Tente novamente.", "error");
+        return;
+      }
+
+      const profile = await res.json();
+
+      // Preenche campos
+      document.getElementById("display-name").textContent = profile.full_name || "Meu Perfil";
+      document.getElementById("display-email").textContent = session.user.email;
+      document.getElementById("full_name").value = profile.full_name || "";
+      document.getElementById("city").value = profile.city || "";
+      document.getElementById("phone").value = profile.phone || "";
+      document.getElementById("referral-code").textContent = profile.referral_code || "—";
+
+      const stateSelect = document.getElementById("state_us");
+      if (profile.state_us) {
+        stateSelect.value = profile.state_us;
+      }
+
+      card.style.display = "block";
+
+      // Salvar perfil
+      document.getElementById("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const saveBtn = document.getElementById("save-btn");
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Salvando...";
+
+        const body = {
+          full_name: document.getElementById("full_name").value.trim() || undefined,
+          city: document.getElementById("city").value.trim() || undefined,
+          state_us: stateSelect.value || undefined,
+          phone: document.getElementById("phone").value.trim() || undefined,
+        };
+        // Remove undefined
+        Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
+
+        if (Object.keys(body).length === 0) {
+          showMsg("Nenhum campo para salvar.", "error");
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Salvar";
+          return;
+        }
+
+        const { data: { session: s } } = await supabase.auth.getSession();
+        const r = await fetch(`${BACKEND_URL}/profile`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${s.access_token}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (r.ok) {
+          const updated = await r.json();
+          document.getElementById("display-name").textContent = updated.full_name;
+          showMsg("Perfil atualizado com sucesso!", "success");
+        } else {
+          showMsg("Erro ao salvar. Tente novamente.", "error");
+        }
+
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Salvar";
+      });
+    }
+
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "index.html";
+    });
+
+    init();
+  </script>
+</body>
+</html>
