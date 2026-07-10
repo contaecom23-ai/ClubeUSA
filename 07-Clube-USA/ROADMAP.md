@@ -4,9 +4,30 @@
 
 ---
 
+## Regras de Segurança e Construção (resumo executivo)
+
+- Auth: TODA rota exige token válido; lista mínima e explícita de rotas públicas.
+- Multi-tenant: todo dado isolado por user_id do servidor (do token), nunca do input do cliente.
+- RLS no Supabase como endgame; até lá, acesso só server-side via service_role.
+- Segredos sempre via env var, nunca hardcoded, sem default forjável.
+- Tokens JWT com TTL curto (7 dias) + refresh.
+- Rate-limit em login e registro (anti brute-force).
+- XSS, SQL injection, path traversal, IDOR: protegidos na camada de API.
+- CORS restrito a origens conhecidas; headers de segurança ativos.
+- Webhooks externos com verificação de assinatura HMAC.
+- Nunca escalar decisão irreversível/de custo sem registro em DECISOES.md.
+
+---
+
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - API FastAPI: POST /auth/register, /auth/login, /auth/verify-email, /auth/resend-confirmation
+  - GET + PATCH /profile/me (autenticado)
+  - Migração SQL users table (Supabase/PostgreSQL)
+  - Frontend HTML: register, login, verify-email, profile
+  - Testes unitários com mocks (Supabase + email)
+  - PR: feature/fase-0-1-cadastro
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
@@ -65,4 +86,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-07-10*

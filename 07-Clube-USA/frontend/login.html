@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Login — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>Clube USA 🇧🇷🇺🇸</h1>
+      <p>A plataforma do imigrante brasileiro nos EUA</p>
+    </div>
+
+    <h2>Entrar</h2>
+
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email"
+               required autocomplete="email"
+               placeholder="voce@email.com">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password"
+               required autocomplete="current-password"
+               placeholder="Sua senha">
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">Entrar</button>
+    </form>
+
+    <div id="msg" class="msg"></div>
+    <div id="spinner" class="spinner">Entrando...</div>
+
+    <div id="resendRow" style="display:none;text-align:center;margin-top:12px;">
+      <a href="#" id="resendLink" style="color:#1a56db;font-size:.88rem;">
+        Reenviar email de confirmação
+      </a>
+    </div>
+
+    <div class="link-row">
+      Não tem conta? <a href="register.html">Criar conta grátis</a>
+    </div>
+  </div>
+
+  <script>
+    const API = window.API_URL || '';
+
+    const form = document.getElementById('loginForm');
+    const msgEl = document.getElementById('msg');
+    const spinner = document.getElementById('spinner');
+    const submitBtn = document.getElementById('submitBtn');
+    const resendRow = document.getElementById('resendRow');
+
+    function showMsg(text, type) {
+      msgEl.textContent = text;
+      msgEl.className = 'msg ' + type;
+      msgEl.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msgEl.style.display = 'none';
+      resendRow.style.display = 'none';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showMsg('Preencha todos os campos.', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      spinner.classList.add('active');
+
+      try {
+        const res = await fetch(`${API}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.access_token) {
+          sessionStorage.setItem('access_token', data.access_token);
+          window.location.href = 'profile.html';
+        } else if (res.status === 429) {
+          showMsg('Muitas tentativas. Aguarde 15 minutos e tente novamente.', 'error');
+        } else if (res.status === 403) {
+          showMsg(data.detail || 'Email não confirmado.', 'error');
+          resendRow.style.display = 'block';
+          document.getElementById('resendLink').dataset.email = email;
+        } else {
+          showMsg(data.detail || 'Email ou senha incorretos.', 'error');
+        }
+      } catch {
+        showMsg('Erro de conexão. Verifique sua internet e tente novamente.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        spinner.classList.remove('active');
+      }
+    });
+
+    document.getElementById('resendLink').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = e.target.dataset.email;
+      if (!email) return;
+      try {
+        await fetch(`${API}/api/auth/resend-confirmation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        showMsg('Novo link de confirmação enviado. Verifique sua caixa de entrada.', 'success');
+      } catch {
+        showMsg('Erro ao reenviar. Tente novamente.', 'error');
+      }
+    });
+  </script>
+</body>
+</html>

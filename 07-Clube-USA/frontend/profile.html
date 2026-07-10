@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .profile-field { margin-bottom: 16px; }
+    .profile-label { font-size: .8rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+    .profile-value { font-size: 1rem; color: #111827; margin-top: 2px; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .75rem; font-weight: 700; }
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .divider { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="top-bar">
+      <span style="font-weight:800;color:#1a56db;font-size:1.1rem;">Clube USA 🇧🇷🇺🇸</span>
+      <button id="logoutBtn" class="btn btn-secondary" style="width:auto;padding:6px 16px;font-size:.85rem;">
+        Sair
+      </button>
+    </div>
+
+    <h2>Meu Perfil</h2>
+
+    <div id="loadingEl" style="color:#6b7280;text-align:center;padding:20px 0;">Carregando...</div>
+    <div id="profileContent" style="display:none;">
+
+      <div class="profile-field">
+        <div class="profile-label">Nome</div>
+        <div class="profile-value" id="displayName"></div>
+      </div>
+
+      <div class="profile-field">
+        <div class="profile-label">Email</div>
+        <div class="profile-value" id="displayEmail"></div>
+      </div>
+
+      <div class="profile-field">
+        <div class="profile-label">Status</div>
+        <div class="profile-value">
+          <span class="badge badge-green">✓ Email confirmado</span>
+        </div>
+      </div>
+
+      <div class="profile-field">
+        <div class="profile-label">Membro desde</div>
+        <div class="profile-value" id="displayCreated"></div>
+      </div>
+
+      <hr class="divider">
+
+      <h2 style="font-size:1rem;margin-bottom:16px;">Editar perfil</h2>
+
+      <form id="editForm" novalidate>
+        <div class="form-group">
+          <label for="edit_name">Nome completo</label>
+          <input type="text" id="edit_name" name="full_name"
+                 minlength="2" maxlength="100" autocomplete="name">
+        </div>
+        <button type="submit" class="btn btn-primary" id="saveBtn">Salvar alterações</button>
+      </form>
+
+      <div id="editMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.API_URL || '';
+
+    function getToken() {
+      return sessionStorage.getItem('access_token');
+    }
+
+    function logout() {
+      sessionStorage.removeItem('access_token');
+      window.location.href = 'login.html';
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    async function loadProfile() {
+      const token = getToken();
+      if (!token) { logout(); return; }
+
+      try {
+        const res = await fetch(`${API}/api/profile/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.status === 401 || res.status === 403) { logout(); return; }
+
+        const user = await res.json();
+
+        // Escape values before inserting as text (defense-in-depth against stored XSS)
+        document.getElementById('displayName').textContent = user.full_name;
+        document.getElementById('displayEmail').textContent = user.email;
+        document.getElementById('displayCreated').textContent =
+          new Date(user.created_at).toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric' });
+        document.getElementById('edit_name').value = user.full_name;
+
+        document.getElementById('loadingEl').style.display = 'none';
+        document.getElementById('profileContent').style.display = 'block';
+      } catch {
+        document.getElementById('loadingEl').textContent = 'Erro ao carregar perfil. Recarregue a página.';
+      }
+    }
+
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = getToken();
+      if (!token) { logout(); return; }
+
+      const full_name = document.getElementById('edit_name').value.trim();
+      const msgEl = document.getElementById('editMsg');
+      msgEl.style.display = 'none';
+
+      if (!full_name || full_name.length < 2) {
+        msgEl.textContent = 'Nome deve ter ao menos 2 caracteres.';
+        msgEl.className = 'msg error';
+        msgEl.style.display = 'block';
+        return;
+      }
+
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Salvando...';
+
+      try {
+        const res = await fetch(`${API}/api/profile/me`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ full_name }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          document.getElementById('displayName').textContent = data.full_name;
+          msgEl.textContent = 'Perfil atualizado com sucesso!';
+          msgEl.className = 'msg success';
+          msgEl.style.display = 'block';
+        } else if (res.status === 401) {
+          logout();
+        } else {
+          msgEl.textContent = data.detail || 'Erro ao salvar.';
+          msgEl.className = 'msg error';
+          msgEl.style.display = 'block';
+        }
+      } catch {
+        msgEl.textContent = 'Erro de conexão.';
+        msgEl.className = 'msg error';
+        msgEl.style.display = 'block';
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar alterações';
+      }
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>
