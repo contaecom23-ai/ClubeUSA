@@ -12,7 +12,52 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
-## Decisões Pendentes
+## ⚠️ ATENÇÃO IMEDIATA — Acúmulo de PRs (D-004)
+
+### [2026-07-10] D-004: 17 PRs abertos sem revisão — ação necessária HOJE
+
+**Contexto:** O builder autônomo rodou ~10 vezes nos últimos dias. Como o ROADMAP no `main` ainda mostra tudo como `[ ]`, cada rodada concluiu que precisava reimplementar tudo do zero. Resultado: 17 PRs acumulados, nenhum merged. Código de qualidade existe, mas está parado.
+
+**Situação técnica atual (verificada em 2026-07-10):**
+- Branch `feature/fase-0-1-cadastro` (PR #17): **21 testes passando**, código de produção pronto para Fase 0.1
+- Código auditado: segurança OK (bcrypt rounds=12, JWT 7d, rate-limit, IDOR impossível, XSS bloqueado, RLS habilitado)
+- PRs para outras fases existem mas NÃO foram auditados nesta rodada
+
+**O que acontece se você não agir:** O builder continua criando PRs duplicados a cada rodada. A cada 8h, mais um PR de Fase 0.1 aparece. O repositório vira um cemitério de branches.
+
+**Plano de ação (60 minutos da sua parte):**
+
+**Passo 1 — Mergear este PR primeiro (PR #17):**
+1. Abra https://github.com/contaecom23-ai/ClubeUSA/pull/17
+2. Revise o diff (32 arquivos, backend + frontend + testes)
+3. Marque como "Ready for review" → Merge
+
+**Passo 2 — Fechar PRs duplicados de Fase 0.1 (7 PRs):**
+Feche com comentário "Substituído pelo PR #17" os PRs: #1, #6, #7, #11, #13, #15 (e possivelmente #2)
+
+**Passo 3 — Decidir sobre PRs de fases ainda não implantadas:**
+
+| PR | Fase | Recomendação |
+|----|------|-------------|
+| #3 | 0.2 Referral | Manter aberto — revisar depois de 0.1 em produção |
+| #4 | 0.3 Analytics | Manter aberto — revisar depois de 0.1 em produção |
+| #5 | 0.4 Anti-fraude | Manter aberto — revisar depois de 0.1 em produção |
+| #9 | Security polish | Manter — melhoras de segurança válidas |
+| #10 | Fix workflow YAML | Manter — conserta o YAML do CI (importante) |
+| #12 | 1.1 Promoções | ⚠️ Não mergear ainda — Fase 0 deve estar em prod primeiro |
+| #14 | 1.2 Busca ZIP | ⚠️ Não mergear ainda — depende de 0.1 deployado |
+| #16 | 1.3 Influenciadores | ⚠️ Não mergear ainda — envolve orçamento (ver D-007) |
+
+**Passo 4 — Fornecer credenciais para que o código vá a produção:**
+Veja D-001 (email), D-002 (Supabase), D-003 (hosting) abaixo.
+
+**Raiz do problema:** O YAML do workflow GitHub Actions (`.github/workflows/clubeusa-builder.yml`) está malformado e nunca rodou automaticamente. O PR #10 corrige isso. Mergear o PR #10 após o #17 vai normalizar o ciclo automático.
+
+**Status:** PENDENTE — decisão exclusiva do dono
+
+---
+
+## Decisões de Infraestrutura
 
 ---
 
@@ -97,6 +142,40 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 **Recomendação:** Frontend na Vercel (grátis) + API no Railway ($5/mês). Total: $5/mês para os primeiros 1.000 usuários. Escala sem refatoração até 10k+ usuários.
 
 **Ação necessária:** Confirmar o domínio (`clubeusa.com` ou outro?) e a escolha de hosting para que o Claude possa configurar as variáveis de ambiente e, se necessário, os arquivos de deploy (Dockerfile, railway.toml, vercel.json).
+
+**Status:** PENDENTE
+
+---
+
+## Decisões de Produto / Negócio
+
+---
+
+### [2026-07-09] D-007: Orçamento para programa de influenciadores (Fase 1.3)
+
+**Contexto:** O PR #16 implementou o sistema técnico de rastreamento de influenciadores (pagamento por cadastro válido). Mas o sistema só pode ser ativado quando você definir:
+
+**Perguntas:**
+1. Quanto pagar por cadastro válido? (sugestão: $0,50–$2,00 por cadastro)
+2. Qual o teto mensal de budget para influenciadores?
+3. Os selos (Parceiro 50 / Embaixador 250 / Hall da Fama 1.000) têm bônus em dinheiro ou só reconhecimento?
+
+**Recomendação:** Comece com $1,00/cadastro válido com teto de $500/mês. Teste por 30 dias e ajuste. Não ative antes de ter Fase 0 em produção (base técnica necessária).
+
+**Status:** PENDENTE — não ativar antes de Fase 0 deployada
+
+---
+
+### [2026-07-09] D-008: Curadoria de Promoções/Achados (Fase 1.1)
+
+**Contexto:** O PR #12 implementou o CRUD de promoções. Mas o produto precisa de decisão sobre:
+
+**Perguntas:**
+1. Quem valida as promoções antes de publicar? (auto-publish ou revisão manual?)
+2. Quais categorias iniciais? (supermercados, restaurantes, serviços, roupas?)
+3. Como seed inicial — você vai alimentar manualmente as primeiras 20–30 promoções?
+
+**Recomendação:** Início com revisão manual (você aprova cada promoção). Automatize depois que tiver volume e confiança na qualidade. Categorias iniciais: Supermercado, Restaurante, Serviços, Vestuário.
 
 **Status:** PENDENTE
 
