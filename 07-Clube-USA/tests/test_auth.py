@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from api.services import password_service
+from api.services import password_service, token_service
 
 
 def _db_ok(data=None):
@@ -92,7 +92,10 @@ class TestVerifyEmail:
             resp = client.post(self.URL, json={"token": token})
 
         assert resp.status_code == 200
-        assert "access_token" in resp.json()
+        body = resp.json()
+        assert "access_token" in body
+        assert "refresh_token" in body
+        assert body["token_type"] == "bearer"
 
     def test_verify_invalid_token(self, client, mock_db):
         mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value = _db_ok([])
@@ -154,8 +157,9 @@ class TestLogin:
         assert resp.status_code == 200
         body = resp.json()
         assert "access_token" in body
+        assert "refresh_token" in body
         assert body["token_type"] == "bearer"
-        assert body["expires_in_days"] == 7
+        assert body["expires_in_days"] == 1  # access token is 1 day
 
     def test_login_wrong_password(self, client, mock_db):
         mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value = _db_ok(
@@ -188,3 +192,37 @@ class TestLogin:
         resp = client.post(self.URL, json={"email": "test@example.com", "password": "senha-forte-123"})
         assert resp.status_code == 403
         assert "confirmado" in resp.json()["detail"].lower()
+
+
+class TestRefresh:
+    URL = "/api/auth/refresh"
+
+    def test_refresh_with_valid_refresh_token(self, client, mock_db):
+        uid = str(uuid.uuid4())
+        refresh_tok = token_service.create_refresh_token(uid)
+
+        resp = client.post(self.URL, json={"refresh_token": refresh_tok})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "access_token" in body
+        assert "refresh_token" in body
+        assert body["expires_in_days"] == 1
+
+    def test_refresh_with_access_token_rejected(self, client, mock_db):
+        uid = str(uuid.uuid4())
+        access_tok = token_service.create_access_token(uid)
+
+        resp = client.post(self.URL, json={"refresh_token": access_tok})
+        assert resp.status_code == 401
+
+    def test_refresh_with_garbage_token(self, client, mock_db):
+        resp = client.post(self.URL, json={"refresh_token": "not.a.real.token"})
+        assert resp.status_code == 401
+
+    def test_refresh_returns_same_refresh_token(self, client, mock_db):
+        uid = str(uuid.uuid4())
+        refresh_tok = token_service.create_refresh_token(uid)
+
+        resp = client.post(self.URL, json={"refresh_token": refresh_tok})
+        assert resp.status_code == 200
+        assert resp.json()["refresh_token"] == refresh_tok

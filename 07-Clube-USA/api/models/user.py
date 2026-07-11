@@ -36,6 +36,10 @@ class ResendConfirmationRequest(BaseModel):
     email: EmailStr
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., min_length=1)
+
+
 class UpdateProfileRequest(BaseModel):
     full_name: Optional[str] = Field(None, min_length=2, max_length=100)
 
@@ -64,6 +68,7 @@ class UserPublic(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     expires_in_days: int
 

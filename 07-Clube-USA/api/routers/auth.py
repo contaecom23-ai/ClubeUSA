@@ -1,5 +1,6 @@
 """
-Auth routes — the ONLY public endpoints are register, login, verify-email, resend-confirmation.
+Auth routes — the ONLY public endpoints are register, login, verify-email,
+resend-confirmation, and refresh.
 All others require a valid JWT (get_current_user_id dependency).
 
 Security notes:
@@ -7,6 +8,8 @@ Security notes:
 - Login returns identical error for wrong email and wrong password (timing-safe)
 - Rate limits: register 10/h, login 5/15min, resend 3/h
 - Email confirmation token: UUID v4, 24h expiry
+- Tokens are segregated by type claim: access tokens cannot be used at /refresh
+  and refresh tokens are rejected at all other endpoints
 """
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -21,10 +24,10 @@ from ..database import get_db
 from ..models.user import (
     LoginRequest,
     MessageResponse,
+    RefreshTokenRequest,
     RegisterRequest,
     ResendConfirmationRequest,
     TokenResponse,
-    UserPublic,
     VerifyEmailRequest,
 )
 from ..services import email_service, password_service, token_service
@@ -37,6 +40,10 @@ _GENERIC_AUTH_ERROR = HTTPException(
     detail="Email ou senha incorretos.",
 )
 
+# Pre-computed bcrypt hash used for timing-safe login when email not found.
+# Value is irrelevant (password unknown); purpose is equal compute time.
+_DUMMY_HASH = "$2b$12$eImiTXuWVxfM37uY4JANjQ.o6OcOE7WcUqgthQ6jTODkB7hGf3oTK"
+
 
 @router.post("/register", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(settings.RATE_LIMIT_REGISTER)
@@ -45,8 +52,6 @@ async def register(
     body: RegisterRequest,
     db: Client = Depends(get_db),
 ) -> MessageResponse:
-    # Check for existing email — return 409 to avoid leaking info via timing,
-    # but 409 is acceptable here (email is their own data).
     existing = db.table("users").select("id").eq("email", body.email).execute()
     if existing.data:
         raise HTTPException(
@@ -99,7 +104,6 @@ async def verify_email(
         raise HTTPException(status_code=400, detail="Email já confirmado. Faça login.")
 
     expires_at = datetime.fromisoformat(user["email_confirm_expires_at"])
-    # Make sure both are offset-aware for comparison
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     if now > expires_at:
@@ -119,9 +123,9 @@ async def verify_email(
 
     email_service.send_welcome_email(user["email"], user["full_name"])
 
-    access_token = token_service.create_access_token(user["id"])
     return TokenResponse(
-        access_token=access_token,
+        access_token=token_service.create_access_token(user["id"]),
+        refresh_token=token_service.create_refresh_token(user["id"]),
         expires_in_days=settings.ACCESS_TOKEN_EXPIRE_DAYS,
     )
 
@@ -140,9 +144,6 @@ async def login(
         .execute()
     )
 
-    # Timing-safe: always run the verify call even if user not found (prevent enumeration).
-    # A pre-computed valid bcrypt hash is used as the dummy target.
-    _DUMMY_HASH = "$2b$12$eImiTXuWVxfM37uY4JANjQ.o6OcOE7WcUqgthQ6jTODkB7hGf3oTK"
     stored_hash = result.data[0]["password_hash"] if result.data else _DUMMY_HASH
     password_ok = password_service.verify_password(body.password, stored_hash)
 
@@ -156,9 +157,30 @@ async def login(
             detail="Email não confirmado. Verifique sua caixa de entrada.",
         )
 
-    access_token = token_service.create_access_token(user["id"])
     return TokenResponse(
-        access_token=access_token,
+        access_token=token_service.create_access_token(user["id"]),
+        refresh_token=token_service.create_refresh_token(user["id"]),
+        expires_in_days=settings.ACCESS_TOKEN_EXPIRE_DAYS,
+    )
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_access_token(body: RefreshTokenRequest) -> TokenResponse:
+    """Issue a new access token from a valid refresh token.
+
+    The refresh token is NOT rotated — the same refresh token works until it
+    expires (7 days). Token rotation can be added later when a revocation store
+    (DB table) is available.
+    """
+    user_id = token_service.decode_refresh_token(body.refresh_token)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token inválido ou expirado. Faça login novamente.",
+        )
+    return TokenResponse(
+        access_token=token_service.create_access_token(user_id),
+        refresh_token=body.refresh_token,  # return the same refresh token
         expires_in_days=settings.ACCESS_TOKEN_EXPIRE_DAYS,
     )
 
@@ -170,7 +192,6 @@ async def resend_confirmation(
     body: ResendConfirmationRequest,
     db: Client = Depends(get_db),
 ) -> MessageResponse:
-    # Always return 200 regardless — don't reveal if email exists
     result = (
         db.table("users")
         .select("id, email, full_name, email_confirmed")

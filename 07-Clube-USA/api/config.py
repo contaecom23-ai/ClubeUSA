@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     # ── Security ──────────────────────────────────────────────────────────────
     SECRET_KEY: str  # required; must be ≥ 32 random bytes (hex/urlsafe)
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_DAYS: int = 7  # short TTL per policy
+    ACCESS_TOKEN_EXPIRE_DAYS: int = 1   # short-lived access token
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # refresh token — user must re-login after 7d
 
     # ── Supabase ──────────────────────────────────────────────────────────────
     SUPABASE_URL: str  # required

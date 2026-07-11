@@ -12,6 +12,16 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
+## ✅ Verificação 2026-07-11 — build rodou, testes passando, fix aplicado
+
+**Run automático em 2026-07-11.** Verificações feitas:
+- 25 testes passando (21 originais + 4 novos para o mecanismo de refresh de token)
+- Fix aplicado: mecanismo de refresh token estava faltando (regra obrigatória: "tokens com TTL curto + refresh"). Adicionado `/auth/refresh` com segregação por claim `type`. Access token agora 1 dia; refresh token 7 dias.
+- Código de qualidade de produção confirmado: segurança, IDOR, rate-limit, XSS, RLS, bcrypt rounds=12 — tudo OK.
+- **Nenhuma nova tarefa desbloqueada.** Tudo ainda aguarda merge do PR #17 e credenciais de infra (D-001, D-002, D-003).
+
+---
+
 ## ⚠️ ATENÇÃO IMEDIATA — Acúmulo de PRs (D-004)
 
 ### [2026-07-10] D-004: 17 PRs abertos sem revisão — ação necessária HOJE
