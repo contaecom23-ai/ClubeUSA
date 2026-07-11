@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,.10);
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .logo { text-align: center; margin-bottom: 24px; }
+    .logo span { font-size: 28px; font-weight: 700; color: #1a56db; }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 24px; text-align: center; color: #111; }
+    label { display: block; font-size: 13px; font-weight: 500; color: #444; margin-bottom: 5px; }
+    input {
+      width: 100%;
+      border: 1.5px solid #d1d5db;
+      border-radius: 7px;
+      padding: 10px 12px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color .15s;
+      margin-bottom: 16px;
+    }
+    input:focus { border-color: #1a56db; }
+    button {
+      width: 100%;
+      background: #1a56db;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    button:hover { background: #1648c0; }
+    button:disabled { background: #9cb5f0; cursor: not-allowed; }
+    .msg {
+      margin-top: 14px;
+      padding: 10px 14px;
+      border-radius: 7px;
+      font-size: 14px;
+      display: none;
+    }
+    .msg.error { background: #fff1f2; color: #9f1239; border: 1px solid #fca5a5; display: block; }
+    .footer { text-align: center; margin-top: 20px; font-size: 14px; color: #666; }
+    .footer a { color: #1a56db; text-decoration: none; }
+    .resend { font-size: 13px; color: #1a56db; cursor: pointer; text-decoration: underline; display: none; margin-top: 6px; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><span>🇺🇸 Clube USA</span></div>
+  <h1>Entrar</h1>
+
+  <form id="loginForm" novalidate>
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" placeholder="seuemail@exemplo.com" required autocomplete="email">
+
+    <label for="password">Senha</label>
+    <input type="password" id="password" name="password" placeholder="Sua senha" required autocomplete="current-password">
+
+    <button type="submit" id="submitBtn">Entrar</button>
+    <div class="msg" id="msg"></div>
+    <div class="resend" id="resendLink" onclick="resendVerification()">Reenviar email de confirmação</div>
+  </form>
+
+  <div class="footer">
+    Não tem conta? <a href="register.html">Criar conta</a>
+  </div>
+</div>
+
+<script>
+  const API = window.CLUBE_USA_API || 'http://localhost:8000';
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const msg = document.getElementById('msg');
+    const resend = document.getElementById('resendLink');
+    msg.className = 'msg';
+    msg.textContent = '';
+    resend.style.display = 'none';
+
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+      msg.className = 'msg error';
+      msg.textContent = 'Preencha email e senha.';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
+
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        // Store tokens (use sessionStorage for access token; refresh token in httpOnly cookie in prod)
+        sessionStorage.setItem('access_token', data.access_token);
+        sessionStorage.setItem('refresh_token', data.refresh_token);
+        window.location.href = 'profile.html';
+      } else {
+        msg.className = 'msg error';
+        msg.textContent = data.detail || 'Email ou senha incorretos.';
+        if (res.status === 403) {
+          resend.style.display = 'block';
+          resend.dataset.email = email;
+        }
+      }
+    } catch (_) {
+      msg.className = 'msg error';
+      msg.textContent = 'Erro de conexão. Verifique sua internet.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    }
+  });
+
+  async function resendVerification() {
+    const email = document.getElementById('resendLink').dataset.email;
+    if (!email) return;
+    try {
+      await fetch(`${API}/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const msg = document.getElementById('msg');
+      msg.className = 'msg error';
+      msg.textContent = 'Se o email existir, um novo link de confirmação foi enviado.';
+      document.getElementById('resendLink').style.display = 'none';
+    } catch (_) {}
+  }
+</script>
+</body>
+</html>

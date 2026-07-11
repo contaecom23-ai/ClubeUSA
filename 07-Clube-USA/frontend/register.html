@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar conta — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,.10);
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 440px;
+    }
+    .logo { text-align: center; margin-bottom: 24px; }
+    .logo span { font-size: 28px; font-weight: 700; color: #1a56db; }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 24px; text-align: center; color: #111; }
+    label { display: block; font-size: 13px; font-weight: 500; color: #444; margin-bottom: 5px; }
+    input, select {
+      width: 100%;
+      border: 1.5px solid #d1d5db;
+      border-radius: 7px;
+      padding: 10px 12px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color .15s;
+      margin-bottom: 14px;
+    }
+    input:focus, select:focus { border-color: #1a56db; }
+    .row { display: flex; gap: 12px; }
+    .row > div { flex: 1; }
+    button {
+      width: 100%;
+      background: #1a56db;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background .15s;
+    }
+    button:hover { background: #1648c0; }
+    button:disabled { background: #9cb5f0; cursor: not-allowed; }
+    .msg {
+      margin-top: 14px;
+      padding: 10px 14px;
+      border-radius: 7px;
+      font-size: 14px;
+      display: none;
+    }
+    .msg.success { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; display: block; }
+    .msg.error   { background: #fff1f2; color: #9f1239; border: 1px solid #fca5a5; display: block; }
+    .footer { text-align: center; margin-top: 20px; font-size: 14px; color: #666; }
+    .footer a { color: #1a56db; text-decoration: none; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><span>🇺🇸 Clube USA</span></div>
+  <h1>Crie sua conta</h1>
+
+  <form id="registerForm" novalidate>
+    <label for="name">Nome completo</label>
+    <input type="text" id="name" name="name" placeholder="Seu nome" required autocomplete="name">
+
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" placeholder="seuemail@exemplo.com" required autocomplete="email">
+
+    <label for="password">Senha</label>
+    <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres (letras + números)" required autocomplete="new-password">
+
+    <div class="row">
+      <div>
+        <label for="zip_code">CEP dos EUA</label>
+        <input type="text" id="zip_code" name="zip_code" placeholder="33101" maxlength="10" autocomplete="postal-code">
+      </div>
+      <div>
+        <label for="state_abbr">Estado</label>
+        <select id="state_abbr" name="state_abbr">
+          <option value="">Selecione</option>
+          <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+          <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+          <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+          <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+          <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+          <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+          <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+          <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+          <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+          <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+          <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+          <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+          <option>WI</option><option>WY</option>
+        </select>
+      </div>
+    </div>
+
+    <button type="submit" id="submitBtn">Criar conta</button>
+    <div class="msg" id="msg"></div>
+  </form>
+
+  <div class="footer">
+    Já tem conta? <a href="login.html">Entrar</a>
+  </div>
+</div>
+
+<script>
+  // API base URL — update for production
+  const API = window.CLUBE_USA_API || 'http://localhost:8000';
+
+  document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const msg = document.getElementById('msg');
+    msg.className = 'msg';
+    msg.textContent = '';
+
+    const payload = {
+      name: document.getElementById('name').value.trim(),
+      email: document.getElementById('email').value.trim().toLowerCase(),
+      password: document.getElementById('password').value,
+    };
+    const zip = document.getElementById('zip_code').value.trim();
+    const state = document.getElementById('state_abbr').value;
+    if (zip) payload.zip_code = zip;
+    if (state) payload.state_abbr = state;
+
+    // Basic client-side validation (server always validates too)
+    if (!payload.name || !payload.email || !payload.password) {
+      msg.className = 'msg error';
+      msg.textContent = 'Preencha nome, email e senha.';
+      return;
+    }
+    if (payload.password.length < 8) {
+      msg.className = 'msg error';
+      msg.textContent = 'A senha deve ter pelo menos 8 caracteres.';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Criando conta…';
+
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        msg.className = 'msg success';
+        msg.textContent = data.message || 'Conta criada! Verifique seu email.';
+        document.getElementById('registerForm').reset();
+      } else {
+        msg.className = 'msg error';
+        msg.textContent = data.detail || 'Erro ao criar conta. Tente novamente.';
+      }
+    } catch (_) {
+      msg.className = 'msg error';
+      msg.textContent = 'Erro de conexão. Verifique sua internet e tente novamente.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Criar conta';
+    }
+  });
+</script>
+</body>
+</html>
