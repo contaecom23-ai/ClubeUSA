@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Confirmação de email — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>Clube USA 🇧🇷🇺🇸</h1>
+    </div>
+
+    <div id="statusContainer" style="text-align:center;">
+      <p id="statusText" style="color:#6b7280;font-size:1rem;">Verificando seu email...</p>
+    </div>
+
+    <div id="successBox" style="display:none;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:16px;">✅</div>
+      <h2 style="margin-bottom:8px;">Email confirmado!</h2>
+      <p style="color:#6b7280;margin-bottom:24px;">Sua conta está ativa. Faça login para continuar.</p>
+      <a href="login.html" class="btn btn-primary" style="text-decoration:none;display:inline-block;width:auto;padding:12px 32px;">
+        Fazer login
+      </a>
+    </div>
+
+    <div id="errorBox" style="display:none;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:16px;">❌</div>
+      <h2 style="margin-bottom:8px;">Link inválido ou expirado</h2>
+      <p id="errorDetail" style="color:#6b7280;margin-bottom:24px;"></p>
+      <a href="register.html" class="btn btn-secondary" style="text-decoration:none;display:inline-block;width:auto;padding:12px 32px;">
+        Criar nova conta
+      </a>
+      <br>
+      <button id="resendBtn" class="btn btn-primary" style="margin-top:12px;width:auto;padding:12px 32px;display:none;">
+        Reenviar email de confirmação
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const API = window.API_URL || '';
+
+    function getTokenFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      // Basic UUID format validation (client-side, not security-critical)
+      if (!token || !/^[0-9a-f-]{36}$/.test(token)) return null;
+      return token;
+    }
+
+    async function verifyToken(token) {
+      const statusEl = document.getElementById('statusText');
+      statusEl.textContent = 'Verificando seu email...';
+
+      try {
+        const res = await fetch(`${API}/api/auth/verify-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+
+        const data = await res.json();
+
+        document.getElementById('statusContainer').style.display = 'none';
+
+        if (res.ok && data.access_token) {
+          // Store token securely in sessionStorage (not localStorage for extra caution)
+          sessionStorage.setItem('access_token', data.access_token);
+          document.getElementById('successBox').style.display = 'block';
+        } else {
+          document.getElementById('errorBox').style.display = 'block';
+          document.getElementById('errorDetail').textContent =
+            data.detail || 'Link inválido ou expirado.';
+
+          if (data.detail && data.detail.includes('expirado')) {
+            document.getElementById('resendBtn').style.display = 'inline-block';
+          }
+        }
+      } catch {
+        document.getElementById('statusContainer').style.display = 'none';
+        document.getElementById('errorBox').style.display = 'block';
+        document.getElementById('errorDetail').textContent =
+          'Erro de conexão. Tente novamente.';
+      }
+    }
+
+    // Resend confirmation
+    document.getElementById('resendBtn').addEventListener('click', async () => {
+      const email = prompt('Digite seu email para reenviar o link:');
+      if (!email) return;
+
+      try {
+        await fetch(`${API}/api/auth/resend-confirmation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        alert('Se esse email estiver cadastrado, você receberá um novo link em breve.');
+      } catch {
+        alert('Erro ao reenviar. Tente novamente.');
+      }
+    });
+
+    // Run on page load
+    const token = getTokenFromURL();
+    if (token) {
+      verifyToken(token);
+    } else {
+      document.getElementById('statusText').textContent = '';
+      document.getElementById('statusContainer').style.display = 'none';
+      document.getElementById('errorBox').style.display = 'block';
+      document.getElementById('errorDetail').textContent =
+        'Nenhum token de confirmação encontrado no link.';
+    }
+  </script>
+</body>
+</html>
