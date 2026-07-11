@@ -18,7 +18,7 @@
 - [~] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência) *(código pronto — branch claude/fase-1.1-promocoes; aguarda merge da cadeia Fase 0 + migration 004)*
 - [~] **1.2** Busca por ZIP + raio 1–5 milhas *(código pronto — branch claude/fase-1.2-busca-zip; aguarda merge de 1.1 + migration 005 + seed zip_codes)*
 - [~] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar) *(código pronto — branch claude/fase-1.3-influenciadores; créditos display only, saques requerem Fase 5)*
-- [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
+- [~] **1.4** Empregos (seed manual nas 1ªs semanas) *(código pronto — branch claude/fase-1.4-empregos; migration 006_jobs.sql + 14 vagas no seed; endpoints GET /jobs, POST /admin/jobs, DELETE /admin/jobs/{id} + filtro ZIP/raio)*
 - [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
 
 ---
@@ -65,4 +65,4 @@
 
 ---
 
-*Atualizado em: 2026-07-09 (Fase 1.3 código pronto — aguarda merge da cadeia completa)*
+*Atualizado em: 2026-07-11 (Fase 1.4 código pronto — branch claude/fase-1.4-empregos; próxima: Fase 1.5 Moradia)*
