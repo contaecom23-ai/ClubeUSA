@@ -19,9 +19,9 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 **O que você precisa fazer, na ordem:**
 1. Resolver **D-002** (Supabase) + **D-003** (email) + **D-004** (hosting) + **D-005** (domínio)
 2. Fechar PRs redundantes: **#1, #6, #7, #8, #11, #13, #15, #17, #18** (duplicatas — cobertos pela cadeia canônica abaixo)
-3. Mergear na ordem: **PR #10 → PR #2 → PR #3 → PR #4 → PR #5 → PR #9 → PR #12 → PR #14 → PR #16 → PR #19 (Fase 1.4)**
-4. Rodar migrations em ordem no Supabase: `001` → `002` → `003` → `004` → `005` → `006`
-5. Rodar `data/seed_zip_codes.sql` + `data/seed_jobs.sql` para popular ZIPs e vagas iniciais
+3. Mergear na ordem: **PR #10 → PR #2 → PR #3 → PR #4 → PR #5 → PR #9 → PR #12 → PR #14 → PR #16 → PR #19 (Fase 1.4) → PR #20 (Fase 1.5)**
+4. Rodar migrations em ordem no Supabase: `001` → `002` → `003` → `004` → `005` → `006` → `007`
+5. Rodar `data/seed_zip_codes.sql` + `data/seed_jobs.sql` + `data/seed_housing.sql` para popular ZIPs, vagas e anúncios de moradia
 6. Responder **D-010** antes que o builder implemente tracking de views
 
 ---
@@ -218,4 +218,4 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 ---
 
-*Atualizado em: 2026-07-11 — Fase 1.4 implementada (empregos; migration 006; 14 vagas seed; PR #19)*
+*Atualizado em: 2026-07-12 — Fase 1.5 implementada (moradia; migration 007; 15 anúncios seed; PR #20; 38 testes)*

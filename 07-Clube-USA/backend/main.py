@@ -9,6 +9,8 @@ from analytics.router import router as analytics_router
 from auth.router import router as auth_router
 from config import settings
 from core.limiter import limiter
+from housing.router import admin_router as housing_admin_router
+from housing.router import router as housing_router
 from influencer.router import admin_router as influencer_admin_router
 from influencer.router import router as influencer_router
 from jobs.router import admin_router as jobs_admin_router
@@ -20,7 +22,7 @@ from users.router import router as users_router
 
 app = FastAPI(
     title="Clube USA API",
-    version="1.4.0",
+    version="1.5.0",
     docs_url="/docs" if settings.ENVIRONMENT == "development" else None,
     redoc_url=None,
 )
@@ -61,11 +63,13 @@ app.include_router(promotions_router)
 app.include_router(promotions_admin_router)
 app.include_router(jobs_router)
 app.include_router(jobs_admin_router)
+app.include_router(housing_router)
+app.include_router(housing_admin_router)
 
 
 @app.get("/", tags=["health"])
 def root():
-    return {"product": "Clube USA", "version": "1.4.0"}
+    return {"product": "Clube USA", "version": "1.5.0"}
 
 
 @app.get("/health", tags=["health"])
