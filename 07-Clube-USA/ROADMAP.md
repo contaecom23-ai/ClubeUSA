@@ -1,25 +1,28 @@
 # ROADMAP — Clube USA
 
-> Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
+> Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas (mergeadas no main).
+
+> **Estado atual (2026-07-12):** 20 PRs abertos, nenhum mergeado no main ainda.
+> Código de todas as fases abaixo existe em branches — veja DECISOES.md para o plano de triage.
 
 ---
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- [ ] **0.1** Cadastro + perfil mínimo + email confirmado *(código pronto: PR #18)*
+- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link) *(código pronto: PR #3)*
+- [ ] **0.3** Analytics básico *(código pronto: PR #4)*
+- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude *(código pronto: PR #5)*
 
 ---
 
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
-- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
-- [ ] **1.2** Busca por ZIP + raio 1–5 milhas
-- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
-- [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
-- [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
+- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência) *(código pronto: PR #12)*
+- [ ] **1.2** Busca por ZIP + raio 1–5 milhas *(código pronto: PR #14)*
+- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar) *(código pronto: PR #16)*
+- [ ] **1.4** Empregos (seed manual nas 1ªs semanas) *(código pronto: PR #19)*
+- [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual) *(código pronto: PR #20)*
 
 ---
 
@@ -65,4 +68,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-07-12*
