@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moradia — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green: #009C3B;
+      --yellow: #FFDF00;
+      --blue: #002776;
+      --bg: #f4f6f8;
+      --card-bg: #ffffff;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --radius: 12px;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    nav {
+      background: var(--blue);
+      padding: 0 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-brand {
+      color: var(--yellow);
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 1rem; align-items: center; }
+    .nav-links a {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .nav-links a:hover { color: #fff; }
+    .nav-links a.active { color: var(--yellow); font-weight: 600; }
+    .page-header {
+      background: linear-gradient(135deg, #002776 0%, #003da5 100%);
+      color: #fff;
+      padding: 2rem 1rem 2.5rem;
+      text-align: center;
+    }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; }
+    .page-header p { margin-top: 0.5rem; opacity: 0.9; font-size: 0.95rem; }
+    main { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+    .state-box {
+      display: none;
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .state-box .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    /* ── Filtros ── */
+    .filters-bar {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .filter-group label { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+    .filter-group input,
+    .filter-group select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: #fff;
+      color: var(--text);
+    }
+    .filter-group input:focus,
+    .filter-group select:focus { outline: 2px solid var(--blue); border-color: var(--blue); }
+    .btn {
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-secondary { background: #e5e7eb; color: var(--text); }
+    .btn-outline { background: transparent; color: var(--blue); border: 1.5px solid var(--blue); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .search-context {
+      display: none;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      padding: 0.5rem 0.75rem;
+      background: #f0f4ff;
+      border-radius: 8px;
+      border-left: 3px solid var(--blue);
+    }
+    /* ── Grid de cards ── */
+    .housing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+    .housing-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.2s;
+    }
+    .housing-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .card-icon {
+      background: linear-gradient(135deg, #002776 0%, #003da5 100%);
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+    .card-body { padding: 1rem 1.1rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+    .card-meta { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+    }
+    .badge-type { background: #e0f2fe; color: #0369a1; }
+    .badge-distance { background: #f0fdf4; color: #166534; }
+    .badge-rent { background: #fef9c3; color: #854d0e; font-size: 0.8rem; }
+    .badge-furnished { background: #f0f4ff; color: var(--blue); }
+    .badge-pets { background: #fff1f2; color: #be123c; }
+    .badge-utilities { background: #f0fdf4; color: #166534; }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .card-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.5;
+      flex: 1;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+    .card-details {
+      font-size: 0.82rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .card-details span::before { margin-right: 0.2rem; }
+    .card-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem; }
+    .btn-contact {
+      background: var(--green);
+      color: #fff;
+      font-size: 0.82rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-contact:hover { opacity: 0.85; }
+    /* ── Pagination ── */
+    .pagination {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    #page-info { font-size: 0.9rem; color: var(--muted); }
+    /* ── Spinner ── */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 4px solid #e5e7eb;
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1f2937;
+      color: #fff;
+      padding: 0.6rem 1.2rem;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    @media (max-width: 600px) {
+      .filters-bar { flex-direction: column; }
+      .housing-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand">🇧🇷 Clube USA</a>
+  <div class="nav-links">
+    <a href="promotions.html">Promoções</a>
+    <a href="housing.html" class="active">Moradia</a>
+    <a href="index.html#jobs">Empregos</a>
+    <a href="profile.html" id="nav-profile" style="display:none">Meu Perfil</a>
+    <a href="login.html" id="nav-login">Entrar</a>
+    <a href="register.html" id="nav-register">Cadastrar</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <h1>🏠 Moradia</h1>
+  <p>Quartos, roommates e casas para a comunidade brasileira nos EUA</p>
+</div>
+
+<main>
+  <!-- Filtros -->
+  <div class="filters-bar">
+    <div class="filter-group">
+      <label>ZIP Code</label>
+      <input type="text" id="zip-input" placeholder="Ex: 33101" maxlength="5" style="width:110px">
+    </div>
+    <div class="filter-group">
+      <label>Raio</label>
+      <select id="radius-select" style="width:100px">
+        <option value="5">5 milhas</option>
+        <option value="10" selected>10 milhas</option>
+        <option value="20">20 milhas</option>
+        <option value="50">50 milhas</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Tipo</label>
+      <select id="type-select" style="width:190px">
+        <option value="">Todos os tipos</option>
+        <option value="quarto_disponivel">Quarto disponível</option>
+        <option value="precisa_quarto">Procura quarto / roommate</option>
+        <option value="casa_disponivel">Casa / Apartamento</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>&nbsp;</label>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-primary" onclick="applyFilters()">Buscar</button>
+        <button class="btn btn-secondary" id="btn-clear-filter" onclick="clearFilters()" style="display:none">Limpar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="search-context" class="search-context"></div>
+
+  <div id="loading" class="state-box">
+    <div class="spinner"></div>
+    <p>Carregando anúncios...</p>
+  </div>
+
+  <div id="empty" class="state-box">
+    <div class="icon">🏠</div>
+    <p>Nenhum anúncio encontrado para esses filtros.<br>Tente ampliar o raio ou limpar os filtros.</p>
+  </div>
+
+  <div id="error" class="state-box">
+    <div class="icon">⚠️</div>
+    <p>Erro ao carregar anúncios. Tente novamente.</p>
+    <button class="btn btn-outline" style="margin-top:1rem" onclick="loadHousing(currentPage)">Tentar novamente</button>
+  </div>
+
+  <div id="housing-grid" class="housing-grid" style="display:none"></div>
+
+  <div id="pagination" class="pagination">
+    <button class="btn btn-secondary" id="btn-prev" onclick="changePage(-1)">← Anterior</button>
+    <span id="page-info"></span>
+    <button class="btn btn-secondary" id="btn-next" onclick="changePage(1)">Próxima →</button>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+  const API_URL = window.API_URL || '';
+  const PAGE_SIZE = 20;
+
+  let currentPage = 1;
+  let totalPages = 1;
+  let activeZip = null;
+  let activeRadius = 10;
+  let activeType = '';
+
+  const LISTING_TYPE_LABELS = {
+    quarto_disponivel: 'Quarto disponível',
+    precisa_quarto: 'Procura roommate',
+    casa_disponivel: 'Casa / Apartamento',
+  };
+
+  const LISTING_TYPE_ICONS = {
+    quarto_disponivel: '🛏️',
+    precisa_quarto: '🤝',
+    casa_disponivel: '🏠',
+  };
+
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    document.getElementById('nav-profile').style.display = '';
+    document.getElementById('nav-login').style.display = 'none';
+    document.getElementById('nav-register').style.display = 'none';
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function escHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function formatRent(cents) {
+    if (!cents) return null;
+    return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + '/mês';
+  }
+
+  function formatAvailable(dt) {
+    if (!dt) return null;
+    const d = new Date(dt);
+    return 'Disponível ' + d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function renderCard(h) {
+    const typeLabel = LISTING_TYPE_LABELS[h.listing_type] || h.listing_type;
+    const typeIcon = LISTING_TYPE_ICONS[h.listing_type] || '🏠';
+
+    const distBadge = (h.distance_miles != null)
+      ? `<span class="badge badge-distance">📍 ${h.distance_miles.toFixed(1)} mi</span>`
+      : '';
+    const rentBadge = h.rent_monthly_cents
+      ? `<span class="badge badge-rent">💰 ${formatRent(h.rent_monthly_cents)}</span>`
+      : '';
+    const furnBadge = h.furnished ? '<span class="badge badge-furnished">🪑 Mobiliado</span>' : '';
+    const utilBadge = h.utilities_included ? '<span class="badge badge-utilities">💡 Utilidades inclusas</span>' : '';
+    const petsBadge = h.pets_allowed === false ? '<span class="badge badge-pets">🚫 Sem animais</span>'
+                    : h.pets_allowed === true  ? '<span class="badge badge-furnished">🐾 Aceita animais</span>'
+                    : '';
+
+    const location = [h.city, h.state].filter(Boolean).join(', ');
+    const locationStr = location ? `<span>📍 ${escHtml(location)}</span>` : '';
+    const bedsStr = h.bedrooms != null ? `<span>🛏 ${h.bedrooms === 0 ? 'Studio' : h.bedrooms + ' quarto' + (h.bedrooms > 1 ? 's' : '')}</span>` : '';
+    const bathStr = h.bathrooms != null ? `<span>🚿 ${h.bathrooms} banheiro${h.bathrooms !== 1 ? 's' : ''}</span>` : '';
+    const availStr = h.available_from ? `<span>${escHtml(formatAvailable(h.available_from))}</span>` : '';
+
+    let contactHtml = '';
+    if (h.contact_email) {
+      contactHtml += `<a href="mailto:${escHtml(h.contact_email)}" class="btn-contact">✉️ Email</a>`;
+    }
+    if (h.contact_phone) {
+      contactHtml += `<a href="tel:${escHtml(h.contact_phone)}" class="btn-contact">📞 Ligar</a>`;
+    }
+
+    return `
+      <article class="housing-card">
+        <div class="card-icon">${typeIcon}</div>
+        <div class="card-body">
+          <div class="card-meta">
+            <span class="badge badge-type">${escHtml(typeLabel)}</span>
+            ${distBadge}
+            ${rentBadge}
+          </div>
+          <h2 class="card-title">${escHtml(h.title)}</h2>
+          <p class="card-desc">${escHtml(h.description)}</p>
+          <div class="card-details">
+            ${locationStr}${bedsStr}${bathStr}${availStr}
+          </div>
+          <div class="card-meta" style="margin-top:0.25rem">
+            ${furnBadge}${utilBadge}${petsBadge}
+          </div>
+          <div class="card-actions">${contactHtml || '<span style="font-size:0.8rem;color:var(--muted)">Entre em contato via plataforma</span>'}</div>
+        </div>
+      </article>`;
+  }
+
+  function applyFilters() {
+    const zip = document.getElementById('zip-input').value.trim();
+    if (zip && !/^\d{5}$/.test(zip)) {
+      showToast('Digite um ZIP code válido (5 números)');
+      return;
+    }
+    activeZip = zip || null;
+    activeRadius = parseFloat(document.getElementById('radius-select').value);
+    activeType = document.getElementById('type-select').value;
+    document.getElementById('btn-clear-filter').style.display = (activeZip || activeType) ? '' : 'none';
+    currentPage = 1;
+    loadHousing(1);
+  }
+
+  function clearFilters() {
+    activeZip = null;
+    activeRadius = 10;
+    activeType = '';
+    document.getElementById('zip-input').value = '';
+    document.getElementById('radius-select').value = '10';
+    document.getElementById('type-select').value = '';
+    document.getElementById('btn-clear-filter').style.display = 'none';
+    document.getElementById('search-context').style.display = 'none';
+    currentPage = 1;
+    loadHousing(1);
+  }
+
+  document.getElementById('zip-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') applyFilters();
+  });
+
+  async function loadHousing(page) {
+    const grid = document.getElementById('housing-grid');
+    const loading = document.getElementById('loading');
+    const empty = document.getElementById('empty');
+    const error = document.getElementById('error');
+    const pagination = document.getElementById('pagination');
+    const searchCtx = document.getElementById('search-context');
+
+    grid.style.display = 'none';
+    empty.style.display = 'none';
+    error.style.display = 'none';
+    pagination.style.display = 'none';
+    loading.style.display = '';
+
+    try {
+      let url = `${API_URL}/housing?page=${page}&page_size=${PAGE_SIZE}`;
+      if (activeZip) url += `&zip=${encodeURIComponent(activeZip)}&radius=${activeRadius}`;
+      if (activeType) url += `&listing_type=${encodeURIComponent(activeType)}`;
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 422) {
+          showToast('ZIP não encontrado. Tente outro CEP ou limpe o filtro.');
+          loading.style.display = 'none';
+          error.style.display = '';
+          return;
+        }
+        throw new Error('API error ' + res.status);
+      }
+      const data = await res.json();
+      loading.style.display = 'none';
+
+      if (activeZip && data.search_zip) {
+        searchCtx.textContent =
+          `${data.total} anúncio${data.total !== 1 ? 's' : ''} próximo${data.total !== 1 ? 's' : ''} ao ZIP ${data.search_zip} (raio ${data.radius_miles} mi)`;
+        searchCtx.style.display = '';
+      } else {
+        searchCtx.style.display = 'none';
+      }
+
+      if (data.items.length === 0) {
+        empty.style.display = '';
+        return;
+      }
+
+      grid.innerHTML = data.items.map(renderCard).join('');
+      grid.style.display = '';
+
+      totalPages = Math.ceil(data.total / PAGE_SIZE) || 1;
+      currentPage = page;
+
+      if (totalPages > 1) {
+        document.getElementById('page-info').textContent = `Página ${currentPage} de ${totalPages}`;
+        document.getElementById('btn-prev').disabled = currentPage <= 1;
+        document.getElementById('btn-next').disabled = currentPage >= totalPages;
+        pagination.style.display = 'flex';
+      }
+    } catch (e) {
+      loading.style.display = 'none';
+      error.style.display = '';
+    }
+  }
+
+  function changePage(delta) {
+    const next = currentPage + delta;
+    if (next < 1 || next > totalPages) return;
+    loadHousing(next);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  loadHousing(1);
+</script>
+</body>
+</html>
