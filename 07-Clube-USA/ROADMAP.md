@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ ESTADO ATUAL DOS PRs (atualizado 2026-07-09)
+## ⚡ ESTADO ATUAL DOS PRs (atualizado 2026-07-12)
 
-**16 PRs abertos, nenhum merged.** A causa raiz: este PR (#10) ainda não foi merged, então o ROADMAP no main continua mostrando `[ ]` e o builder continua criando duplicatas. **Mergear este PR é a ação mais urgente.**
+**20 PRs abertos, nenhum merged.** A causa raiz: este PR (#10) ainda não foi merged, então o ROADMAP no main continua mostrando `[ ]` e o builder continua criando duplicatas. **Mergear este PR é a ação mais urgente.**
 
 **PRs para MERGEAR (na ordem):**
 | PR | Branch | Conteúdo | Depende de | Ordem |
@@ -18,7 +18,7 @@
 | **#5** | `claude/fase-0.4-valid-registration` | Fase 0.4 — cadastro válido + anti-fraude | PRs #2–#4 | 5º |
 | **#9** | `claude/fase-0-security-polish` | Security polish — senha forte + headers | PR #5 | 6º |
 
-**PRs para FECHAR (duplicatas — 7 ao total):**
+**PRs para FECHAR (duplicatas — 11 ao total):**
 | PR | Branch | Motivo |
 |----|--------|--------|
 | #1 | `claude/fase-0-cadastro-email` | Duplicata de #2 |
@@ -28,20 +28,25 @@
 | #11 | `feat/fase-0.1-cadastro-perfil` | Duplicata de #2 (criada 2026-07-08) |
 | #13 | `claude/fase-0-cadastro-perfil` | Duplicata de #2 (criada 2026-07-09) |
 | #15 | `claude/fase-0-cadastro` | Duplicata de #2 (criada 2026-07-09) |
+| #17 | `feature/fase-0-1-cadastro` | Duplicata de #2 (criada 2026-07-12) |
+| #18 | `claude/fase-0-cadastro-auth` | Duplicata de #2 (criada 2026-07-12) |
 
-**PRs de Fase 1 — AVALIAR antes de mergear (ver D-010 em DECISOES.md):**
+**PRs de Fase 1 — AVALIAR antes de mergear (ver D-010 e D-011 em DECISOES.md):**
 | PR | Branch | Conteúdo | Status |
 |----|--------|----------|--------|
 | #12 | `claude/fase-1.1-promocoes` | Fase 1.1 — Promoções/Achados | Aguarda D-008 respondido + Fase 0 deployed |
 | #14 | `claude/fase-1.2-busca-zip` | Fase 1.2 — Busca por ZIP | Aguarda Fase 1.1 deployed |
-| #16 | `claude/fase-1.3-influenciadores` | Fase 1.3 — Influenciadores pago por resultado | Aguarda D-007 + D-006 respondidos |
+| #16 | `claude/fase-1.3-influenciadores` | Fase 1.3 — Influenciadores pago por resultado | Aguarda D-006, D-007 respondidos |
+| #19 | `claude/fase-1.4-empregos` | Fase 1.4 — Board de empregos | Aguarda D-011 (ver abaixo) |
+| #20 | `claude/fase-1.5-moradia` | Fase 1.5 — Moradia/quartos/roommates | Aguarda D-011 (ver abaixo) |
 
-**Próxima ação do dono (60 minutos):**
-1. Fechar os 7 PRs duplicados listados acima
-2. Mergear este PR #10
+**Próxima ação do dono (~60 minutos):**
+1. Fechar os 9 PRs duplicados listados acima
+2. Mergear este PR #10 (corrige raiz do problema)
 3. Configurar Supabase (ver D-002 em DECISOES.md — grátis, ~10 min)
 4. Mergear em ordem: #2 → #3 → #4 → #5 → #9
-5. Responder D-008 (5 perguntas de produto para Fase 1.1) — desbloqueia o builder
+5. Responder D-008 (produto para Fase 1.1) — desbloqueia o builder
+6. Avaliar PRs #12, #14, #16, #19, #20 (ver D-010 e D-011)
 
 ---
 
@@ -58,9 +63,9 @@
 
 - [~] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência) *(código em PR #12 — aguarda D-008 respondido + Fase 0 deployed)*
 - [~] **1.2** Busca por ZIP + raio 1–5 milhas *(código em PR #14 — aguarda Fase 1.1 deployed)*
-- [~] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar) *(código em PR #16 — aguarda D-006, D-007 respondidos)*
-- [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
-- [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
+- [~] **1.3** Programa de influenciadores PAGO POR RESULTADO *(código em PR #16 — aguarda D-006, D-007 respondidos)*
+- [~] **1.4** Empregos (seed manual nas 1ªs semanas) *(código em PR #19 — aguarda D-011)*
+- [~] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual) *(código em PR #20 — aguarda D-011)*
 
 ---
 
@@ -106,4 +111,4 @@
 
 ---
 
-*Atualizado em: 2026-07-09*
+*Atualizado em: 2026-07-12*

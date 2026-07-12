@@ -12,33 +12,46 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 ---
 
-## ⚡ AÇÃO IMEDIATA NECESSÁRIA — atualizado 2026-07-09
+## 🚨 ATENÇÃO IMEDIATA NECESSÁRIA — atualizado 2026-07-12
 
-**Situação crítica:** 16 PRs abertos, nenhum merged. A Fase 0 está codificada e testada (66 testes passando) mas o ROADMAP no main ainda mostra `[ ]` porque este PR (#10) não foi merged. Cada nova rodada do builder cria PRs duplicados. O ROADMAP do main é a raiz do problema.
+**Situação crítica:** 20 PRs abertos, nenhum merged. A cada rodada (3x/dia) que passa sem o PR #10 ser merged, o builder cria 2 novos PRs duplicados de Fase 0.1. Desde a última atualização (2026-07-09), foram criados PRs #17, #18 (mais duplicatas de 0.1), #19 (Fase 1.4 empregos) e #20 (Fase 1.5 moradia).
 
-**Impacto se não agir:** O builder vai continuar abrindo PRs duplicados toda rodada. Já foram criados 3 duplicatas de 0.1 desde 2026-07-07 (#11, #13, #15).
+**Por que isso acontece:** O ROADMAP no main mostra tudo como `[ ]`. O builder lê isso, acha que nada foi feito e recomeça do zero. A única correção é mergear PR #10.
 
-**Plano de ação (60 minutos do seu tempo):**
-1. **Fechar PRs redundantes:** #1, #6, #7, #8, #11, #13, #15 (todos duplicatas de 0.1)
-2. **Mergear ESTE PR #10 primeiro** — corrige o YAML do workflow e atualiza o ROADMAP no main. Resolve a causa raiz dos duplicados.
-3. **Resolver D-002** (criar projeto Supabase — grátis, ~10 min) — desbloqueia deploy
-4. **Mergear em ordem:** PR #2 → #3 → #4 → #5 → #9 (Fase 0 completa)
-5. **Responder D-008** (produto para 1.1 Promoções) — uma resposta de 2 minutos desbloqueia semanas de trabalho do builder
-6. **Avaliar PRs #12, #14, #16** (Fase 1.1, 1.2, 1.3) — ver D-010
+**Custo real de não agir:** 2 novos PRs por rodada × 3 rodadas/dia = ~6 PRs/dia acumulando lixo no repositório.
 
-**Resumo de PRs:**
+**Plano de ação (~60 minutos do seu tempo):**
+
+**Passo 1 — Limpar duplicatas (5 min):** Fechar PRs #1, #6, #7, #8, #11, #13, #15, #17, #18 (todos duplicatas de Fase 0.1).
+
+**Passo 2 — Mergear PR #10 (5 min):** Este PR corrige o ROADMAP e o workflow. É a ação mais impactante — para o ciclo de duplicatas imediatamente.
+
+**Passo 3 — Configurar Supabase (10 min):** Ver D-002 abaixo. Grátis. Desbloqueia deploy da Fase 0.
+
+**Passo 4 — Mergear Fase 0 em ordem (20 min revisão):** PR #2 → #3 → #4 → #5 → #9.
+
+**Passo 5 — Responder D-008 (5 min):** 5 perguntas rápidas de produto para Fase 1.1. Uma resposta sua desbloqueia semanas de trabalho.
+
+**Passo 6 — Avaliar PRs de Fase 1 (15 min):** Ver D-010 e D-011.
+
+---
+
+## Tabela de PRs (estado atual 2026-07-12)
+
 | PR | Ação | Prioridade |
-|----|------|-----------|
-| **#10** (este) | Mergear 1º — corrige workflow + ROADMAP | 🔴 Urgente |
+|----|------|------------|
+| **#10** (este) | Mergear 1º — corrige ROADMAP + workflow | 🔴 Urgente |
 | **#2** | Mergear 2º — Fase 0.1 auth | 🔴 Urgente |
 | **#3** | Mergear 3º — Fase 0.2 referral | 🔴 Urgente |
 | **#4** | Mergear 4º — Fase 0.3 analytics | 🔴 Urgente |
 | **#5** | Mergear 5º — Fase 0.4 anti-fraude | 🔴 Urgente |
 | **#9** | Mergear 6º — security polish | 🟡 Normal |
-| #12 | Avaliar — Fase 1.1 Promoções (ver D-010) | 🟡 Depois |
+| #12 | Avaliar — Fase 1.1 Promoções (ver D-008, D-010) | 🟡 Depois |
 | #14 | Avaliar — Fase 1.2 Busca ZIP (ver D-010) | 🟡 Depois |
-| #16 | Avaliar — Fase 1.3 Influenciadores (ver D-010) | 🟡 Depois |
-| #1, #6, #7, #8, #11, #13, #15 | **Fechar** — duplicatas | ❌ Fechar |
+| #16 | Avaliar — Fase 1.3 Influenciadores (ver D-007, D-010) | 🟡 Depois |
+| #19 | Avaliar — Fase 1.4 Empregos (ver D-011) | 🟡 Depois |
+| #20 | Avaliar — Fase 1.5 Moradia (ver D-011) | 🟡 Depois |
+| #1, #6, #7, #8, #11, #13, #15, #17, #18 | **Fechar** — duplicatas de Fase 0.1 | ❌ Fechar |
 
 ---
 
@@ -46,22 +59,22 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 ---
 
-### [2026-07-03 → atualizado 2026-07-09] D-001: Merge order dos PRs
+### [2026-07-03 → atualizado 2026-07-12] D-001: Merge order dos PRs
 
-**Contexto:** Existem agora 16 PRs abertos (era 9 em 2026-07-07). 7 são duplicatas de 0.1; 3 são Fase 1.x construídos sem Fase 0 merged.
+**Contexto:** 20 PRs abertos. 9 são duplicatas de 0.1 (criadas porque o ROADMAP do main ainda mostra `[ ]`). 5 são Fase 1.x construídas sem Fase 0 merged. Situação piora a cada rodada.
 
-**Ação recomendada:**
-1. Fechar duplicatas: #1, #6, #7, #8, #11, #13, #15
-2. Review e merge na ordem: **#10 → #2 → #3 → #4 → #5 → #9**
-3. Avaliar #12, #14, #16 (ver D-010)
+**Ação recomendada (em ordem):**
+1. Fechar duplicatas: #1, #6, #7, #8, #11, #13, #15, #17, #18
+2. Mergear: **#10 → #2 → #3 → #4 → #5 → #9**
+3. Avaliar: #12, #14, #16, #19, #20 (ver D-008, D-010, D-011)
 
-**Status:** PENDENTE — atenção redobrada, situação piorou desde 2026-07-07
+**Status:** PENDENTE — situação piorou desde 2026-07-09 (eram 16 PRs, agora são 20)
 
 ---
 
 ### [2026-07-03] D-002: Configuração do projeto Supabase (BLOQUEANTE)
 
-**Contexto:** A Fase 0 (auth, referral, analytics, validação) usa Supabase como banco. Código pronto, mas não tem banco para rodar.
+**Contexto:** A Fase 0 (auth, referral, analytics, validação) usa Supabase como banco. Código pronto e testado, mas sem banco configurado não tem como deployar.
 
 **O que fazer:**
 1. Criar projeto em https://supabase.com — plano gratuito cobre os primeiros 1.000 usuários
@@ -168,12 +181,12 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
 
 ### [2026-07-06] D-008: Decisões de produto para iniciar Fase 1.1 (Promoções/Achados)
 
-**Contexto:** A Fase 1.1 (PROMOÇÕES/ACHADOS = carro-chefe da plataforma) precisa de respostas antes do builder implementar. Sem clareza de produto, o código vai na direção errada.
+**Contexto:** A Fase 1.1 (PROMOÇÕES/ACHADOS = carro-chefe da plataforma) precisa de respostas de produto. Sem clareza, o código vai na direção errada. O PR #12 já existe mas pode precisar de ajuste dependendo das respostas.
 
-**Perguntas:**
+**Perguntas (responda as 5, leva ~5 min):**
 
 1. **Quem cria as promoções no MVP?**
-   - Opção A: Só o admin (você), via painel ou seed manual. *Recomendado no MVP — garante curadoria, sem overhead de UX para empresas.*
+   - Opção A: Só o admin (você), via painel ou seed manual. *Recomendado — curadoria garantida, sem overhead.*
    - Opção B: Empresas cadastradas criam as próprias (self-service). Requer Fase 2.1 antes.
 
 2. **Quais campos mínimos por promoção?**
@@ -185,53 +198,70 @@ Quando o builder travar em algo que só você pode decidir (orçamento, preços,
    - Opção B: Campo `quantity` — "restam 10 vagas". Mais complexo, permite fraude.
 
 4. **Modelo geográfico?**
-   - Opção A: Promoções nacionais (sem filtro de ZIP na Fase 1.1) + filtro de ZIP chega na 1.2.
-   - Opção B: ZIP obrigatório desde o início. Consistente com 1.2, mas exige que admin saiba o ZIP de cada promoção.
-   - *Recomendado: A — nacional primeiro, filtro de ZIP na 1.2.*
+   - Opção A: Promoções nacionais (sem filtro de ZIP na Fase 1.1) + filtro de ZIP chega na 1.2. *Recomendado.*
+   - Opção B: ZIP obrigatório desde o início.
 
 5. **Como usuários descobrem promoções?**
-   - Lista cronológica (mais recente primeiro) com paginação. Zero algoritmo. *Recomendado para MVP — implementa em 1 dia.*
+   - Lista cronológica (mais recente primeiro) com paginação. Zero algoritmo. *Recomendado para MVP.*
 
-**Recomendação geral:** Admin cria promoções (Opção A), campos mínimos da sugestão, urgência por `expires_at`, nacional primeiro, lista cronológica.
-
-**Status:** PENDENTE — confirme suas escolhas para o builder iniciar 1.1
+**Status:** PENDENTE — responda para o builder ajustar PR #12 se necessário e iniciar o deploy
 
 ---
 
 ### [2026-07-07] D-009: Workflow YAML estava quebrado (fix incluído neste PR)
 
-**Contexto:** O arquivo `.github/workflows/clubeusa-builder.yml` inicial tinha indentação completamente malformada — o YAML não era válido e o builder nunca rodou no agendamento (3x ao dia). Toda rodada era manual ou via interface web.
+**Contexto:** O arquivo `.github/workflows/clubeusa-builder.yml` inicial tinha YAML malformado — o builder nunca rodou no agendamento. Toda rodada era manual.
 
-**O que foi feito:** O workflow foi reescrito com YAML válido e prompt completo (incluindo ROADMAP, regras de segurança e como trabalhar). Este fix está incluído neste PR (claude/fix-workflow-yaml-e-docs-main).
+**O que foi feito:** O workflow foi reescrito com YAML válido. Fix incluído neste PR.
 
-**Ação necessária:** Apenas mergear este PR. Após o merge, o builder vai rodar automaticamente 3x/dia nos horários configurados (10h, 16h, 22h UTC = 6h, 12h, 18h ET) sem intervenção manual.
+**Ação necessária:** Apenas mergear este PR. Após merge, o builder roda automaticamente 3x/dia.
 
 **Status:** RESOLVIDO — aguarda merge deste PR
 
 ---
 
----
+### [2026-07-09] D-010: PRs de Fase 1.1, 1.2, 1.3 construídos antes de Fase 0 deployed
 
-### [2026-07-09] D-010: PRs de Fase 1 construídos antes de Fase 0 ser deployed
-
-**Contexto:** Entre 2026-07-07 e 2026-07-09, o builder ignorou o bloqueio em D-008 e construiu PRs de Fase 1:
-- **PR #12** (`claude/fase-1.1-promocoes`): Fase 1.1 — PROMOÇÕES/ACHADOS
-- **PR #14** (`claude/fase-1.2-busca-zip`): Fase 1.2 — busca por ZIP
-- **PR #16** (`claude/fase-1.3-influenciadores`): Fase 1.3 — programa de influenciadores
-
-**Problema:** Esses PRs foram construídos sem a Fase 0 deployed/testada, sem as decisões de produto (D-008 para 1.1) e sem orçamento definido (D-007 para 1.3). Podem ter escolhas de produto incorretas.
+**Contexto:** PRs #12 (Fase 1.1), #14 (Fase 1.2) e #16 (Fase 1.3) foram construídos sem Fase 0 deployed e sem D-008 respondido.
 
 **Opções:**
-- **A — Manter e revisar:** Os PRs podem estar tecnicamente corretos mesmo sem deploy de Fase 0. Revisar se as escolhas de produto fazem sentido. Ajustar o que precisar. *Mais rápido.*
-- **B — Descartar e rebuild depois:** Fechar #12, #14, #16 agora. Builder reconstrói depois com D-008 respondido. *Mais correto, mas perde o trabalho feito.*
-- **C — Manter mas não mergear até Fase 0 estar em produção:** Não fechar, não mergear ainda. Revisar quando Fase 0 for ao ar. *Recomendado — não perde trabalho, não apressa o processo.*
+- **A — Manter e revisar:** Código pode estar tecnicamente correto. Ajustar se D-008 mostrar escolhas diferentes. *Mais rápido.*
+- **B — Descartar:** Fechar agora, reconstruir depois com D-008 respondido. *Mais correto, perde trabalho.*
+- **C — Manter mas não mergear:** Não fechar, não mergear ainda. Revisar quando Fase 0 for ao ar. *Recomendado.*
 
-**Recomendação:** Opção C. Manter PRs #12, #14, #16 abertos para revisão futura, mas NÃO mergear antes de Fase 0 estar deployed e D-008 respondido. Revisar D-008 respondendo as 5 perguntas de produto — o builder adapta o código se necessário.
+**Recomendação:** Opção C. Responda D-008 para o builder ajustar o código se necessário.
 
-**Impacto se D-008 não for respondido:** Builder vai continuar não sabendo como implementar 1.1 corretamente e pode criar mais PRs inconsistentes.
-
-**Status:** PENDENTE — decida A, B ou C e responda D-008
+**Status:** PENDENTE
 
 ---
 
-*Atualizado em: 2026-07-09*
+### [2026-07-12] D-011: PRs de Fase 1.4 e 1.5 construídos fora de ordem
+
+**Contexto:** Entre 2026-07-09 e 2026-07-12, o builder construiu:
+- **PR #19** (`claude/fase-1.4-empregos`): board de empregos com seed manual + filtro ZIP
+- **PR #20** (`claude/fase-1.5-moradia`): moradia/quartos/roommates com filtro ZIP
+
+Fases 1.4 e 1.5 foram implementadas sem: Fase 0 deployed, Fase 1.1 respondida (D-008), Fase 1.2 deployada. O código provavelmente tem qualidade razoável (o padrão dos outros PRs é bom), mas as escolhas de produto podem não refletir sua visão.
+
+**Perguntas de produto para Fase 1.4 (Empregos):**
+1. Quem posta vagas no MVP? Admin (seed manual) ou empregadores self-service?
+2. Campos mínimos: título, empresa, descrição, ZIP, tipo (CLT/PJ/freelance), salário (opcional)? Confirma?
+3. Vagas expiram? Por data ou por remoção manual?
+
+**Perguntas de produto para Fase 1.5 (Moradia):**
+1. Quem posta quartos/casas? Admin (seed) ou usuários self-service?
+2. Campos: tipo (quarto/apartamento/casa), preço/mês, ZIP, descrição, contato. Confirma?
+3. Listings expiram? Por data ou por remoção manual?
+
+**Opções (mesmas do D-010):**
+- **A — Manter e revisar:** Verificar se as escolhas batem com sua visão. Ajustar o que não bater.
+- **B — Descartar:** Fechar #19 e #20, reconstruir depois com respostas.
+- **C — Manter mas não mergear:** Aguardar Fase 0 deployed, responder as perguntas acima, revisar código então. *Recomendado.*
+
+**Recomendação:** Opção C. Responda as perguntas acima quando chegar a hora. O builder não tocará nesses PRs até então.
+
+**Status:** PENDENTE
+
+---
+
+*Atualizado em: 2026-07-12*
