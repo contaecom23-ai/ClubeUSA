@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Entrar — Clube USA</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 420px;
+  }
+  .logo { font-size: 1.6rem; font-weight: 700; color: #1a56db; margin-bottom: .25rem; }
+  .subtitle { color: #6b7280; font-size: .9rem; margin-bottom: 2rem; }
+  label { display: block; font-size: .85rem; font-weight: 600; color: #374151; margin-bottom: .35rem; }
+  input {
+    width: 100%; padding: .65rem .9rem;
+    border: 1.5px solid #d1d5db; border-radius: 8px;
+    font-size: .95rem; outline: none; transition: border-color .15s;
+  }
+  input:focus { border-color: #1a56db; }
+  .field { margin-bottom: 1.1rem; }
+  button[type="submit"] {
+    width: 100%; padding: .75rem;
+    background: #1a56db; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+    transition: background .15s;
+    margin-top: .5rem;
+  }
+  button[type="submit"]:hover { background: #1648bf; }
+  button[type="submit"]:disabled { background: #93c5fd; cursor: not-allowed; }
+  .msg { border-radius: 8px; padding: .75rem 1rem; font-size: .9rem; margin-top: 1rem; display: none; }
+  .msg.success { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+  .msg.error   { background: #fef2f2; color: #7f1d1d; border: 1px solid #fca5a5; }
+  .footer-link { text-align: center; margin-top: 1.5rem; font-size: .88rem; color: #6b7280; }
+  .footer-link a { color: #1a56db; text-decoration: none; font-weight: 600; }
+  .resend { text-align: center; margin-top: .75rem; font-size: .85rem; display: none; }
+  .resend a { color: #1a56db; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Clube USA 🇺🇸</div>
+  <div class="subtitle">Entre na sua conta</div>
+
+  <form id="form" novalidate>
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" placeholder="joao@email.com" required />
+    </div>
+    <div class="field">
+      <label for="password">Senha</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Sua senha" required />
+    </div>
+    <button type="submit" id="btn">Entrar</button>
+  </form>
+
+  <div id="msg" class="msg"></div>
+  <div class="resend" id="resend">
+    Não recebeu o email? <a id="resendLink">Reenviar confirmação</a>
+  </div>
+
+  <div class="footer-link">
+    Não tem conta? <a href="register.html">Cadastre-se grátis</a>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:8000';  // TODO: alterar para URL de produção
+
+  const form      = document.getElementById('form');
+  const btn       = document.getElementById('btn');
+  const msg       = document.getElementById('msg');
+  const resendDiv = document.getElementById('resend');
+
+  function showMsg(text, type) {
+    msg.className = 'msg ' + type;
+    msg.textContent = text;
+    msg.style.display = 'block';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+    msg.style.display = 'none';
+    resendDiv.style.display = 'none';
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        // Store token — httpOnly cookie preferred in production; localStorage OK for MVP
+        sessionStorage.setItem('access_token', data.access_token);
+        sessionStorage.setItem('user_id', data.user_id);
+        showMsg('✅ Login realizado! Redirecionando...', 'success');
+        setTimeout(() => { window.location.href = 'profile.html'; }, 800);
+      } else {
+        showMsg('❌ ' + (data.detail || 'Credenciais inválidas'), 'error');
+        // Offer resend if might be unconfirmed
+        resendDiv.style.display = 'block';
+        document.getElementById('resendLink').dataset.email = email;
+      }
+    } catch {
+      showMsg('❌ Não foi possível conectar ao servidor.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    }
+  });
+
+  document.getElementById('resendLink').addEventListener('click', async (e) => {
+    const email = e.target.dataset.email;
+    if (!email) return;
+    try {
+      await fetch(`${API}/auth/resend-confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      showMsg('📧 Link de confirmação reenviado. Verifique sua caixa de entrada.', 'success');
+    } catch {
+      showMsg('❌ Não foi possível reenviar. Tente novamente.', 'error');
+    }
+  });
+</script>
+</body>
+</html>

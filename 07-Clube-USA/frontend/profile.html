@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meu perfil — Clube USA</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 480px;
+  }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem; }
+  .logo { font-size: 1.4rem; font-weight: 700; color: #1a56db; }
+  .logout { background: none; border: 1px solid #d1d5db; color: #374151; padding: .4rem .9rem; border-radius: 6px; cursor: pointer; font-size: .85rem; }
+  .logout:hover { background: #f9fafb; }
+  h2 { font-size: 1.1rem; color: #111827; margin-bottom: 1.5rem; }
+  label { display: block; font-size: .85rem; font-weight: 600; color: #374151; margin-bottom: .35rem; }
+  input, select {
+    width: 100%; padding: .65rem .9rem;
+    border: 1.5px solid #d1d5db; border-radius: 8px;
+    font-size: .95rem; outline: none; transition: border-color .15s;
+    background: #fff;
+  }
+  input:focus, select:focus { border-color: #1a56db; }
+  input:disabled { background: #f9fafb; color: #9ca3af; }
+  .field { margin-bottom: 1.1rem; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  button[type="submit"] {
+    width: 100%; padding: .75rem;
+    background: #1a56db; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 1rem; font-weight: 600; cursor: pointer;
+    transition: background .15s; margin-top: .5rem;
+  }
+  button[type="submit"]:hover { background: #1648bf; }
+  button[type="submit"]:disabled { background: #93c5fd; cursor: not-allowed; }
+  .msg { border-radius: 8px; padding: .75rem 1rem; font-size: .9rem; margin-top: 1rem; display: none; }
+  .msg.success { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+  .msg.error   { background: #fef2f2; color: #7f1d1d; border: 1px solid #fca5a5; }
+  .loading { text-align: center; color: #9ca3af; padding: 2rem 0; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="logo">Clube USA 🇺🇸</div>
+    <button class="logout" id="logoutBtn">Sair</button>
+  </div>
+
+  <div class="loading" id="loading">Carregando perfil...</div>
+
+  <div id="profileSection" style="display:none">
+    <h2>Meu perfil</h2>
+    <form id="form" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" disabled />
+      </div>
+      <div class="field">
+        <label for="name">Nome completo</label>
+        <input id="name" type="text" placeholder="João Silva" autocomplete="name" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="state">Estado (EUA)</label>
+          <select id="state">
+            <option value="">Selecione</option>
+            <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+            <option>CA</option><option>CO</option><option>CT</option><option>DC</option>
+            <option>DE</option><option>FL</option><option>GA</option><option>HI</option>
+            <option>ID</option><option>IL</option><option>IN</option><option>IA</option>
+            <option>KS</option><option>KY</option><option>LA</option><option>ME</option>
+            <option>MD</option><option>MA</option><option>MI</option><option>MN</option>
+            <option>MS</option><option>MO</option><option>MT</option><option>NE</option>
+            <option>NV</option><option>NH</option><option>NJ</option><option>NM</option>
+            <option>NY</option><option>NC</option><option>ND</option><option>OH</option>
+            <option>OK</option><option>OR</option><option>PA</option><option>RI</option>
+            <option>SC</option><option>SD</option><option>TN</option><option>TX</option>
+            <option>UT</option><option>VT</option><option>VA</option><option>WA</option>
+            <option>WV</option><option>WI</option><option>WY</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="zip">ZIP Code</label>
+          <input id="zip" type="text" placeholder="32801" maxlength="10" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="city">Cidade</label>
+        <input id="city" type="text" placeholder="Orlando" autocomplete="address-level2" />
+      </div>
+      <button type="submit" id="btn">Salvar alterações</button>
+    </form>
+    <div id="msg" class="msg"></div>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:8000';  // TODO: alterar para URL de produção
+
+  const token = sessionStorage.getItem('access_token');
+  if (!token) { window.location.href = 'login.html'; }
+
+  const authHeader = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  async function loadProfile() {
+    try {
+      const res = await fetch(`${API}/profile`, { headers: authHeader });
+      if (res.status === 401 || res.status === 403) {
+        sessionStorage.clear();
+        window.location.href = 'login.html';
+        return;
+      }
+      const data = await res.json();
+      document.getElementById('email').value   = data.email || '';
+      document.getElementById('name').value    = data.full_name || '';
+      document.getElementById('city').value    = data.city || '';
+      document.getElementById('zip').value     = data.zip_code || '';
+      if (data.state) document.getElementById('state').value = data.state;
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('profileSection').style.display = 'block';
+    } catch {
+      document.getElementById('loading').textContent = 'Erro ao carregar perfil. Recarregue a página.';
+    }
+  }
+
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn');
+    const msg = document.getElementById('msg');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    msg.style.display = 'none';
+
+    const body = {};
+    const name  = document.getElementById('name').value.trim();
+    const city  = document.getElementById('city').value.trim();
+    const state = document.getElementById('state').value;
+    const zip   = document.getElementById('zip').value.trim();
+    if (name)  body.full_name = name;
+    if (city)  body.city = city;
+    if (state) body.state = state;
+    if (zip)   body.zip_code = zip;
+
+    try {
+      const res = await fetch(`${API}/profile`, {
+        method: 'PUT',
+        headers: authHeader,
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        msg.className = 'msg success';
+        msg.textContent = '✅ Perfil atualizado com sucesso!';
+      } else {
+        const detail = data.detail;
+        msg.className = 'msg error';
+        msg.textContent = '❌ ' + (Array.isArray(detail) ? detail.map(d => d.msg).join(' | ') : (detail || 'Erro desconhecido'));
+      }
+    } catch {
+      msg.className = 'msg error';
+      msg.textContent = '❌ Não foi possível salvar. Tente novamente.';
+    } finally {
+      msg.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Salvar alterações';
+    }
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    sessionStorage.clear();
+    window.location.href = 'login.html';
+  });
+
+  loadProfile();
+</script>
+</body>
+</html>

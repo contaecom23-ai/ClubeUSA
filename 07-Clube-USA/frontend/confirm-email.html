@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Email confirmado — Clube USA</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    padding: 3rem 2rem;
+    width: 100%;
+    max-width: 420px;
+  }
+  .icon { font-size: 3.5rem; margin-bottom: 1rem; }
+  h1 { font-size: 1.5rem; color: #111827; margin-bottom: .75rem; }
+  p  { color: #6b7280; font-size: .95rem; line-height: 1.6; margin-bottom: 1.5rem; }
+  a.btn {
+    display: inline-block;
+    background: #1a56db; color: #fff;
+    padding: .75rem 2rem; border-radius: 8px;
+    text-decoration: none; font-weight: 600; font-size: .95rem;
+    transition: background .15s;
+  }
+  a.btn:hover { background: #1648bf; }
+  .error-msg { display: none; }
+  .error-msg .icon { color: #dc2626; }
+</style>
+</head>
+<body>
+<div class="card" id="success">
+  <div class="icon">✅</div>
+  <h1>Email confirmado!</h1>
+  <p>Sua conta no Clube USA está ativa. Agora você pode fazer login e começar a usar a plataforma.</p>
+  <a href="login.html" class="btn">Fazer login</a>
+</div>
+
+<div class="card error-msg" id="error">
+  <div class="icon">❌</div>
+  <h1>Link inválido ou expirado</h1>
+  <p>O link de confirmação não é mais válido. Faça login e solicite um novo link de confirmação.</p>
+  <a href="login.html" class="btn">Ir para login</a>
+</div>
+
+<script>
+  // Supabase redireciona com hash contendo type=signup ou error
+  const hash = window.location.hash;
+  const params = new URLSearchParams(hash.replace('#', '?'));
+
+  if (params.get('error') || params.get('error_code')) {
+    document.getElementById('success').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+  }
+  // Se chegou sem error, assume sucesso (Supabase já validou o token)
+</script>
+</body>
+</html>
