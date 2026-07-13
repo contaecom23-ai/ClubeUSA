@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Clube USA</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script>
+    window.APP_CONFIG = { api_url: "http://localhost:8000" };
+  </script>
+</head>
+<body>
+  <div class="page-center">
+    <div class="card">
+      <div class="brand">
+        <h1>Clube USA</h1>
+        <p>A comunidade brasileira nos Estados Unidos</p>
+      </div>
+
+      <div id="alert" class="alert"></div>
+
+      <form id="register-form" onsubmit="handleRegister(event)" novalidate>
+        <div class="form-group">
+          <label for="full_name">Nome completo</label>
+          <input type="text" id="full_name" name="full_name" placeholder="Joao Silva" required autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="seu@email.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password"
+                 placeholder="Minimo 8 caracteres com letras e numeros"
+                 required autocomplete="new-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary" data-label="Criar conta">Criar conta</button>
+      </form>
+
+      <div class="form-footer">
+        Ja tem conta? <a href="login.html">Entrar</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/auth.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => redirectIfLoggedIn());
+  </script>
+</body>
+</html>

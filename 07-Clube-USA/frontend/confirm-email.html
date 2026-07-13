@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmacao de email — Clube USA</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script>
+    window.APP_CONFIG = { api_url: "http://localhost:8000" };
+  </script>
+</head>
+<body>
+  <div class="page-center">
+    <div class="card" style="text-align:center">
+      <div class="brand">
+        <h1>Clube USA</h1>
+      </div>
+
+      <div id="status" class="alert alert-info show">Confirmando seu email...</div>
+
+      <div class="form-footer" style="margin-top:16px">
+        <a href="login.html">Ir para o login</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/auth.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", handleConfirmEmail);
+  </script>
+</body>
+</html>

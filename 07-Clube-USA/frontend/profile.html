@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu perfil — Clube USA</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script>
+    window.APP_CONFIG = { api_url: "http://localhost:8000" };
+  </script>
+</head>
+<body>
+  <nav>
+    <a href="index.html" class="nav-brand">Clube USA</a>
+    <div class="nav-links">
+      <a href="profile.html">Perfil</a>
+      <button onclick="logout()">Sair</button>
+    </div>
+  </nav>
+
+  <div class="profile-container">
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="avatar" id="avatar">?</div>
+        <div>
+          <p class="profile-name" id="profile-name">Carregando...</p>
+          <p class="profile-email" id="profile-email"></p>
+          <span class="badge" id="email-badge"></span>
+        </div>
+      </div>
+
+      <div id="alert" class="alert"></div>
+
+      <form id="profile-form" novalidate>
+        <div class="form-group">
+          <label for="full_name">Nome completo</label>
+          <input type="text" id="full_name" name="full_name" autocomplete="name">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="zip_code">ZIP Code</label>
+            <input type="text" id="zip_code" name="zip_code" placeholder="90210" maxlength="10">
+          </div>
+          <div class="form-group">
+            <label for="state">Estado</label>
+            <input type="text" id="state" name="state" placeholder="CA" maxlength="2">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="city">Cidade</label>
+          <input type="text" id="city" name="city" placeholder="Los Angeles">
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Telefone</label>
+          <input type="tel" id="phone" name="phone" placeholder="+1 (555) 000-0000" autocomplete="tel">
+        </div>
+
+        <div class="form-group">
+          <label for="bio">Sobre voce</label>
+          <textarea id="bio" name="bio" placeholder="Conte um pouco sobre voce..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" data-label="Salvar alteracoes">Salvar alteracoes</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/profile.js"></script>
+</body>
+</html>

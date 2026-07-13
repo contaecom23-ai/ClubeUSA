@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Clube USA</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script>
+    window.APP_CONFIG = { api_url: "http://localhost:8000" };
+  </script>
+</head>
+<body>
+  <div class="page-center">
+    <div class="card">
+      <div class="brand">
+        <h1>Clube USA</h1>
+        <p>Bem-vindo de volta</p>
+      </div>
+
+      <div id="alert" class="alert"></div>
+
+      <form id="login-form" onsubmit="handleLogin(event)" novalidate>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="seu@email.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password" placeholder="Sua senha" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary" data-label="Entrar">Entrar</button>
+      </form>
+
+      <div class="form-footer">
+        <p>Nao confirmou seu email? <a href="#" onclick="showResendForm()">Reenviar confirmacao</a></p>
+        <p>Nao tem conta? <a href="register.html">Cadastrar</a></p>
+      </div>
+
+      <!-- Resend confirmation (hidden by default) -->
+      <div id="resend-section" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid var(--gray-200)">
+        <p style="font-size:14px;color:var(--gray-500);margin:0 0 12px">Digite seu email para receber um novo link:</p>
+        <form id="resend-form" onsubmit="handleResend(event)" novalidate>
+          <div class="form-group">
+            <input type="email" id="resend-email" name="email" placeholder="seu@email.com" required>
+          </div>
+          <button type="submit" class="btn btn-secondary" data-label="Reenviar" style="width:100%">Reenviar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/auth.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => redirectIfLoggedIn());
+
+    function showResendForm() {
+      document.getElementById("resend-section").style.display = "block";
+    }
+
+    async function handleResend(e) {
+      e.preventDefault();
+      const form = e.target;
+      const alert = document.getElementById("alert");
+      const btn = form.querySelector("button[type=submit]");
+      setLoading(btn, true);
+      try {
+        const resp = await fetch(`${API}/auth/resend-confirmation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: form.email.value.trim() }),
+        });
+        const data = await resp.json();
+        showAlert(alert, data.message || "Email enviado.", "info");
+      } catch {
+        showAlert(alert, "Erro de conexao.", "error");
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+  </script>
+</body>
+</html>
