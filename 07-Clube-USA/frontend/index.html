@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Para brasileiros nos EUA</title>
+  <meta name="description" content="A plataforma que organiza a vida do imigrante brasileiro nos EUA.">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="page">
+
+  <nav class="nav">
+    <a href="/" class="nav-brand">Clube<span>USA</span></a>
+    <div class="nav-links">
+      <a href="/login.html" id="nav-login">Entrar</a>
+      <a href="/profile.html" id="nav-profile" style="display:none">Meu Perfil</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <h1>Sua vida nos EUA<br><span>mais organizada</span></h1>
+    <p>Promoções, empregos, moradia, comunidade e muito mais — tudo em um só lugar para brasileiros.</p>
+    <a href="#cadastro" class="btn-hero">Criar conta grátis</a>
+  </section>
+
+  <main class="main" id="cadastro">
+    <div class="card">
+      <h2 class="card-title">Criar conta</h2>
+      <p class="card-sub">Grátis. Sem cartão de crédito.</p>
+
+      <div id="alert" class="alert"></div>
+
+      <form id="register-form" novalidate>
+        <div class="form-group">
+          <label for="full_name">Nome completo *</label>
+          <input type="text" id="full_name" autocomplete="name" placeholder="João Silva">
+        </div>
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input type="email" id="email" autocomplete="email" placeholder="joao@email.com">
+        </div>
+        <div class="form-group">
+          <label for="password">Senha * <span style="font-weight:400;color:var(--gray500)">(mínimo 8 caracteres)</span></label>
+          <input type="password" id="password" autocomplete="new-password">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="zip_code">ZIP code</label>
+            <input type="text" id="zip_code" maxlength="10" placeholder="10001">
+          </div>
+          <div class="form-group">
+            <label for="state">Estado</label>
+            <select id="state">
+              <option value="">Selecione</option>
+              <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+              <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+              <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+              <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+              <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+              <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+              <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+              <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+              <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+              <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+              <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+              <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+              <option>WI</option><option>WY</option><option>DC</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="phone">Telefone (WhatsApp)</label>
+          <input type="tel" id="phone" autocomplete="tel" placeholder="+1 (555) 000-0000">
+        </div>
+        <div class="form-group">
+          <label for="referral_code">Código de indicação <span style="font-weight:400;color:var(--gray500)">(opcional)</span></label>
+          <input type="text" id="referral_code" maxlength="20" placeholder="XXXXXXXX">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          <span class="btn-text">Criar conta grátis</span>
+          <span class="spinner"></span>
+        </button>
+      </form>
+
+      <div class="text-center mt-2">
+        <span style="color:var(--gray500);font-size:.875rem">Já tem conta?</span>
+        <a href="/login.html" class="text-link"> Entrar</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    // Redirecionar se já logado
+    if (Auth.isLoggedIn()) {
+      document.getElementById('nav-login').style.display = 'none';
+      document.getElementById('nav-profile').style.display = '';
+    }
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('alert');
+
+      const data = {
+        full_name:     getField('full_name'),
+        email:         getField('email'),
+        password:      getField('password'),
+        zip_code:      getField('zip_code') || null,
+        state:         getField('state') || null,
+        phone:         getField('phone') || null,
+        referral_code: getField('referral_code') || null,
+      };
+
+      if (!data.full_name || !data.email || !data.password) {
+        showAlert('alert', 'Preencha nome, email e senha.');
+        return;
+      }
+      if (data.password.length < 8) {
+        showAlert('alert', 'A senha precisa ter pelo menos 8 caracteres.');
+        return;
+      }
+
+      setLoading('submit-btn', true);
+      try {
+        const res = await fetch('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const json = await res.json();
+        if (res.ok) {
+          showAlert('alert', '✓ Cadastro realizado! Verifique seu email para ativar a conta.', 'success');
+          document.getElementById('register-form').reset();
+        } else {
+          showAlert('alert', json.detail || 'Erro ao criar conta. Tente novamente.');
+        }
+      } catch (err) {
+        showAlert('alert', 'Falha de conexão. Verifique sua internet e tente novamente.');
+      } finally {
+        setLoading('submit-btn', false);
+      }
+    });
+  </script>
+</body>
+</html>

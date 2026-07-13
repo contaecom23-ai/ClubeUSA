@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="page">
+
+  <nav class="nav">
+    <a href="/" class="nav-brand">Clube<span>USA</span></a>
+    <div class="nav-links">
+      <a href="#" onclick="logout(); return false">Sair</a>
+    </div>
+  </nav>
+
+  <main class="main" style="align-items:flex-start;padding-top:2rem">
+    <div style="width:100%;max-width:520px;margin:0 auto">
+
+      <!-- Cabeçalho do perfil -->
+      <div class="card" style="margin-bottom:1rem">
+        <div class="profile-header">
+          <div class="avatar" id="avatar-initials">?</div>
+          <div>
+            <div id="profile-name" style="font-weight:700;font-size:1.1rem;color:var(--blue)">Carregando…</div>
+            <div id="profile-email" style="color:var(--gray500);font-size:.875rem"></div>
+            <div id="confirm-badge" style="display:none;margin-top:.25rem">
+              <span style="background:#D1FAE5;color:#065F46;padding:.2rem .6rem;border-radius:999px;font-size:.75rem;font-weight:600">
+                ✓ Email confirmado
+              </span>
+            </div>
+            <div id="unconfirmed-badge" style="display:none;margin-top:.25rem">
+              <span style="background:#FEF3C7;color:#92400E;padding:.2rem .6rem;border-radius:999px;font-size:.75rem;font-weight:600">
+                ⚠ Email não confirmado
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Link de indicação -->
+        <div style="font-size:.85rem;color:var(--gray700);margin-bottom:.35rem">Seu link de indicação:</div>
+        <div class="referral-box">
+          <span id="referral-url" class="referral-code" style="font-size:.9rem;word-break:break-all"></span>
+          <button class="copy-btn" onclick="copyReferral()">Copiar</button>
+        </div>
+        <div id="copy-feedback" style="font-size:.78rem;color:var(--green);margin-top:.35rem;display:none">✓ Copiado!</div>
+      </div>
+
+      <!-- Editar perfil -->
+      <div class="card">
+        <h2 style="font-size:1.1rem;font-weight:700;color:var(--blue);margin-bottom:1rem">Editar perfil</h2>
+        <div id="save-alert" class="alert"></div>
+
+        <form id="profile-form" novalidate>
+          <div class="form-group">
+            <label for="full_name">Nome completo</label>
+            <input type="text" id="full_name">
+          </div>
+          <div class="form-group">
+            <label for="phone">Telefone (WhatsApp)</label>
+            <input type="tel" id="phone" placeholder="+1 (555) 000-0000">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="zip_code">ZIP code</label>
+              <input type="text" id="zip_code" maxlength="10">
+            </div>
+            <div class="form-group">
+              <label for="city">Cidade</label>
+              <input type="text" id="city">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="state">Estado</label>
+            <select id="state">
+              <option value="">Selecione</option>
+              <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+              <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+              <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+              <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+              <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+              <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+              <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+              <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+              <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+              <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+              <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+              <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+              <option>WI</option><option>WY</option><option>DC</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="save-btn">
+            <span class="btn-text">Salvar alterações</span>
+            <span class="spinner"></span>
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    requireAuth();
+
+    let userReferralCode = '';
+
+    async function loadProfile() {
+      try {
+        const res = await apiFetch('/users/me');
+        if (!res.ok) { Auth.clear(); window.location.href = '/login.html'; return; }
+        const u = await res.json();
+
+        // Cabeçalho
+        const initials = u.full_name.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
+        document.getElementById('avatar-initials').textContent = initials;
+        document.getElementById('profile-name').textContent = u.full_name;
+        document.getElementById('profile-email').textContent = u.email;
+
+        if (u.email_confirmed) {
+          document.getElementById('confirm-badge').style.display = 'block';
+        } else {
+          document.getElementById('unconfirmed-badge').style.display = 'block';
+        }
+
+        // Link de indicação (Fase 0.2 usará isto)
+        userReferralCode = u.referral_code;
+        const base = window.location.origin;
+        document.getElementById('referral-url').textContent = `${base}/?ref=${u.referral_code}`;
+
+        // Preencher form
+        document.getElementById('full_name').value = u.full_name || '';
+        document.getElementById('phone').value    = u.phone    || '';
+        document.getElementById('zip_code').value = u.zip_code || '';
+        document.getElementById('city').value     = u.city     || '';
+        if (u.state) {
+          const sel = document.getElementById('state');
+          for (const opt of sel.options) {
+            if (opt.value === u.state) { opt.selected = true; break; }
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadProfile();
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('save-alert');
+      const data = {
+        full_name: getField('full_name') || undefined,
+        phone:     getField('phone')     || undefined,
+        zip_code:  getField('zip_code')  || undefined,
+        city:      getField('city')      || undefined,
+        state:     getField('state')     || undefined,
+      };
+      // Remover undefined
+      Object.keys(data).forEach(k => data[k] === undefined && delete data[k]);
+
+      setLoading('save-btn', true);
+      try {
+        const res = await apiFetch('/users/me', {
+          method: 'PATCH',
+          body: JSON.stringify(data),
+        });
+        const json = await res.json();
+        if (res.ok) {
+          showAlert('save-alert', '✓ Perfil atualizado!', 'success');
+          document.getElementById('profile-name').textContent = json.full_name;
+          const initials = json.full_name.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
+          document.getElementById('avatar-initials').textContent = initials;
+        } else {
+          showAlert('save-alert', json.detail || 'Erro ao salvar.');
+        }
+      } catch {
+        showAlert('save-alert', 'Falha de conexão.');
+      } finally {
+        setLoading('save-btn', false);
+      }
+    });
+
+    function copyReferral() {
+      const url = window.location.origin + '/?ref=' + userReferralCode;
+      navigator.clipboard.writeText(url).then(() => {
+        const fb = document.getElementById('copy-feedback');
+        fb.style.display = 'block';
+        setTimeout(() => fb.style.display = 'none', 2000);
+      });
+    }
+  </script>
+</body>
+</html>

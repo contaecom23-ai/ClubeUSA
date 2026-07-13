@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmação de email — Clube USA</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="page">
+
+  <nav class="nav">
+    <a href="/" class="nav-brand">Clube<span>USA</span></a>
+  </nav>
+
+  <main class="main">
+    <div class="card" style="text-align:center">
+      <div id="loading">
+        <div style="font-size:2.5rem;margin-bottom:1rem">⏳</div>
+        <h1 class="card-title">Confirmando seu email…</h1>
+        <p class="card-sub">Aguarde um instante.</p>
+      </div>
+
+      <div id="success" style="display:none">
+        <div style="font-size:2.5rem;margin-bottom:1rem">✅</div>
+        <h1 class="card-title">Email confirmado!</h1>
+        <p class="card-sub">Sua conta está ativa. Faça login para começar.</p>
+        <a href="/login.html?confirmed=1" class="btn btn-primary" style="display:inline-flex;margin-top:1.5rem;text-decoration:none;max-width:220px">
+          Fazer login
+        </a>
+      </div>
+
+      <div id="error" style="display:none">
+        <div style="font-size:2.5rem;margin-bottom:1rem">❌</div>
+        <h1 class="card-title">Link inválido</h1>
+        <p class="card-sub" id="error-msg">O link pode ter expirado ou já foi utilizado.</p>
+        <a href="/login.html" class="btn btn-outline" style="display:inline-flex;margin-top:1.5rem;text-decoration:none;max-width:220px">
+          Voltar ao login
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    (async () => {
+      const token = new URLSearchParams(window.location.search).get('token');
+      if (!token) {
+        show('error', 'Token não encontrado na URL.');
+        return;
+      }
+      try {
+        const res = await fetch(`/auth/confirm-email?token=${encodeURIComponent(token)}`);
+        const json = await res.json();
+        if (res.ok) {
+          show('success');
+        } else {
+          show('error', json.detail || 'Link inválido ou expirado.');
+        }
+      } catch {
+        show('error', 'Falha de conexão. Tente novamente.');
+      }
+    })();
+
+    function show(section, errMsg) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById(section).style.display = 'block';
+      if (errMsg && document.getElementById('error-msg')) {
+        document.getElementById('error-msg').textContent = errMsg;
+      }
+    }
+  </script>
+</body>
+</html>
