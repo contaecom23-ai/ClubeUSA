@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="page">
+
+  <nav class="nav">
+    <a href="/" class="nav-brand">Clube<span>USA</span></a>
+    <div class="nav-links">
+      <a href="/">Criar conta</a>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="card">
+      <h1 class="card-title">Entrar</h1>
+      <p class="card-sub">Bem-vindo(a) de volta!</p>
+
+      <div id="alert" class="alert"></div>
+
+      <form id="login-form" novalidate>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" autocomplete="email" placeholder="joao@email.com">
+        </div>
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          <span class="btn-text">Entrar</span>
+          <span class="spinner"></span>
+        </button>
+      </form>
+
+      <div class="text-center mt-2">
+        <span style="color:var(--gray500);font-size:.875rem">Não tem conta?</span>
+        <a href="/" class="text-link"> Criar conta grátis</a>
+      </div>
+
+      <div class="text-center mt-1">
+        <a href="#" id="resend-link" class="text-link" style="font-size:.8rem;color:var(--gray500)">
+          Não recebi o email de confirmação
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal: reenviar confirmação -->
+  <div id="resend-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;">
+    <div class="card" style="max-width:380px;margin:1rem">
+      <h2 class="card-title" style="font-size:1.2rem">Reenviar confirmação</h2>
+      <p class="card-sub">Digite seu email para receber um novo link.</p>
+      <div id="resend-alert" class="alert"></div>
+      <div class="form-group">
+        <label for="resend-email">Email</label>
+        <input type="email" id="resend-email" placeholder="joao@email.com">
+      </div>
+      <button class="btn btn-primary" id="resend-btn" onclick="resendEmail()">
+        <span class="btn-text">Reenviar</span>
+        <span class="spinner"></span>
+      </button>
+      <button class="btn btn-outline" onclick="closeResend()">Fechar</button>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    if (Auth.isLoggedIn()) window.location.href = '/profile.html';
+
+    // URL pode trazer ?email=... após confirmação
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('confirmed')) {
+      showAlert('alert', '✓ Email confirmado! Faça login para continuar.', 'success');
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('alert');
+      const data = { email: getField('email'), password: getField('password') };
+      if (!data.email || !data.password) {
+        showAlert('alert', 'Preencha email e senha.');
+        return;
+      }
+      setLoading('submit-btn', true);
+      try {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const json = await res.json();
+        if (res.ok) {
+          Auth.save(json);
+          window.location.href = '/profile.html';
+        } else {
+          showAlert('alert', json.detail || 'Email ou senha incorretos.');
+        }
+      } catch (err) {
+        showAlert('alert', 'Falha de conexão. Tente novamente.');
+      } finally {
+        setLoading('submit-btn', false);
+      }
+    });
+
+    document.getElementById('resend-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('resend-modal').style.display = 'flex';
+    });
+    function closeResend() {
+      document.getElementById('resend-modal').style.display = 'none';
+      hideAlert('resend-alert');
+    }
+    async function resendEmail() {
+      const email = getField('resend-email');
+      if (!email) { showAlert('resend-alert', 'Digite seu email.'); return; }
+      setLoading('resend-btn', true);
+      try {
+        const res = await fetch('/auth/resend-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const json = await res.json();
+        showAlert('resend-alert', json.message || 'Verifique seu email.', 'success');
+      } catch {
+        showAlert('resend-alert', 'Falha de conexão.');
+      } finally {
+        setLoading('resend-btn', false);
+      }
+    }
+  </script>
+</body>
+</html>
