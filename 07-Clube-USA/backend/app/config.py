@@ -1,48 +1,46 @@
-import secrets
-import warnings
-from typing import List
-
+import sys
+from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # Supabase (server-side service_role only — never expose to client)
     SUPABASE_URL: str
+    SUPABASE_ANON_KEY: str
     SUPABASE_SERVICE_ROLE_KEY: str
+    SUPABASE_JWT_SECRET: str
 
-    # JWT
-    SECRET_KEY: str
-    ACCESS_TOKEN_EXPIRE_DAYS: int = 7
-
-    # App
-    FRONTEND_URL: str = "http://localhost:8080"
-    BACKEND_URL: str = "http://localhost:8000"
-    CORS_ORIGINS: str = "http://localhost:8080,http://localhost:3000"
-
-    # Email (SMTP); empty = dev mode (print link to console)
-    SMTP_HOST: str = ""
-    SMTP_PORT: int = 587
-    SMTP_USERNAME: str = ""
-    SMTP_PASSWORD: str = ""
-    EMAIL_FROM: str = "noreply@clubeusa.com"
+    CORS_ORIGINS: str = ""
+    APP_ENV: str = "development"
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
+        if not self.CORS_ORIGINS:
+            return []
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
-    def model_post_init(self, __context) -> None:
-        insecure = {"", "REPLACE-WITH-A-RANDOM-64-CHAR-STRING", "change-me", "secret"}
-        if self.SECRET_KEY in insecure or len(self.SECRET_KEY) < 32:
-            suggestion = secrets.token_urlsafe(64)
-            warnings.warn(
-                "SECRET_KEY is missing or insecure. "
-                f"Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\"\n"
-                f"Example: {suggestion}",
-                UserWarning,
-                stacklevel=2,
-            )
+    def _validate_secrets(self) -> None:
+        """Recusa iniciar se algum segredo parece placeholder."""
+        sentinels = {"xxxx", "eyJ...", "super-secret", "changeme", "secret"}
+        for field in ("SUPABASE_URL", "SUPABASE_ANON_KEY",
+                      "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_JWT_SECRET"):
+            val = getattr(self, field, "")
+            if any(s in val for s in sentinels):
+                print(
+                    f"[ERRO] {field} parece placeholder. "
+                    "Configure as variáveis de ambiente reais antes de iniciar.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    s = Settings()  # type: ignore[call-arg]
+    if s.APP_ENV != "testing":
+        s._validate_secrets()
+    return s
+
+
+settings = get_settings()

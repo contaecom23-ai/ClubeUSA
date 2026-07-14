@@ -10,80 +10,79 @@
 
 Quando o Claude travar em algo que só você pode decidir (orçamento, preços, escolhas de produto/negócio, aprovação de gasto, chaves/contas externas, direção estratégica, qualquer coisa irreversível ou com custo), ele registra aqui e segue para outra tarefa.
 
-Formato de cada entrada:
-
-```
-### [DATA] Título da decisão
-**Contexto:** ...
-**Pergunta:** ...
-**Opções:**
-- Opção A: prós / contras
-- Opção B: prós / contras
-**Recomendação:** ...
-**Status:** PENDENTE | APROVADO | REJEITADO
-```
-
 ---
 
 ## Decisões Pendentes
 
-### [2026-07-05] Provedor de email para confirmação de conta
+### [2026-07-14] Configuração do projeto Supabase (BLOQUEADOR para Fase 0.1 entrar em produção)
 
-**Contexto:** O backend (Fase 0.1) já tem a lógica de envio de email por SMTP. Em modo dev, o link de confirmação aparece no console. Para produção, precisamos de um provedor SMTP configurado. A escolha afeta custo e entregabilidade.
+**Contexto:**
+A Fase 0.1 está codificada e pronta para rodar, mas exige um projeto Supabase real com as chaves de API. Sem isso, o backend não inicia.
 
-**Pergunta:** Qual provedor de email transacional usar para o envio de confirmação de conta (e futuros emails)?
+**Pergunta:**
+Você tem um projeto Supabase criado para o Clube USA? Se não, precisa criar um.
 
-**Opções:**
+**O que você precisa fazer (não requer aprovação do Claude, só sua ação):**
 
-- **Opção A — Resend (resend.com):** $0 nos primeiros 3.000 emails/mês, depois $20/mês. API simples, alta entregabilidade, ótima DX. Sem SMTP nativo — precisaria de um adapter, mas eles têm SDK Python.
-  - Prós: Generoso no free tier, moderno, rápido de integrar.
-  - Contras: Não é SMTP puro (precisaria de pequena adaptação no código).
+1. **Criar projeto Supabase** (gratuito até ~500 MB):
+   - Acesse https://supabase.com → New Project
+   - Nome sugerido: `clube-usa`
+   - Escolha região: `US East (N. Virginia)` — mais próxima do público-alvo
 
-- **Opção B — SendGrid (Twilio):** Free tier com 100 emails/dia (~3k/mês). SMTP disponível — plugaria direto no código atual sem nenhuma mudança.
-  - Prós: Zero mudança de código, free tier suficiente para os primeiros 1k usuários.
-  - Contras: Interface mais complexa, reputação de entregabilidade um pouco inferior ao Resend.
+2. **Aplicar a migration SQL:**
+   - No dashboard → SQL Editor → cole e execute o arquivo `07-Clube-USA/backend/migrations/001_initial_schema.sql`
 
-- **Opção C — AWS SES:** ~$0,10 por 1k emails. Baratíssimo em escala. Requer conta AWS e verificação de domínio.
-  - Prós: Escala sem custo explosivo, SMTP disponível.
-  - Contras: Setup mais trabalhoso, requer conta AWS ativa.
+3. **Configurar email de verificação:**
+   - Dashboard → Authentication → URL Configuration
+   - Site URL: `https://SEU_DOMINIO.com` (ou `http://localhost:3000` para testar)
+   - Redirect URLs: adicione `https://SEU_DOMINIO.com/verify-email.html`
+   - Email Templates → Confirm signup → verifique que o link aponta para a URL correta
 
-- **Opção D — Gmail SMTP (temporário):** Gratuito, mas limitado a 500 emails/dia e sujeito a bloqueios.
-  - Prós: Imediato para testar.
-  - Contras: Não é solução de produção. Bloqueável pelo Google. Não recomendado para uso real.
+4. **Copiar as chaves:**
+   - Dashboard → Settings → API
+   - Copie: `URL`, `anon key`, `service_role key`, `JWT Secret`
+   - Crie `07-Clube-USA/backend/.env` baseado em `.env.example` e preencha com as chaves reais
+   - **NUNCA commite o `.env` com chaves reais** (está no `.gitignore`)
 
-**Recomendação:** **SendGrid (Opção B)** para o lançamento — zero mudança de código, free tier cobre os primeiros 1k usuários, e quando escalar para 10k+ migrar para AWS SES. Resend também é boa opção se quiser a melhor DX.
+5. **Hospedar o backend:**
+   - Opção grátis/fácil: [Railway](https://railway.app) ou [Render](https://render.com)
+   - Configure as env vars no painel do host (não no código)
+   - Comando de start: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
 
-**O que você precisa fazer:**
-1. Criar conta no SendGrid (ou provedor escolhido)
-2. Verificar seu domínio (clubeusa.com)
-3. Configurar as env vars no servidor: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `EMAIL_FROM`
+6. **Hospedar o frontend:**
+   - Opção grátis: [Netlify](https://netlify.com) ou [GitHub Pages](https://pages.github.com)
+   - Antes do deploy, edite `frontend/assets/api.js` linha 1: troque `http://localhost:8000` pela URL real do backend
 
-**Status:** PENDENTE
+**Recomendação do Claude:**
+Comece com Railway (backend) + Netlify (frontend) — ambos gratuitos, deploy simples via GitHub, suportam env vars. Isso cobre os primeiros 1.000 usuários sem custo.
 
----
-
-### [2026-07-05] URL de produção do backend (FRONTEND_URL / API_URL)
-
-**Contexto:** Os arquivos HTML do frontend têm `const API_URL = 'http://localhost:8000/api/v1'` hardcoded. Para produção, isso precisa apontar para o domínio real da API. Similarmente, o backend precisa saber o `FRONTEND_URL` para gerar o link de verificação no email.
-
-**Pergunta:** Onde o backend FastAPI vai rodar em produção? (ex: Railway, Render, VPS, Supabase Edge Functions?)
-
-**Opções:**
-
-- **Opção A — Railway.app:** Deploy via GitHub, free tier limitado, $5/mês no plano básico. Mais simples.
-- **Opção B — Render.com:** Free tier com cold start, $7/mês no plano básico. Similar ao Railway.
-- **Opção C — VPS (DigitalOcean/Hetzner):** $4–6/mês, controle total, requer setup de nginx/systemd.
-- **Opção D — AWS/GCP/Azure:** Mais complexo, mais caro no início, mas escala infinitamente.
-
-**Recomendação:** **Railway ou Render** para começar — deploy em minutos, sem ops. Quando chegar a 10k usuários, avaliar migrar para VPS ou AWS.
-
-**O que você precisa fazer:**
-1. Escolher e configurar o host
-2. Definir o domínio da API (ex: `api.clubeusa.com`)
-3. Atualizar `API_URL` nos HTMLs (ou criar um `config.js` centralizado)
-
-**Status:** PENDENTE
+**Status:** PENDENTE — aguardando ação do dono
 
 ---
 
-*Atualizado em: 2026-07-05*
+### [2026-07-14] Provedor de e-mail transacional (para verificação de conta)
+
+**Contexto:**
+O Supabase usa seu próprio SMTP para enviar e-mails de verificação. O limite gratuito é 3 e-mails/hora — **insuficiente para lançamento**. Acima disso é necessário configurar SMTP externo.
+
+**Pergunta:**
+Qual provedor de e-mail transacional deseja usar?
+
+**Opções:**
+| Provedor | Custo | Limite grátis | Notas |
+|---|---|---|---|
+| **Resend** | $0–20/mês | 3.000/mês | API moderna, fácil integrar com Supabase |
+| **SendGrid** | $0–19.95/mês | 100/dia | Consolidado, mais configuração |
+| **Mailgun** | $0–35/mês | 100/dia (3 meses) | Bom deliverability |
+| Supabase built-in | $0 | 3/hora | Só para dev/teste |
+
+**Recomendação do Claude:**
+**Resend** — mais simples, integração nativa com Supabase Auth, 3.000 e-mails/mês grátis são suficientes para os primeiros 1.000 usuários. Setup em 10 minutos.
+
+**Como fazer:** Resend.com → criar conta → gerar API Key → no Supabase: Auth → SMTP Settings → ativar custom SMTP com as credenciais do Resend.
+
+**Status:** PENDENTE — aguardando decisão e ação do dono
+
+---
+
+*Atualizado em: 2026-07-14*

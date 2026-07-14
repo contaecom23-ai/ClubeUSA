@@ -1,89 +1,58 @@
--- =============================================================
--- Clube USA — Migration 001: Initial Schema
--- =============================================================
--- Run against your Supabase project with the service_role key.
--- All tables use server-side access only (service_role).
--- RLS is disabled intentionally until client-side queries are needed;
--- security is enforced at the API layer (see backend/app/).
--- =============================================================
+-- =============================================================================
+-- Migração 001 — Schema inicial Clube USA
+-- Aplicar em: Supabase Dashboard > SQL Editor
+-- =============================================================================
 
--- Users: core auth record (email + password hash + verification status)
-CREATE TABLE IF NOT EXISTS public.users (
-    id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    email             TEXT        UNIQUE NOT NULL,
-    password_hash     TEXT        NOT NULL,
-    is_email_verified BOOLEAN     NOT NULL DEFAULT FALSE,
-    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Profiles: mutable user data (1-to-1 with users)
+-- -----------------------------------------------------------------------------
+-- Tabela profiles
+-- Estende auth.users (gerenciado pelo Supabase Auth).
+-- Toda leitura/escrita só ocorre via FastAPI com service_role key.
+-- RLS habilitado mas sem policy permissiva — acesso só server-side.
+-- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.profiles (
-    id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id    UUID        UNIQUE NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    full_name  TEXT        CHECK (char_length(full_name) <= 100),
-    phone      TEXT        CHECK (char_length(phone) <= 30),
-    state      TEXT        CHECK (char_length(state) <= 50),
-    city       TEXT        CHECK (char_length(city) <= 100),
-    zip_code   TEXT        CHECK (zip_code ~ '^\d{5}(-\d{4})?$' OR zip_code IS NULL),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name   TEXT        NOT NULL CHECK (length(trim(full_name)) >= 2),
+    city        TEXT,
+    state       CHAR(2),    -- código de 2 letras do estado americano
+    phone       TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Email verification tokens (24h TTL, single-use)
-CREATE TABLE IF NOT EXISTS public.email_verification_tokens (
-    id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id    UUID        NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    token      TEXT        UNIQUE NOT NULL,
-    expires_at TIMESTAMPTZ NOT NULL,
-    used_at    TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+-- Índice para buscas futuras por estado (Fase 1.2)
+CREATE INDEX IF NOT EXISTS profiles_state_idx ON public.profiles(state);
 
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_users_email
-    ON public.users(email);
+-- RLS ativo — bloqueia acesso anônimo direto ao banco.
+-- Todo acesso legítimo vem da API com service_role (bypassa RLS).
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE INDEX IF NOT EXISTS idx_profiles_user_id
-    ON public.profiles(user_id);
+-- Sem policy permissiva: qualquer acesso via anon key ou user JWT direto
+-- ao banco é bloqueado. Isso é intencional.
 
-CREATE INDEX IF NOT EXISTS idx_verification_tokens_token
-    ON public.email_verification_tokens(token);
-
-CREATE INDEX IF NOT EXISTS idx_verification_tokens_user_id
-    ON public.email_verification_tokens(user_id);
-
--- Auto-update updated_at on row changes
-CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-RETURNS TRIGGER AS $$
+-- -----------------------------------------------------------------------------
+-- Trigger: cria perfil automaticamente ao cadastrar usuário
+-- Lê full_name de raw_user_meta_data (passado no sign_up da API)
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-    NEW.updated_at = NOW();
+    INSERT INTO public.profiles (id, full_name)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', 'Usuário')
+    )
+    ON CONFLICT (id) DO NOTHING;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_users_updated_at') THEN
-        CREATE TRIGGER update_users_updated_at
-            BEFORE UPDATE ON public.users
-            FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-    END IF;
-END $$;
+-- Garante idempotência ao re-aplicar a migração
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_profiles_updated_at') THEN
-        CREATE TRIGGER update_profiles_updated_at
-            BEFORE UPDATE ON public.profiles
-            FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-    END IF;
-END $$;
-
--- Security: revoke direct access from anon/authenticated roles.
--- All access goes through the API with the service_role key.
-REVOKE ALL ON public.users FROM anon, authenticated;
-REVOKE ALL ON public.profiles FROM anon, authenticated;
-REVOKE ALL ON public.email_verification_tokens FROM anon, authenticated;
-
-ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.profiles DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.email_verification_tokens DISABLE ROW LEVEL SECURITY;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

@@ -1,243 +1,133 @@
-"""Tests for /api/v1/auth — register, login, verify-email, resend-verification."""
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, call
-
+"""Testes de autenticação."""
 import pytest
-
-from app.security import create_access_token, hash_password
-
-
-# ---------------------------------------------------------------------------
-# Helpers to wire up mock_db method-chain return values
-# ---------------------------------------------------------------------------
-
-def _setup_select_none(mock_db: MagicMock, table: str) -> None:
-    """Make db.table(table).select(...).eq(...).execute() return empty data."""
-    mock_db.table(table).select.return_value.eq.return_value.execute.return_value.data = []
+from unittest.mock import MagicMock
+from gotrue.errors import AuthApiError
 
 
-def _table_mock(mock_db: MagicMock, table: str) -> MagicMock:
-    return mock_db.table(table)
+def _supabase_error(msg: str) -> AuthApiError:
+    return AuthApiError(msg, 400, "unexpected_failure")
 
-
-# ---------------------------------------------------------------------------
-# Register
-# ---------------------------------------------------------------------------
 
 class TestRegister:
-    def test_success(self, client: "TestClient", mock_db: MagicMock):
-        # No duplicate user
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = []
-        # User insert returns new user
-        mock_db.table.return_value.insert.return_value.execute.return_value.data = [
-            {"id": "user-001"}
-        ]
+    def test_success(self, client, patch_supabase):
+        mock_auth, _ = patch_supabase
+        fake_user = MagicMock()
+        fake_user.user = MagicMock(id="uuid-123")
+        mock_auth.auth.sign_up.return_value = fake_user
 
-        resp = client.post("/api/v1/auth/register", json={
-            "email": "new@example.com",
-            "password": "Secure1Pass",
-            "full_name": "Maria Silva",
+        resp = client.post("/auth/register", json={
+            "email": "joao@exemplo.com",
+            "password": "Senha123",
+            "full_name": "João Silva",
         })
         assert resp.status_code == 201
-        assert "Cadastro realizado" in resp.json()["message"]
+        assert "e-mail" in resp.json()["message"].lower()
 
-    def test_duplicate_email_returns_400(self, client: "TestClient", mock_db: MagicMock):
-        # Existing user found
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [
-            {"id": "user-existing"}
-        ]
+    def test_duplicate_email(self, client, patch_supabase):
+        mock_auth, _ = patch_supabase
+        mock_auth.auth.sign_up.side_effect = _supabase_error("already registered")
 
-        resp = client.post("/api/v1/auth/register", json={
-            "email": "taken@example.com",
-            "password": "Secure1Pass",
-            "full_name": "Already Exists",
+        resp = client.post("/auth/register", json={
+            "email": "joao@exemplo.com",
+            "password": "Senha123",
+            "full_name": "João Silva",
         })
-        # Must be 400, NOT 409 — don't reveal account existence
-        assert resp.status_code == 400
+        assert resp.status_code == 409
 
-    def test_weak_password_no_uppercase(self, client: "TestClient", mock_db: MagicMock):
-        resp = client.post("/api/v1/auth/register", json={
-            "email": "x@example.com",
-            "password": "alllower1",
-            "full_name": "Test User",
+    def test_weak_password_short(self, client, patch_supabase):
+        resp = client.post("/auth/register", json={
+            "email": "joao@exemplo.com",
+            "password": "abc",
+            "full_name": "João Silva",
         })
         assert resp.status_code == 422
 
-    def test_weak_password_no_digit(self, client: "TestClient", mock_db: MagicMock):
-        resp = client.post("/api/v1/auth/register", json={
-            "email": "x@example.com",
-            "password": "NoDigitHere",
-            "full_name": "Test User",
+    def test_weak_password_no_number(self, client, patch_supabase):
+        resp = client.post("/auth/register", json={
+            "email": "joao@exemplo.com",
+            "password": "SenhaSemNumero",
+            "full_name": "João Silva",
         })
         assert resp.status_code == 422
 
-    def test_weak_password_too_short(self, client: "TestClient", mock_db: MagicMock):
-        resp = client.post("/api/v1/auth/register", json={
-            "email": "x@example.com",
-            "password": "Ab1",
-            "full_name": "Test User",
+    def test_invalid_email(self, client, patch_supabase):
+        resp = client.post("/auth/register", json={
+            "email": "nao-e-email",
+            "password": "Senha123",
+            "full_name": "João",
         })
         assert resp.status_code == 422
 
-    def test_invalid_email_rejected(self, client: "TestClient", mock_db: MagicMock):
-        resp = client.post("/api/v1/auth/register", json={
-            "email": "not-an-email",
-            "password": "Secure1Pass",
-            "full_name": "Test User",
+    def test_name_too_short(self, client, patch_supabase):
+        resp = client.post("/auth/register", json={
+            "email": "joao@exemplo.com",
+            "password": "Senha123",
+            "full_name": "J",
         })
         assert resp.status_code == 422
 
-    def test_empty_name_rejected(self, client: "TestClient", mock_db: MagicMock):
-        resp = client.post("/api/v1/auth/register", json={
-            "email": "x@example.com",
-            "password": "Secure1Pass",
-            "full_name": "  ",
-        })
-        assert resp.status_code == 422
-
-
-# ---------------------------------------------------------------------------
-# Login
-# ---------------------------------------------------------------------------
 
 class TestLogin:
-    def _setup_user(self, mock_db: MagicMock, verified: bool = True) -> None:
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [
-            {
-                "id": "user-001",
-                "email": "user@example.com",
-                "password_hash": hash_password("Correct1"),
-                "is_email_verified": verified,
-            }
-        ]
+    def test_success(self, client, patch_supabase):
+        mock_auth, _ = patch_supabase
+        fake_session = MagicMock()
+        fake_session.session = MagicMock(
+            access_token="access-tok",
+            refresh_token="refresh-tok",
+            expires_in=3600,
+        )
+        mock_auth.auth.sign_in_with_password.return_value = fake_session
 
-    def test_success(self, client: "TestClient", mock_db: MagicMock):
-        self._setup_user(mock_db, verified=True)
-        resp = client.post("/api/v1/auth/login", json={
-            "email": "user@example.com",
-            "password": "Correct1",
+        resp = client.post("/auth/login", json={
+            "email": "joao@exemplo.com",
+            "password": "Senha123",
         })
         assert resp.status_code == 200
         data = resp.json()
-        assert "access_token" in data
+        assert data["access_token"] == "access-tok"
         assert data["token_type"] == "bearer"
 
-    def test_wrong_password(self, client: "TestClient", mock_db: MagicMock):
-        self._setup_user(mock_db, verified=True)
-        resp = client.post("/api/v1/auth/login", json={
-            "email": "user@example.com",
-            "password": "Wrong1Pass",
+    def test_wrong_password(self, client, patch_supabase):
+        mock_auth, _ = patch_supabase
+        mock_auth.auth.sign_in_with_password.side_effect = _supabase_error("invalid credentials")
+
+        resp = client.post("/auth/login", json={
+            "email": "joao@exemplo.com",
+            "password": "Errada123",
         })
         assert resp.status_code == 401
 
-    def test_user_not_found_returns_401(self, client: "TestClient", mock_db: MagicMock):
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = []
-        resp = client.post("/api/v1/auth/login", json={
-            "email": "nobody@example.com",
-            "password": "Secure1Pass",
-        })
-        assert resp.status_code == 401
-        # Same error message as wrong password — prevents user enumeration
-        assert "inválidos" in resp.json()["detail"]
+    def test_email_not_verified(self, client, patch_supabase):
+        mock_auth, _ = patch_supabase
+        fake_resp = MagicMock()
+        fake_resp.session = None  # Supabase não retorna sessão sem email confirmado
+        mock_auth.auth.sign_in_with_password.return_value = fake_resp
 
-    def test_unverified_email_returns_403(self, client: "TestClient", mock_db: MagicMock):
-        self._setup_user(mock_db, verified=False)
-        resp = client.post("/api/v1/auth/login", json={
-            "email": "user@example.com",
-            "password": "Correct1",
+        resp = client.post("/auth/login", json={
+            "email": "joao@exemplo.com",
+            "password": "Senha123",
         })
         assert resp.status_code == 403
-        assert "confirmado" in resp.json()["detail"]
 
-    def test_jwt_contains_user_id(self, client: "TestClient", mock_db: MagicMock):
-        self._setup_user(mock_db, verified=True)
-        resp = client.post("/api/v1/auth/login", json={
-            "email": "user@example.com",
-            "password": "Correct1",
-        })
-        assert resp.json()["user_id"] == "user-001"
-
-
-# ---------------------------------------------------------------------------
-# Verify Email
-# ---------------------------------------------------------------------------
 
 class TestVerifyEmail:
-    def _valid_token_rec(self) -> dict:
-        future = (datetime.now(timezone.utc) + timedelta(hours=12)).isoformat()
-        return {"id": "tok-001", "user_id": "user-001", "expires_at": future, "used_at": None}
+    def test_success(self, client, patch_supabase):
+        mock_auth, _ = patch_supabase
+        mock_auth.auth.verify_otp.return_value = MagicMock()
 
-    def test_success(self, client: "TestClient", mock_db: MagicMock):
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [
-            self._valid_token_rec()
-        ]
-        resp = client.get("/api/v1/auth/verify-email?token=validtoken123")
+        resp = client.post("/auth/verify-email", json={
+            "token_hash": "valid-hash",
+            "type": "email",
+        })
         assert resp.status_code == 200
-        assert "confirmado" in resp.json()["message"]
+        assert "verificado" in resp.json()["message"].lower()
 
-    def test_invalid_token(self, client: "TestClient", mock_db: MagicMock):
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = []
-        resp = client.get("/api/v1/auth/verify-email?token=doesnotexist")
+    def test_invalid_token(self, client, patch_supabase):
+        mock_auth, _ = patch_supabase
+        mock_auth.auth.verify_otp.side_effect = _supabase_error("invalid token")
+
+        resp = client.post("/auth/verify-email", json={
+            "token_hash": "bad-hash",
+            "type": "email",
+        })
         assert resp.status_code == 400
-
-    def test_already_used_token(self, client: "TestClient", mock_db: MagicMock):
-        rec = self._valid_token_rec()
-        rec["used_at"] = "2025-01-01T00:00:00+00:00"
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [rec]
-        resp = client.get("/api/v1/auth/verify-email?token=usedtoken")
-        assert resp.status_code == 400
-        assert "já foi utilizado" in resp.json()["detail"]
-
-    def test_expired_token(self, client: "TestClient", mock_db: MagicMock):
-        rec = self._valid_token_rec()
-        rec["expires_at"] = "2020-01-01T00:00:00+00:00"  # Past
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [rec]
-        resp = client.get("/api/v1/auth/verify-email?token=expiredtoken")
-        assert resp.status_code == 400
-        assert "expirado" in resp.json()["detail"]
-
-    def test_empty_token_rejected(self, client: "TestClient", mock_db: MagicMock):
-        resp = client.get("/api/v1/auth/verify-email?token=")
-        assert resp.status_code == 400
-
-    def test_oversized_token_rejected(self, client: "TestClient", mock_db: MagicMock):
-        huge = "x" * 200
-        resp = client.get(f"/api/v1/auth/verify-email?token={huge}")
-        assert resp.status_code == 400
-
-
-# ---------------------------------------------------------------------------
-# Resend Verification
-# ---------------------------------------------------------------------------
-
-class TestResendVerification:
-    def test_always_returns_200(self, client: "TestClient", mock_db: MagicMock):
-        # Even when user doesn't exist — prevent enumeration
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = []
-        resp = client.post("/api/v1/auth/resend-verification", json={"email": "ghost@example.com"})
-        assert resp.status_code == 200
-
-    def test_sends_new_token_for_unverified(self, client: "TestClient", mock_db: MagicMock):
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [
-            {"id": "user-001", "is_email_verified": False}
-        ]
-        resp = client.post("/api/v1/auth/resend-verification", json={"email": "pend@example.com"})
-        assert resp.status_code == 200
-
-    def test_skips_already_verified(self, client: "TestClient", mock_db: MagicMock):
-        mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [
-            {"id": "user-001", "is_email_verified": True}
-        ]
-        resp = client.post("/api/v1/auth/resend-verification", json={"email": "done@example.com"})
-        # Returns 200 with generic message — doesn't reveal verification state
-        assert resp.status_code == 200
-
-
-# ---------------------------------------------------------------------------
-# Health check
-# ---------------------------------------------------------------------------
-
-def test_health(client: "TestClient", mock_db: MagicMock):
-    resp = client.get("/health")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "ok"

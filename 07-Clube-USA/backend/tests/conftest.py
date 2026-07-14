@@ -1,60 +1,47 @@
-"""Test configuration and shared fixtures.
-
-All DB calls are mocked — no real Supabase connection needed.
-Set env vars before importing app modules so pydantic-settings picks them up.
+"""
+Fixtures e mocks compartilhados.
+Todos os testes rodam sem Supabase real — usamos mocks.
 """
 import os
-from unittest.mock import MagicMock
-
-# Must be set before any app import (pydantic-settings reads at import time)
-os.environ.update({
-    "SUPABASE_URL": "https://test.supabase.co",
-    "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key",
-    "SECRET_KEY": "test-secret-key-that-is-long-enough-for-testing-12345",
-    "FRONTEND_URL": "http://localhost:8080",
-    "BACKEND_URL": "http://localhost:8000",
-    "CORS_ORIGINS": "http://localhost:8080",
-    "SMTP_HOST": "",
-})
-
 import pytest
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
-from app.database import get_db
-from app.dependencies import get_current_user
-from main import app
+# Força modo testing para que config.py não valide segredos reais
+os.environ.setdefault("APP_ENV", "testing")
+os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
+os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
+os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+os.environ.setdefault("SUPABASE_JWT_SECRET", "test-jwt-secret-at-least-32-chars-long!!")
+os.environ.setdefault("CORS_ORIGINS", "http://localhost:3000")
 
 
-@pytest.fixture()
-def mock_db() -> MagicMock:
-    return MagicMock()
+@pytest.fixture(autouse=True)
+def patch_supabase():
+    """Substitui os clientes Supabase por mocks em todos os testes."""
+    mock_auth = MagicMock()
+    mock_admin = MagicMock()
+    with (
+        patch("app.database.get_auth_client", return_value=mock_auth),
+        patch("app.database.get_admin_client", return_value=mock_admin),
+        patch("app.auth.service.get_auth_client", return_value=mock_auth),
+        patch("app.users.service.get_admin_client", return_value=mock_admin),
+    ):
+        yield mock_auth, mock_admin
 
 
-@pytest.fixture()
-def client(mock_db: MagicMock) -> TestClient:
-    """TestClient with the real DB dependency overridden by a mock."""
-    app.dependency_overrides[get_db] = lambda: mock_db
-    with TestClient(app, raise_server_exceptions=False) as c:
-        yield c
-    app.dependency_overrides.clear()
+@pytest.fixture
+def client():
+    from app.main import app
+    return TestClient(app)
 
 
-@pytest.fixture()
-def authed_client(mock_db: MagicMock) -> TestClient:
-    """TestClient with both DB and current_user overridden (for protected routes)."""
-    fake_user = {
-        "id": "user-aaaaaaaa-0000-0000-0000-000000000001",
-        "email": "test@example.com",
-        "is_email_verified": True,
+def make_jwt(user_id: str, email: str) -> str:
+    """Gera JWT de teste assinado com a secret de teste."""
+    from jose import jwt
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "role": "authenticated",
     }
-    app.dependency_overrides[get_db] = lambda: mock_db
-    app.dependency_overrides[get_current_user] = lambda: fake_user
-    with TestClient(app, raise_server_exceptions=False) as c:
-        yield c
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture()
-def another_user_id() -> str:
-    """A different user_id for cross-tenant (IDOR) tests."""
-    return "user-bbbbbbbb-0000-0000-0000-000000000002"
+    return jwt.encode(payload, os.environ["SUPABASE_JWT_SECRET"], algorithm="HS256")

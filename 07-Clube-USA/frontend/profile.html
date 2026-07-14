@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <a href="/" class="logo">Clube<span>USA</span></a>
+
+  <nav>
+    <span style="font-size:.9rem;color:var(--gray-500)" id="greeting">Olá!</span>
+    <a href="#" id="logout-btn">Sair</a>
+  </nav>
+
+  <div class="card">
+    <h1>Meu Perfil</h1>
+    <p class="subtitle profile-email" id="email-display"></p>
+
+    <div class="alert error"   id="alert-err"></div>
+    <div class="alert success" id="alert-ok"></div>
+
+    <form id="form">
+      <div class="field">
+        <label for="full_name">Nome completo</label>
+        <input id="full_name" type="text" required autocomplete="name">
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="city">Cidade (EUA)</label>
+          <input id="city" type="text" placeholder="Miami" autocomplete="address-level2">
+        </div>
+        <div class="field">
+          <label for="state">Estado</label>
+          <select id="state">
+            <option value="">— Selecione —</option>
+            <option>AL</option><option>AK</option><option>AZ</option>
+            <option>AR</option><option>CA</option><option>CO</option>
+            <option>CT</option><option>DE</option><option>DC</option>
+            <option>FL</option><option>GA</option><option>HI</option>
+            <option>ID</option><option>IL</option><option>IN</option>
+            <option>IA</option><option>KS</option><option>KY</option>
+            <option>LA</option><option>ME</option><option>MD</option>
+            <option>MA</option><option>MI</option><option>MN</option>
+            <option>MS</option><option>MO</option><option>MT</option>
+            <option>NE</option><option>NV</option><option>NH</option>
+            <option>NJ</option><option>NM</option><option>NY</option>
+            <option>NC</option><option>ND</option><option>OH</option>
+            <option>OK</option><option>OR</option><option>PA</option>
+            <option>RI</option><option>SC</option><option>SD</option>
+            <option>TN</option><option>TX</option><option>UT</option>
+            <option>VT</option><option>VA</option><option>WA</option>
+            <option>WV</option><option>WI</option><option>WY</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="phone">Telefone (opcional)</label>
+        <input id="phone" type="tel" placeholder="+1 305 555-0100" autocomplete="tel">
+      </div>
+
+      <button class="btn" id="btn" type="submit" data-label="Salvar alterações">
+        Salvar alterações
+      </button>
+    </form>
+  </div>
+
+  <script src="assets/api.js"></script>
+  <script>
+    requireAuth();
+
+    (async () => {
+      try {
+        const profile = await ClubeAPI.getProfile();
+        document.getElementById("greeting").textContent = `Olá, ${profile.full_name.split(" ")[0]}!`;
+        document.getElementById("email-display").textContent = profile.email;
+        document.getElementById("full_name").value = profile.full_name || "";
+        document.getElementById("city").value  = profile.city  || "";
+        document.getElementById("state").value = profile.state || "";
+        document.getElementById("phone").value = profile.phone || "";
+      } catch {
+        showAlert("alert-err", "Não foi possível carregar o perfil. Faça login novamente.");
+        setTimeout(() => Auth.logout(), 2000);
+      }
+    })();
+
+    document.getElementById("logout-btn").addEventListener("click", e => {
+      e.preventDefault();
+      ClubeAPI.logout();
+    });
+
+    document.getElementById("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      hideAlert("alert-err");
+      hideAlert("alert-ok");
+      setLoading("btn", true);
+
+      const updates = {};
+      const fullName = document.getElementById("full_name").value.trim();
+      const city     = document.getElementById("city").value.trim();
+      const state    = document.getElementById("state").value;
+      const phone    = document.getElementById("phone").value.trim();
+
+      if (fullName) updates.full_name = fullName;
+      if (city)     updates.city      = city;
+      if (state)    updates.state     = state;
+      if (phone)    updates.phone     = phone;
+
+      try {
+        await ClubeAPI.updateProfile(updates);
+        showAlert("alert-ok", "✅ Perfil atualizado com sucesso!", "success");
+      } catch (err) {
+        showAlert("alert-err", err.message);
+      } finally {
+        setLoading("btn", false);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,19 +1,20 @@
-from supabase import Client, create_client
+"""
+Clientes Supabase:
+- auth_client  → operações de autenticação (usa anon key)
+- admin_client → operações de banco server-side (usa service_role key)
 
+NUNCA exponha o admin_client ou service_role_key ao frontend.
+"""
+from functools import lru_cache
+from supabase import create_client, Client
 from app.config import settings
 
-_client: Client | None = None
+
+@lru_cache
+def get_auth_client() -> Client:
+    return create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
 
 
-def get_db() -> Client:
-    """Return a singleton Supabase client using the service_role key.
-
-    server-side only — the service_role key is NEVER sent to the browser.
-    """
-    global _client
-    if _client is None:
-        _client = create_client(
-            settings.SUPABASE_URL,
-            settings.SUPABASE_SERVICE_ROLE_KEY,
-        )
-    return _client
+@lru_cache
+def get_admin_client() -> Client:
+    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
