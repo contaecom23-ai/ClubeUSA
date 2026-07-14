@@ -14,6 +14,36 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## Decisões Pendentes
 
+### [2026-07-14] URGENTE — 24 PRs abertos: feche os duplicados antes de continuar
+
+**Contexto:**
+O repositório acumulou 24 PRs abertos. A maioria são duplicatas do mesmo trabalho (Fase 0.1), criadas por diferentes execuções do agente autônomo. Isso é um problema operacional grave: sem triagem, o agente vai continuar criando código em cima de código conflitante e nunca avançar com confiança para as próximas fases.
+
+**Estado atual dos PRs (2026-07-14):**
+- **PR #7** `feat/fase-0.1-cadastro-perfil-email` — Branch desta execução. Contém a versão mais recente: Supabase Auth nativo, 19/19 testes, estrutura modular. **ESTE é o PR de Fase 0.1 para revisar.**
+- **PRs #1, 2, 6, 11, 13, 15, 17, 18, 22, 23, 24** — Duplicatas de Fase 0.1 de execuções anteriores. Feche todos estes.
+- **PR #21** — Um agente anterior identificou o problema e criou um PR de triagem. Contém guia de qual fechar. Pode fechar depois de ler.
+- **PRs #3, 4, 5** — Fases 0.2, 0.3, 0.4 (anteriores à 0.1 estar revisada). Tecnicamente fora de ordem mas podem conter trabalho útil para o futuro.
+- **PRs #9, 10** — Polimentos de segurança e docs. Podem ser fechados (o trabalho de segurança já está incorporado na estrutura atual).
+- **PRs #12, 14, 16, 19, 20** — Fases 1.1 a 1.5. **Não revisar ainda.** A Fase 0.1 precisa estar em produção primeiro.
+
+**Pergunta:**
+O agente deve parar de abrir PRs de features novas enquanto a Fase 0.1 não for aprovada e mergeada?
+
+**Recomendação:**
+Sim. Veja o que fazer:
+1. Revise o **PR #7** (`feat/fase-0.1-cadastro-perfil-email`) — é a versão mais limpa e testada.
+2. Feche os PRs duplicados de Fase 0.1 (#1, 2, 6, 11, 13, 15, 17, 18, 22, 23, 24) com o comentário "Duplicata — usando PR #7".
+3. Faça o merge do PR #7 na main.
+4. Aplique a migration SQL no Supabase (ver decisão abaixo).
+5. Só então o agente avança para Fase 0.2.
+
+Enquanto você não fizer o merge do PR #7, o agente continuará trabalhando em Fase 0.1 e gerando variações — isso é waste puro.
+
+**Status:** PENDENTE — ação crítica do dono
+
+---
+
 ### [2026-07-14] Configuração do projeto Supabase (BLOQUEADOR para Fase 0.1 entrar em produção)
 
 **Contexto:**
