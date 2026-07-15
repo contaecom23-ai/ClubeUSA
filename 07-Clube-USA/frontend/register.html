@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.1);
+      padding: 2rem;
+      width: 100%;
+      max-width: 420px;
+    }
+    .logo { text-align: center; margin-bottom: 1.5rem; }
+    .logo h1 { font-size: 1.6rem; color: #1a73e8; font-weight: 700; }
+    .logo p { color: #666; font-size: .9rem; margin-top: .25rem; }
+    label { display: block; font-size: .85rem; font-weight: 600; color: #333; margin-bottom: .3rem; }
+    input {
+      width: 100%;
+      padding: .7rem .9rem;
+      border: 1.5px solid #d1d9e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      transition: border-color .2s;
+    }
+    input:focus { outline: none; border-color: #1a73e8; }
+    .btn {
+      width: 100%;
+      padding: .8rem;
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .btn:hover { background: #1557b0; }
+    .btn:disabled { background: #9ab8e8; cursor: not-allowed; }
+    .msg { padding: .75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: .9rem; }
+    .msg.error { background: #fde8e8; color: #c0392b; }
+    .msg.success { background: #e8f5e9; color: #2e7d32; }
+    .links { text-align: center; margin-top: 1rem; font-size: .9rem; color: #555; }
+    .links a { color: #1a73e8; text-decoration: none; font-weight: 600; }
+    .optional { font-size: .8rem; color: #888; font-weight: 400; }
+    .field-hint { font-size: .78rem; color: #888; margin-top: -.7rem; margin-bottom: .9rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>🇺🇸 Clube USA</h1>
+      <p>Crie sua conta gratuita</p>
+    </div>
+    <div id="msg" style="display:none" class="msg"></div>
+    <form id="form">
+      <label for="full_name">Nome completo</label>
+      <input type="text" id="full_name" name="full_name" placeholder="João da Silva" autocomplete="name" required />
+
+      <label for="email">E-mail</label>
+      <input type="email" id="email" name="email" placeholder="joao@email.com" autocomplete="email" required />
+
+      <label for="zip_code">CEP americano <span class="optional">(opcional)</span></label>
+      <input type="text" id="zip_code" name="zip_code" placeholder="33101" maxlength="10" />
+      <p class="field-hint">Usado para mostrar ofertas e vagas na sua região.</p>
+
+      <label for="password">Senha</label>
+      <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres com número ou símbolo" autocomplete="new-password" required />
+
+      <button type="submit" class="btn" id="submit-btn">Criar conta</button>
+    </form>
+    <div class="links">
+      Já tem conta? <a href="login.html">Entrar</a>
+    </div>
+  </div>
+
+  <script>
+    const API = (window.CLUBE_USA_API_URL || 'http://localhost:8000');
+
+    const form = document.getElementById('form');
+    const msgEl = document.getElementById('msg');
+    const btn = document.getElementById('submit-btn');
+
+    function showMsg(text, type) {
+      msgEl.textContent = text;
+      msgEl.className = 'msg ' + type;
+      msgEl.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Criando conta…';
+      msgEl.style.display = 'none';
+
+      const body = {
+        full_name: document.getElementById('full_name').value.trim(),
+        email: document.getElementById('email').value.trim().toLowerCase(),
+        password: document.getElementById('password').value,
+        zip_code: document.getElementById('zip_code').value.trim(),
+      };
+
+      try {
+        const res = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          showMsg('✅ ' + data.message, 'success');
+          form.reset();
+        } else {
+          const detail = Array.isArray(data.detail)
+            ? data.detail.map(d => d.msg).join(' ')
+            : (data.detail || 'Erro desconhecido.');
+          showMsg('❌ ' + detail, 'error');
+        }
+      } catch {
+        showMsg('❌ Falha de conexão. Tente novamente.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Criar conta';
+      }
+    });
+  </script>
+</body>
+</html>

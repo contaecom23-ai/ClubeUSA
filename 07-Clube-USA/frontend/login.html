@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.1);
+      padding: 2rem;
+      width: 100%;
+      max-width: 400px;
+    }
+    .logo { text-align: center; margin-bottom: 1.5rem; }
+    .logo h1 { font-size: 1.6rem; color: #1a73e8; font-weight: 700; }
+    .logo p { color: #666; font-size: .9rem; margin-top: .25rem; }
+    label { display: block; font-size: .85rem; font-weight: 600; color: #333; margin-bottom: .3rem; }
+    input {
+      width: 100%;
+      padding: .7rem .9rem;
+      border: 1.5px solid #d1d9e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      transition: border-color .2s;
+    }
+    input:focus { outline: none; border-color: #1a73e8; }
+    .btn {
+      width: 100%;
+      padding: .8rem;
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .btn:hover { background: #1557b0; }
+    .btn:disabled { background: #9ab8e8; cursor: not-allowed; }
+    .msg { padding: .75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: .9rem; }
+    .msg.error { background: #fde8e8; color: #c0392b; }
+    .msg.success { background: #e8f5e9; color: #2e7d32; }
+    .msg.info { background: #e8f0fe; color: #1a73e8; }
+    .links { text-align: center; margin-top: 1rem; font-size: .9rem; color: #555; }
+    .links a { color: #1a73e8; text-decoration: none; font-weight: 600; }
+    .resend-link { margin-top: .5rem; display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>🇺🇸 Clube USA</h1>
+      <p>Entre na sua conta</p>
+    </div>
+    <div id="msg" style="display:none" class="msg"></div>
+    <form id="form">
+      <label for="email">E-mail</label>
+      <input type="email" id="email" name="email" placeholder="joao@email.com" autocomplete="email" required />
+
+      <label for="password">Senha</label>
+      <input type="password" id="password" name="password" placeholder="Sua senha" autocomplete="current-password" required />
+
+      <button type="submit" class="btn" id="submit-btn">Entrar</button>
+    </form>
+    <div class="links">
+      Não tem conta? <a href="register.html">Criar grátis</a>
+      <span id="resend-wrap" style="display:none">
+        <br/><a href="#" id="resend-link" class="resend-link">Reenviar e-mail de confirmação</a>
+      </span>
+    </div>
+  </div>
+
+  <script>
+    const API = (window.CLUBE_USA_API_URL || 'http://localhost:8000');
+
+    const form = document.getElementById('form');
+    const msgEl = document.getElementById('msg');
+    const btn = document.getElementById('submit-btn');
+    const resendWrap = document.getElementById('resend-wrap');
+    const resendLink = document.getElementById('resend-link');
+    let lastEmail = '';
+
+    function showMsg(text, type) {
+      msgEl.textContent = text;
+      msgEl.className = 'msg ' + type;
+      msgEl.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Entrando…';
+      msgEl.style.display = 'none';
+      resendWrap.style.display = 'none';
+
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const password = document.getElementById('password').value;
+      lastEmail = email;
+
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem('access_token', data.access_token);
+          localStorage.setItem('refresh_token', data.refresh_token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          showMsg('✅ Login realizado! Redirecionando…', 'success');
+          setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+        } else {
+          const detail = data.detail || 'Erro ao entrar.';
+          showMsg('❌ ' + detail, 'error');
+          if (detail.toLowerCase().includes('confirmado')) {
+            resendWrap.style.display = 'block';
+          }
+        }
+      } catch {
+        showMsg('❌ Falha de conexão. Tente novamente.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+      }
+    });
+
+    resendLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      resendLink.textContent = 'Enviando…';
+      try {
+        await fetch(`${API}/auth/resend-confirmation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: lastEmail }),
+        });
+        showMsg('📧 Se sua conta existir, um novo link foi enviado. Verifique o e-mail.', 'info');
+      } catch {
+        showMsg('❌ Erro ao reenviar. Tente mais tarde.', 'error');
+      } finally {
+        resendLink.textContent = 'Reenviar e-mail de confirmação';
+      }
+    });
+  </script>
+</body>
+</html>
