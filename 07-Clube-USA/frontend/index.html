@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clube USA — Para brasileiros nos EUA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4ff;
+      color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #1a56db;
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header .logo { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+    header nav a {
+      color: #fff;
+      text-decoration: none;
+      margin-left: 16px;
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+    header nav a:hover { opacity: 1; text-decoration: underline; }
+    .hero {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 24px;
+    }
+    .hero h1 { font-size: 2.2rem; font-weight: 800; line-height: 1.2; max-width: 640px; }
+    .hero h1 span { color: #1a56db; }
+    .hero p { margin-top: 16px; font-size: 1.1rem; color: #444; max-width: 520px; }
+    .cta-group { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; justify-content: center; }
+    .btn {
+      display: inline-block;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn-primary { background: #1a56db; color: #fff; }
+    .btn-secondary { background: #fff; color: #1a56db; border: 2px solid #1a56db; }
+    .features {
+      display: flex;
+      gap: 24px;
+      padding: 40px 24px;
+      max-width: 900px;
+      margin: 0 auto;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .feature {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      flex: 1;
+      min-width: 220px;
+      max-width: 260px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+    .feature .icon { font-size: 2rem; margin-bottom: 10px; }
+    .feature h3 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .feature p { font-size: 0.9rem; color: #555; line-height: 1.5; }
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 0.85rem;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo">🇧🇷 Clube USA</span>
+    <nav>
+      <a href="login.html">Entrar</a>
+      <a href="register.html">Cadastrar</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h1>A plataforma para <span>brasileiros</span> nos EUA</h1>
+    <p>Promoções, empregos, moradia e muito mais — tudo organizado para a sua vida no exterior.</p>
+    <div class="cta-group">
+      <a href="register.html" class="btn btn-primary">Criar conta grátis</a>
+      <a href="login.html" class="btn btn-secondary">Já tenho conta</a>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="feature">
+      <div class="icon">🛒</div>
+      <h3>Promoções &amp; Achados</h3>
+      <p>As melhores ofertas curadas pela comunidade, perto de você.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">💼</div>
+      <h3>Empregos</h3>
+      <p>Vagas selecionadas para brasileiros em todo o território americano.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🏠</div>
+      <h3>Moradia</h3>
+      <p>Quartos, roommates e casas — filtrados pelo seu ZIP code.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🤝</div>
+      <h3>Comunidade</h3>
+      <p>Dicas, recomendações e suporte de quem já passou pelo mesmo que você.</p>
+    </div>
+  </div>
+
+  <footer>&copy; 2026 Clube USA. Feito com 🇧🇷 e ☕</footer>
+</body>
+</html>

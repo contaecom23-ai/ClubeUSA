@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirmar Email — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4ff;
+      color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      padding: 48px 36px;
+      width: 100%;
+      max-width: 440px;
+      text-align: center;
+    }
+    .icon { font-size: 3.5rem; margin-bottom: 20px; }
+    h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; }
+    p { color: #555; line-height: 1.6; font-size: 0.95rem; }
+    .btn {
+      display: inline-block;
+      margin-top: 28px;
+      padding: 13px 32px;
+      background: #1a56db;
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #1a56db;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading { display: block; }
+    #success, #error { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- Estado: carregando -->
+    <div id="loading">
+      <div class="spinner"></div>
+      <h1>Confirmando email…</h1>
+      <p>Aguarde um momento.</p>
+    </div>
+
+    <!-- Estado: sucesso -->
+    <div id="success">
+      <div class="icon">✅</div>
+      <h1>Email confirmado!</h1>
+      <p>Sua conta está ativa. Agora você pode aproveitar tudo que o Clube USA tem a oferecer.</p>
+      <a href="login.html" class="btn">Fazer login</a>
+    </div>
+
+    <!-- Estado: erro -->
+    <div id="error">
+      <div class="icon">❌</div>
+      <h1 id="error-title">Link inválido</h1>
+      <p id="error-msg">Este link de confirmação é inválido ou expirou.</p>
+      <a href="register.html" class="btn">Criar nova conta</a>
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:8000';
+
+    const token = new URLSearchParams(window.location.search).get('token');
+
+    function show(id) {
+      ['loading', 'success', 'error'].forEach(s => {
+        document.getElementById(s).style.display = s === id ? 'block' : 'none';
+      });
+    }
+
+    async function confirm() {
+      if (!token) {
+        document.getElementById('error-title').textContent = 'Token ausente';
+        document.getElementById('error-msg').textContent = 'O link de confirmação está incompleto.';
+        show('error');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/auth/confirm-email?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+
+        if (res.ok) {
+          show('success');
+        } else {
+          document.getElementById('error-msg').textContent =
+            data.detail || 'Token inválido ou expirado.';
+          show('error');
+        }
+      } catch (err) {
+        document.getElementById('error-msg').textContent =
+          'Erro de conexão. Tente novamente mais tarde.';
+        show('error');
+      }
+    }
+
+    confirm();
+  </script>
+</body>
+</html>
