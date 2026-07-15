@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clube USA — Plataforma para Brasileiros nos EUA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #fff;
+      color: #222;
+    }
+    nav {
+      background: #1a73e8;
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    nav h1 { font-size: 1.2rem; }
+    .nav-links a {
+      color: #fff;
+      text-decoration: none;
+      margin-left: 1.2rem;
+      font-size: .95rem;
+      font-weight: 600;
+    }
+    .hero {
+      background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+      color: #fff;
+      text-align: center;
+      padding: 5rem 1.5rem 4rem;
+    }
+    .hero h2 { font-size: clamp(1.6rem, 5vw, 2.4rem); margin-bottom: 1rem; line-height: 1.25; }
+    .hero p { font-size: 1.1rem; opacity: .9; max-width: 520px; margin: 0 auto 2rem; line-height: 1.6; }
+    .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: #fff;
+      color: #1a73e8;
+      padding: .85rem 2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1rem;
+      transition: opacity .2s;
+    }
+    .btn-primary:hover { opacity: .9; }
+    .btn-secondary {
+      background: rgba(255,255,255,.2);
+      color: #fff;
+      padding: .85rem 2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: background .2s;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,.3); }
+    .features {
+      max-width: 900px;
+      margin: 4rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature {
+      background: #f8faff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid #e3ecff;
+    }
+    .feature .icon { font-size: 2rem; margin-bottom: .75rem; }
+    .feature h3 { font-size: 1rem; font-weight: 700; color: #222; margin-bottom: .4rem; }
+    .feature p { font-size: .88rem; color: #555; line-height: 1.5; }
+    footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #888;
+      font-size: .85rem;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <h1>🇺🇸 Clube USA</h1>
+    <div class="nav-links">
+      <a href="login.html">Entrar</a>
+      <a href="register.html">Cadastrar</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <h2>Tudo que o imigrante brasileiro precisa em um só lugar</h2>
+    <p>Promoções, empregos, moradia, serviços e comunidade — organizados para você viver melhor nos EUA.</p>
+    <div class="hero-btns">
+      <a href="register.html" class="btn-primary">Criar conta grátis</a>
+      <a href="login.html" class="btn-secondary">Já tenho conta</a>
+    </div>
+  </section>
+
+  <div class="features">
+    <div class="feature">
+      <div class="icon">🏷️</div>
+      <h3>Promoções e Achados</h3>
+      <p>Ofertas e descontos curados para brasileiros, por região e ZIP code.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">💼</div>
+      <h3>Vagas de Emprego</h3>
+      <p>Oportunidades de trabalho para imigrantes, sem burocracia.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🏠</div>
+      <h3>Moradia</h3>
+      <p>Quartos, roommates e casas para alugar perto de você.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🤝</div>
+      <h3>Comunidade</h3>
+      <p>Conecte-se com outros brasileiros e compartilhe experiências.</p>
+    </div>
+  </div>
+
+  <footer>
+    © 2026 Clube USA. Feito com 💛 para imigrantes brasileiros nos EUA.
+  </footer>
+</body>
+</html>
