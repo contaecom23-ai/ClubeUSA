@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4ff;
+      color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .logo { color: #1a56db; font-size: 1.2rem; font-weight: 700; margin-bottom: 24px; display: block; }
+    h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
+    .subtitle { font-size: 0.9rem; color: #666; margin-bottom: 28px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: #333; }
+    input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+      transition: border-color .15s;
+      outline: none;
+    }
+    input:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,.12); }
+    input.error { border-color: #e02424; }
+    .hint { font-size: 0.8rem; color: #666; margin-top: -12px; margin-bottom: 16px; }
+    .btn {
+      width: 100%;
+      padding: 13px;
+      background: #1a56db;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .msg.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; display: block; }
+    .msg.error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; display: block; }
+    .footer-link { text-align: center; margin-top: 20px; font-size: 0.88rem; color: #666; }
+    .footer-link a { color: #1a56db; text-decoration: none; font-weight: 600; }
+    .footer-link a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <a href="index.html" class="logo">🇧🇷 Clube USA</a>
+    <h1>Criar conta</h1>
+    <p class="subtitle">Grátis. Para brasileiros nos EUA.</p>
+
+    <form id="form" novalidate>
+      <label for="full_name">Nome completo *</label>
+      <input type="text" id="full_name" name="full_name" placeholder="Maria da Silva" required />
+
+      <label for="email">Email *</label>
+      <input type="email" id="email" name="email" placeholder="maria@email.com" required />
+
+      <label for="password">Senha *</label>
+      <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" required />
+      <p class="hint">Mínimo 8 caracteres</p>
+
+      <label for="zip_code">ZIP Code</label>
+      <input type="text" id="zip_code" name="zip_code" placeholder="10001" maxlength="10" />
+
+      <label for="referral_code">Código de indicação <span style="font-weight:400;color:#888">(opcional)</span></label>
+      <input type="text" id="referral_code" name="referral_code" placeholder="ABC123" maxlength="12" />
+
+      <button type="submit" class="btn" id="submit-btn">Criar conta</button>
+    </form>
+
+    <div id="msg" class="msg"></div>
+    <p class="footer-link">Já tem conta? <a href="login.html">Entrar</a></p>
+  </div>
+
+  <script>
+    const API = 'http://localhost:8000';
+    const form = document.getElementById('form');
+    const btn  = document.getElementById('submit-btn');
+    const msg  = document.getElementById('msg');
+
+    // Preenche código de referral via query string (?ref=CODIGO)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('ref')) {
+      document.getElementById('referral_code').value = params.get('ref');
+    }
+
+    function showMsg(text, type) {
+      msg.textContent = text;
+      msg.className = 'msg ' + type;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Criando conta…';
+      msg.className = 'msg';
+
+      const body = {
+        full_name:     document.getElementById('full_name').value.trim(),
+        email:         document.getElementById('email').value.trim(),
+        password:      document.getElementById('password').value,
+        zip_code:      document.getElementById('zip_code').value.trim() || null,
+        referral_code: document.getElementById('referral_code').value.trim() || null,
+      };
+
+      try {
+        const res = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          form.style.display = 'none';
+          showMsg(
+            '✅ ' + (data.message || 'Conta criada! Verifique seu email para confirmar.'),
+            'success'
+          );
+        } else {
+          const detail = data.detail;
+          const text = Array.isArray(detail)
+            ? detail.map(e => e.msg).join('; ')
+            : (detail || 'Erro desconhecido');
+          showMsg('⚠️ ' + text, 'error');
+        }
+      } catch (err) {
+        showMsg('Erro de conexão. Verifique se o servidor está rodando.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Criar conta';
+      }
+    });
+  </script>
+</body>
+</html>
