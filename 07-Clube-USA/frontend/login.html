@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+  <div class="page-center">
+    <div class="card">
+      <div class="brand">
+        <h1>🇧🇷 Clube USA</h1>
+        <p>Entre na sua conta</p>
+      </div>
+
+      <div id="alert" class="alert"></div>
+
+      <form id="form" novalidate>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="joao@email.com" autocomplete="email" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password" placeholder="Sua senha" autocomplete="current-password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-4" id="btn-submit">
+          Entrar
+        </button>
+      </form>
+
+      <p class="text-center mt-4">
+        <a href="register.html" class="text-link">Ainda não tem conta? Cadastre-se →</a>
+      </p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API, Auth } from './static/js/api.js';
+
+    if (Auth.isLoggedIn()) window.location.href = 'profile.html';
+
+    const form = document.getElementById('form');
+    const alertEl = document.getElementById('alert');
+    const btn = document.getElementById('btn-submit');
+
+    function showAlert(msg, type) {
+      alertEl.textContent = msg;
+      alertEl.className = `alert alert-${type} show`;
+    }
+    function setLoading(loading) {
+      btn.disabled = loading;
+      btn.innerHTML = loading ? '<span class="spinner"></span>Entrando…' : 'Entrar';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertEl.className = 'alert';
+      setLoading(true);
+
+      try {
+        await API.login({
+          email: form.email.value.trim().toLowerCase(),
+          password: form.password.value,
+        });
+        window.location.href = 'profile.html';
+      } catch (err) {
+        showAlert(err.message || 'Erro ao fazer login. Tente novamente.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

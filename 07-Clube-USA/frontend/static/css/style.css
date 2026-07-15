@@ -1,0 +1,166 @@
+/* Clube USA — Design base */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue:    #0055a5;
+  --blue-lt: #1a6fc4;
+  --green:   #009c3b;
+  --yellow:  #ffd700;
+  --gray:    #64748b;
+  --gray-lt: #f1f5f9;
+  --red:     #dc2626;
+  --white:   #ffffff;
+  --text:    #1e293b;
+  --border:  #cbd5e1;
+  --radius:  8px;
+  --shadow:  0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.06);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--gray-lt);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* Layout */
+.page-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px 16px;
+}
+
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 420px;
+}
+
+/* Logo / Brand */
+.brand {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.brand h1 {
+  color: var(--blue);
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+.brand p {
+  color: var(--gray);
+  font-size: .875rem;
+  margin-top: 4px;
+}
+
+/* Formulários */
+.form-group {
+  margin-bottom: 16px;
+}
+label {
+  display: block;
+  font-size: .875rem;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  transition: border-color .15s;
+  outline: none;
+}
+input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0,85,165,.15);
+}
+.field-error {
+  font-size: .8rem;
+  color: var(--red);
+  margin-top: 4px;
+}
+
+/* Botões */
+.btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, opacity .15s;
+  text-align: center;
+  text-decoration: none;
+}
+.btn-primary {
+  background: var(--blue);
+  color: var(--white);
+}
+.btn-primary:hover { background: var(--blue-lt); }
+.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Alertas */
+.alert {
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: .875rem;
+  margin-bottom: 16px;
+  display: none;
+}
+.alert.show { display: block; }
+.alert-error { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+.alert-success { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+.alert-info { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8; }
+
+/* Links */
+.text-link { color: var(--blue); text-decoration: none; font-size: .875rem; }
+.text-link:hover { text-decoration: underline; }
+.text-center { text-align: center; }
+.mt-4 { margin-top: 16px; }
+.mt-6 { margin-top: 24px; }
+
+/* Password strength hint */
+.hint { font-size: .775rem; color: var(--gray); margin-top: 4px; }
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,.5);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Navbar simples */
+.nav {
+  background: var(--blue);
+  color: white;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.nav a { color: white; text-decoration: none; font-weight: 600; }
+
+/* Profile page */
+.profile-header { margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+.profile-header h2 { color: var(--blue); }
+.badge-confirmed { color: var(--green); font-size: .8rem; font-weight: 600; }
+.badge-unconfirmed { color: var(--red); font-size: .8rem; font-weight: 600; }

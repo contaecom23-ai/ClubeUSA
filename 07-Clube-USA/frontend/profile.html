@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+  <nav class="nav">
+    <a href="index.html">🇧🇷 Clube USA</a>
+    <button id="btn-logout" style="background:transparent; border:none; color:white; cursor:pointer; font-size:.875rem;">
+      Sair
+    </button>
+  </nav>
+
+  <div class="page-center" style="justify-content:flex-start; padding-top:40px;">
+    <div class="card" style="max-width:520px;">
+      <div class="profile-header">
+        <h2 id="profile-name">Carregando…</h2>
+        <p id="profile-email" style="color:var(--gray); margin-top:4px;"></p>
+        <span id="email-status"></span>
+      </div>
+
+      <div id="alert" class="alert"></div>
+
+      <form id="form" novalidate>
+        <div class="form-group">
+          <label for="full_name">Nome completo</label>
+          <input type="text" id="full_name" name="full_name" autocomplete="name">
+          <div class="field-error" id="err-full_name"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="zip_code">ZIP Code (EUA)</label>
+          <input type="text" id="zip_code" name="zip_code" placeholder="10001" maxlength="10" autocomplete="postal-code">
+          <div class="field-error" id="err-zip_code"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Telefone</label>
+          <input type="tel" id="phone" name="phone" placeholder="+1 555 555-5555" autocomplete="tel">
+          <div class="field-error" id="err-phone"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-4" id="btn-save">
+          Salvar alterações
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API, Auth } from './static/js/api.js';
+
+    if (!Auth.isLoggedIn()) window.location.href = 'login.html';
+
+    const alertEl = document.getElementById('alert');
+    const btn = document.getElementById('btn-save');
+
+    function showAlert(msg, type) {
+      alertEl.textContent = msg;
+      alertEl.className = `alert alert-${type} show`;
+      setTimeout(() => alertEl.className = 'alert', 3000);
+    }
+    function clearErrors() {
+      document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+    }
+    function setLoading(loading) {
+      btn.disabled = loading;
+      btn.innerHTML = loading ? '<span class="spinner"></span>Salvando…' : 'Salvar alterações';
+    }
+
+    // Carrega perfil atual
+    let profile = null;
+    try {
+      profile = await API.getProfile();
+      document.getElementById('profile-name').textContent = profile.full_name || 'Meu Perfil';
+      document.getElementById('profile-email').textContent = profile.email;
+      document.getElementById('email-status').innerHTML = profile.email_confirmed
+        ? '<span class="badge-confirmed">✓ Email confirmado</span>'
+        : '<span class="badge-unconfirmed">⚠ Email não confirmado</span>';
+
+      document.getElementById('full_name').value = profile.full_name || '';
+      document.getElementById('zip_code').value = profile.zip_code || '';
+      document.getElementById('phone').value = profile.phone || '';
+    } catch (err) {
+      showAlert('Erro ao carregar perfil.', 'error');
+    }
+
+    // Salvar
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearErrors();
+
+      const updates = {};
+      const full_name = document.getElementById('full_name').value.trim();
+      const zip_code = document.getElementById('zip_code').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+
+      if (full_name && full_name !== (profile?.full_name || '')) updates.full_name = full_name;
+      if (zip_code && zip_code !== (profile?.zip_code || '')) updates.zip_code = zip_code;
+      if (phone && phone !== (profile?.phone || '')) updates.phone = phone;
+
+      if (!Object.keys(updates).length) {
+        showAlert('Nenhuma alteração para salvar.', 'info');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        profile = await API.updateProfile(updates);
+        document.getElementById('profile-name').textContent = profile.full_name || 'Meu Perfil';
+        showAlert('Perfil atualizado com sucesso!', 'success');
+      } catch (err) {
+        showAlert(err.message || 'Erro ao salvar. Tente novamente.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // Logout
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await API.logout();
+      window.location.href = 'login.html';
+    });
+  </script>
+</body>
+</html>

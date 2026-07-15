@@ -1,0 +1,14 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+# PyJWT/python-jose avoided: cryptography package has broken Rust/CFFI in target env
+# JWT HS256 implemented via stdlib (hmac + hashlib) in app/utils/jwt_hs256.py
+passlib[bcrypt]==1.7.4
+slowapi==0.1.9
+python-dotenv==1.0.1
+asyncpg==0.29.0
+email-validator==2.2.0
+python-multipart==0.0.12
+httpx==0.27.2
+pytest==8.3.3
+pytest-asyncio==0.24.0
+pytest-httpx==0.32.0

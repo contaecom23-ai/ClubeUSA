@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Para brasileiros nos EUA</title>
+  <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+  <nav class="nav">
+    <a href="index.html">🇧🇷 Clube USA</a>
+    <div id="nav-links">
+      <a href="login.html" style="margin-right:16px">Entrar</a>
+      <a href="register.html">Cadastrar</a>
+    </div>
+  </nav>
+
+  <div class="page-center" style="justify-content:flex-start; padding-top:60px;">
+    <div style="text-align:center; max-width:600px; padding: 0 16px;">
+      <h1 style="font-size:2.5rem; color:var(--blue); margin-bottom:16px;">
+        🇧🇷 Sua vida nos EUA,<br>mais organizada.
+      </h1>
+      <p style="font-size:1.125rem; color:var(--gray); margin-bottom:32px; line-height:1.6;">
+        O Clube USA conecta brasileiros nos Estados Unidos com promoções,
+        empregos, moradia e serviços — tudo em um lugar só.
+      </p>
+      <a href="register.html" class="btn btn-primary" style="display:inline-block; width:auto; padding:14px 32px; font-size:1.1rem;">
+        Criar conta gratuita
+      </a>
+      <p class="mt-4">
+        <a href="login.html" class="text-link">Já tem conta? Entrar →</a>
+      </p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { Auth } from './static/js/api.js';
+    if (Auth.isLoggedIn()) {
+      window.location.href = 'profile.html';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar conta — Clube USA</title>
+  <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+  <div class="page-center">
+    <div class="card">
+      <div class="brand">
+        <h1>🇧🇷 Clube USA</h1>
+        <p>Crie sua conta gratuita</p>
+      </div>
+
+      <div id="alert" class="alert"></div>
+
+      <form id="form" novalidate>
+        <div class="form-group">
+          <label for="full_name">Nome completo *</label>
+          <input type="text" id="full_name" name="full_name" placeholder="João Silva" autocomplete="name" required>
+          <div class="field-error" id="err-full_name"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input type="email" id="email" name="email" placeholder="joao@email.com" autocomplete="email" required>
+          <div class="field-error" id="err-email"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="zip_code">ZIP Code (EUA)</label>
+          <input type="text" id="zip_code" name="zip_code" placeholder="10001" maxlength="10" autocomplete="postal-code">
+          <div class="field-error" id="err-zip_code"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha *</label>
+          <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+          <div class="hint">Pelo menos 8 caracteres, 1 letra e 1 número.</div>
+          <div class="field-error" id="err-password"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-4" id="btn-submit">
+          Criar conta
+        </button>
+      </form>
+
+      <p class="text-center mt-4">
+        <a href="login.html" class="text-link">Já tem conta? Entrar →</a>
+      </p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API, Auth } from './static/js/api.js';
+
+    if (Auth.isLoggedIn()) window.location.href = 'profile.html';
+
+    const form = document.getElementById('form');
+    const alert = document.getElementById('alert');
+    const btn = document.getElementById('btn-submit');
+
+    function showAlert(msg, type) {
+      alert.textContent = msg;
+      alert.className = `alert alert-${type} show`;
+    }
+    function clearFieldErrors() {
+      document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+    }
+    function setLoading(loading) {
+      btn.disabled = loading;
+      btn.innerHTML = loading
+        ? '<span class="spinner"></span>Criando conta…'
+        : 'Criar conta';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearFieldErrors();
+      alert.className = 'alert';
+
+      const body = {
+        full_name: form.full_name.value.trim(),
+        email: form.email.value.trim().toLowerCase(),
+        password: form.password.value,
+      };
+      const zip = form.zip_code.value.trim();
+      if (zip) body.zip_code = zip;
+
+      setLoading(true);
+      try {
+        await API.register(body);
+        showAlert(
+          '✅ Cadastro realizado! Verifique seu email para confirmar a conta.',
+          'success'
+        );
+        form.style.display = 'none';
+      } catch (err) {
+        // Tenta mapear erros de campo do backend (422)
+        if (err.message && err.message.includes('email')) {
+          document.getElementById('err-email').textContent = err.message;
+        } else if (err.message && err.message.includes('senha')) {
+          document.getElementById('err-password').textContent = err.message;
+        } else {
+          showAlert(err.message || 'Erro ao criar conta. Tente novamente.', 'error');
+        }
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>
