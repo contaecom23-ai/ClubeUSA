@@ -2,8 +2,8 @@
 
 > Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas (mergeadas no main).
 
-> **Estado atual (2026-07-12):** 20 PRs abertos, nenhum mergeado no main ainda.
-> Código de todas as fases abaixo existe em branches — veja DECISOES.md para o plano de triage.
+> **Estado atual (2026-07-16):** 25 PRs abertos, nenhum mergeado no main ainda.
+> Código de todas as fases (0.1 → 1.5) existe em branches — veja DECISOES.md para o plano de triage e ordem de merge.
 
 ---
 
@@ -68,4 +68,4 @@
 
 ---
 
-*Atualizado em: 2026-07-12*
+*Atualizado em: 2026-07-16*
