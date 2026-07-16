@@ -6,7 +6,10 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from supabase import Client
 
+import logging
+
 from analytics import emit_event
+from antifraude import is_disposable_email
 from config import settings
 from deps import get_db
 from email_service import send_email_confirmation
@@ -29,6 +32,7 @@ from security import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 limiter = Limiter(key_func=get_remote_address)
+logger = logging.getLogger(__name__)
 
 # Hash pré-computado para comparação em tempo constante quando usuário não existe (anti-timing)
 _DUMMY_HASH = hash_password("clube-usa-dummy-timing-xf8k3n9-never-a-real-password")
@@ -46,6 +50,14 @@ async def register(
     body: RegisterRequest,
     db: Annotated[Client, Depends(get_db)],
 ) -> MessageResponse:
+    # Anti-fraude: bloqueia domínios de email descartáveis conhecidos
+    # Mesma resposta que duplicate (anti-enumeração — não revela que o domínio é bloqueado)
+    if is_disposable_email(body.email):
+        logger.info("registro bloqueado: domínio descartável")
+        return MessageResponse(
+            message="Se este email for válido, você receberá um link de confirmação."
+        )
+
     # Anti-enumeração: mesma resposta independente de email já existir
     existing = db.table("users").select("id").eq("email", body.email).execute()
     if existing.data:

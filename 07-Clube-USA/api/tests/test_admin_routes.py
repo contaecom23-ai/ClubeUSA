@@ -1,4 +1,5 @@
 """Testes das rotas admin — DB mockado, chave admin configurada no conftest."""
+import pytest
 
 ADMIN_KEY = "test-admin-key-for-unit-tests"
 ADMIN_HEADERS = {"X-Admin-Key": ADMIN_KEY}
@@ -9,12 +10,14 @@ _USER_CONFIRMED = {
     "email_confirmed_at": "2026-07-10T00:00:00+00:00",
     "referred_by_user_id": None,
     "created_at": "2026-07-10T00:00:00+00:00",
+    "state": None, "city": None, "zip_code": None,
 }
 _USER_UNCONFIRMED_REFERRED = {
     "id": "u2",
     "email_confirmed_at": None,
     "referred_by_user_id": "u1",
     "created_at": "2026-07-15T00:00:00+00:00",
+    "state": None, "city": None, "zip_code": None,
 }
 
 _EVENT_LOGIN = {"event_type": "user_login", "created_at": "2026-07-15T00:00:00+00:00"}
@@ -95,7 +98,7 @@ class TestAdminMetrics:
         # Verifica estrutura completa
         assert set(data["users"].keys()) == {
             "total", "confirmed", "unconfirmed", "confirmation_rate",
-            "new_last_7d", "new_last_30d",
+            "new_last_7d", "new_last_30d", "valid_registrations", "valid_rate",
         }
         assert set(data["referrals"].keys()) == {"total_attributed", "attribution_rate"}
         assert set(data["events"].keys()) == {
@@ -103,3 +106,30 @@ class TestAdminMetrics:
             "registrations_last_7d", "registrations_last_30d",
         }
         assert "as_of" in data
+
+    def test_valid_registrations_count(self, client, mock_db):
+        # Usuário confirmado com localização = válido
+        # Usuário confirmado sem localização = NÃO válido
+        # Usuário não confirmado = NÃO válido
+        confirmed_with_location = {
+            "id": "u1", "email_confirmed_at": "2026-07-01T00:00:00+00:00",
+            "referred_by_user_id": None, "created_at": "2026-07-01T00:00:00+00:00",
+            "state": "FL", "city": "Miami", "zip_code": None,
+        }
+        confirmed_no_location = {
+            "id": "u2", "email_confirmed_at": "2026-07-01T00:00:00+00:00",
+            "referred_by_user_id": None, "created_at": "2026-07-01T00:00:00+00:00",
+            "state": None, "city": None, "zip_code": None,
+        }
+        unconfirmed = {
+            "id": "u3", "email_confirmed_at": None,
+            "referred_by_user_id": None, "created_at": "2026-07-01T00:00:00+00:00",
+            "state": "CA", "city": "LA", "zip_code": "90001",
+        }
+        _set_users(mock_db, [confirmed_with_location, confirmed_no_location, unconfirmed])
+        _set_events(mock_db, [])
+
+        r = client.get("/api/admin/metrics", headers=ADMIN_HEADERS)
+        data = r.json()
+        assert data["users"]["valid_registrations"] == 1
+        assert data["users"]["valid_rate"] == pytest.approx(1/3, abs=0.01)

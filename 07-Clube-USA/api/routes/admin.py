@@ -37,16 +37,20 @@ async def get_metrics(
     # Carrega todos os usuários (MVP — ver docstring para escala)
     users_result = (
         db.table("users")
-        .select("id, email_confirmed_at, referred_by_user_id, created_at")
+        .select("id, email_confirmed_at, referred_by_user_id, created_at, state, city, zip_code")
         .execute()
     )
     users = users_result.data or []
+
+    def _has_location(u: dict) -> bool:
+        return bool(u.get("zip_code") or (u.get("state") and u.get("city")))
 
     total_users = len(users)
     confirmed_users = sum(1 for u in users if u.get("email_confirmed_at"))
     new_7d = sum(1 for u in users if (u.get("created_at") or "") >= seven_days_ago)
     new_30d = sum(1 for u in users if (u.get("created_at") or "") >= thirty_days_ago)
     total_referred = sum(1 for u in users if u.get("referred_by_user_id"))
+    valid_registrations = sum(1 for u in users if u.get("email_confirmed_at") and _has_location(u))
 
     # Carrega eventos dos últimos 30 dias
     events_result = (
@@ -70,6 +74,7 @@ async def get_metrics(
 
     confirmation_rate = round(confirmed_users / total_users, 3) if total_users > 0 else 0.0
     attribution_rate = round(total_referred / total_users, 3) if total_users > 0 else 0.0
+    valid_rate = round(valid_registrations / total_users, 3) if total_users > 0 else 0.0
 
     return AdminMetrics(
         users=UsersMetrics(
@@ -79,6 +84,8 @@ async def get_metrics(
             confirmation_rate=confirmation_rate,
             new_last_7d=new_7d,
             new_last_30d=new_30d,
+            valid_registrations=valid_registrations,
+            valid_rate=valid_rate,
         ),
         referrals=ReferralMetrics(
             total_attributed=total_referred,

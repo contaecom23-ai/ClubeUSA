@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from deps import get_current_user_id, get_db
-from models import UpdateProfileRequest, UserProfile
+from models import RegistrationValidity, UpdateProfileRequest, UserProfile
 from supabase import Client
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -45,6 +45,42 @@ async def get_me(
     db: Annotated[Client, Depends(get_db)],
 ) -> UserProfile:
     return _row_to_profile(_fetch_user(db, user_id))
+
+
+@router.get(
+    "/me/validity",
+    response_model=RegistrationValidity,
+    summary="Verificar se o cadastro é 'válido' (email confirmado + localização preenchida)",
+)
+async def get_validity(
+    user_id: Annotated[str, Depends(get_current_user_id)],
+    db: Annotated[Client, Depends(get_db)],
+) -> RegistrationValidity:
+    result = (
+        db.table("users")
+        .select("email_confirmed_at, state, city, zip_code")
+        .eq("id", user_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    u = result.data[0]
+    email_confirmed = bool(u.get("email_confirmed_at"))
+    has_location = bool(u.get("zip_code") or (u.get("state") and u.get("city")))
+
+    required_actions: list[str] = []
+    if not email_confirmed:
+        required_actions.append("Confirme seu email")
+    if not has_location:
+        required_actions.append("Preencha estado + cidade ou CEP no seu perfil")
+
+    return RegistrationValidity(
+        is_valid=email_confirmed and has_location,
+        email_confirmed=email_confirmed,
+        has_location=has_location,
+        required_actions=required_actions,
+    )
 
 
 @router.put("/me", response_model=UserProfile, summary="Atualizar perfil")

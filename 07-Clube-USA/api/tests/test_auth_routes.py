@@ -75,6 +75,16 @@ class TestRegister:
         r = client.post("/api/auth/register", json={"email": "a@b.com"})
         assert r.status_code == 422
 
+    def test_disposable_email_blocked_silently(self, client, mock_db):
+        # Anti-fraude: domínio descartável retorna mesma resposta que email duplicado (anti-enumeração)
+        r = client.post("/api/auth/register", json={
+            "email": "teste@mailinator.com",
+            "password": "senha1234",
+            "name": "Bot Fraud",
+        })
+        assert r.status_code == 201
+        assert "link de confirmação" in r.json()["message"].lower()
+
 
 # ─── /api/auth/confirm-email ──────────────────────────────────────────────────
 

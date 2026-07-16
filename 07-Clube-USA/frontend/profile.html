@@ -32,6 +32,10 @@
     .copy-btn.copied { background: #2e7d32; }
     .referral-count { margin-top: 10px; font-size: .88rem; color: #555; }
     .referral-count strong { color: #1a56db; }
+    .validity-banner { border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; font-size: .9rem; }
+    .validity-banner.valid { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .validity-banner.invalid { background: #fff8e1; color: #e65100; border: 1px solid #ffe082; }
+    .validity-banner ul { margin: 6px 0 0 18px; }
     .actions { display: flex; gap: 12px; margin-top: 8px; }
     .save-btn { flex: 1; padding: 12px; background: #1a56db; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .2s; }
     .save-btn:hover:not(:disabled) { background: #1648c4; }
@@ -50,6 +54,8 @@
   </header>
 
   <div id="loading">Carregando perfil...</div>
+
+  <div id="validity-banner" style="display:none;max-width:600px;margin:0 auto 0"></div>
 
   <div class="card" id="card" style="display:none">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
@@ -247,6 +253,24 @@
       });
     });
 
+    async function loadValidity() {
+      try {
+        const r = await fetch(`${API}/users/me/validity`, {
+          headers: { 'Authorization': `Bearer ${token()}` },
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        const banner = document.getElementById('validity-banner');
+        if (data.is_valid) {
+          banner.innerHTML = '<div class="validity-banner valid">✓ <strong>Cadastro validado</strong> — email confirmado e localização preenchida.</div>';
+        } else {
+          const items = data.required_actions.map(a => `<li>${a}</li>`).join('');
+          banner.innerHTML = `<div class="validity-banner invalid">⚠ <strong>Cadastro ainda não validado</strong><ul>${items}</ul></div>`;
+        }
+        banner.style.display = 'block';
+      } catch {}
+    }
+
     async function loadReferralStats() {
       try {
         const r = await fetch(`${API}/referral/stats`, {
@@ -280,6 +304,7 @@
         populate(data);
         document.getElementById('loading').style.display = 'none';
         document.getElementById('card').style.display = 'block';
+        loadValidity();
         loadReferralStats();
       } catch {
         document.getElementById('loading').textContent = 'Erro ao carregar perfil. Recarregue a página.';

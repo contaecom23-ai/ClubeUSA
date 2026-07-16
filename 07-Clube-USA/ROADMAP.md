@@ -9,7 +9,7 @@
 - [x] **0.1** Cadastro + perfil mínimo + email confirmado *(PR aberto — aguardando merge)*
 - [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [x] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- [x] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
 ---
 

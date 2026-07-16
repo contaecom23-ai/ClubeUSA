@@ -69,6 +69,13 @@ class ReferralStats(BaseModel):
     referral_url: str | None
 
 
+class RegistrationValidity(BaseModel):
+    is_valid: bool
+    email_confirmed: bool
+    has_location: bool
+    required_actions: list[str]
+
+
 class UsersMetrics(BaseModel):
     total: int
     confirmed: int
@@ -76,6 +83,8 @@ class UsersMetrics(BaseModel):
     confirmation_rate: float
     new_last_7d: int
     new_last_30d: int
+    valid_registrations: int  # confirmados + localização preenchida
+    valid_rate: float
 
 
 class ReferralMetrics(BaseModel):
