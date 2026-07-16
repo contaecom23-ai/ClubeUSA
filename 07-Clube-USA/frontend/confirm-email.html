@@ -3,48 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirmando email — Clube USA</title>
-  <link rel="stylesheet" href="static/css/style.css">
+  <title>Confirmação de Email — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4ff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { background: white; border-radius: 12px; padding: 48px 36px; width: 100%; max-width: 420px; box-shadow: 0 4px 24px rgba(0,0,0,.08); text-align: center; }
+    .icon { font-size: 3rem; margin-bottom: 20px; }
+    h1 { color: #1a56db; font-size: 1.4rem; margin-bottom: 12px; }
+    p { color: #555; line-height: 1.6; margin-bottom: 24px; }
+    a.btn { display: inline-block; padding: 12px 28px; background: #1a56db; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; transition: background .2s; }
+    a.btn:hover { background: #1648c4; }
+    .loading { color: #888; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #ddd; border-top-color: #1a56db; border-radius: 50%; animation: spin .8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
-  <div class="page-center">
-    <div class="card" style="text-align:center;">
-      <div class="brand">
-        <h1>🇧🇷 Clube USA</h1>
-      </div>
-
-      <div id="status" style="font-size:1.5rem; margin: 24px 0;">⏳ Confirmando seu email…</div>
-      <div id="alert" class="alert"></div>
-      <div id="action" style="display:none;" class="mt-4">
-        <a href="login.html" class="btn btn-primary">Fazer login →</a>
-      </div>
+  <div class="card" id="card">
+    <div class="loading">
+      <span class="spinner"></span> Confirmando seu email...
     </div>
   </div>
 
-  <script type="module">
-    import { API } from './static/js/api.js';
+  <script>
+    const API = '/api';
 
-    const statusEl = document.getElementById('status');
-    const alertEl = document.getElementById('alert');
-    const actionEl = document.getElementById('action');
+    async function confirm() {
+      const token = new URLSearchParams(location.search).get('token');
+      const card = document.getElementById('card');
 
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
+      if (!token) {
+        card.innerHTML = `
+          <div class="icon">⚠️</div>
+          <h1>Link inválido</h1>
+          <p>Este link de confirmação não é válido. Verifique o email que você recebeu.</p>
+          <a class="btn" href="/register.html">Criar conta</a>
+        `;
+        return;
+      }
 
-    function showResult(ok, msg) {
-      statusEl.textContent = ok ? '✅' : '❌';
-      alertEl.textContent = msg;
-      alertEl.className = `alert alert-${ok ? 'success' : 'error'} show`;
-      if (ok) actionEl.style.display = 'block';
+      try {
+        const r = await fetch(`${API}/auth/confirm-email?token=${encodeURIComponent(token)}`);
+        const data = await r.json();
+
+        if (r.ok) {
+          card.innerHTML = `
+            <div class="icon">✅</div>
+            <h1>Email confirmado!</h1>
+            <p>${data.message}</p>
+            <a class="btn" href="/login.html">Fazer login</a>
+          `;
+        } else {
+          const isExpired = (data.detail || '').toLowerCase().includes('expirado');
+          card.innerHTML = `
+            <div class="icon">❌</div>
+            <h1>${isExpired ? 'Link expirado' : 'Link inválido'}</h1>
+            <p>${data.detail || 'Não foi possível confirmar seu email.'}</p>
+            ${isExpired
+              ? `<p>Solicite um novo link na tela de <a href="/login.html" style="color:#1a56db">login</a>.</p>`
+              : `<a class="btn" href="/register.html">Cadastrar novamente</a>`
+            }
+          `;
+        }
+      } catch {
+        card.innerHTML = `
+          <div class="icon">🔌</div>
+          <h1>Erro de conexão</h1>
+          <p>Não foi possível conectar ao servidor. Tente novamente em alguns instantes.</p>
+          <a class="btn" href="${location.href}">Tentar novamente</a>
+        `;
+      }
     }
 
-    if (!token) {
-      showResult(false, 'Link inválido. Verifique seu email e tente novamente.');
-    } else {
-      API.confirmEmail(token)
-        .then(() => showResult(true, 'Email confirmado com sucesso! Você já pode fazer login.'))
-        .catch(err => showResult(false, err.message || 'Erro ao confirmar email.'));
-    }
+    confirm();
   </script>
 </body>
 </html>

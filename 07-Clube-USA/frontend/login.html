@@ -3,74 +3,119 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Entrar — Clube USA</title>
-  <link rel="stylesheet" href="static/css/style.css">
+  <title>Login — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4ff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { background: white; border-radius: 12px; padding: 36px; width: 100%; max-width: 380px; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
+    h1 { color: #1a56db; font-size: 1.5rem; margin-bottom: 8px; }
+    .subtitle { color: #666; font-size: .9rem; margin-bottom: 28px; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: .85rem; font-weight: 500; color: #333; margin-bottom: 4px; }
+    input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: .95rem; transition: border-color .2s; }
+    input:focus { outline: none; border-color: #1a56db; }
+    button { width: 100%; padding: 12px; background: #1a56db; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .2s; margin-top: 8px; }
+    button:hover:not(:disabled) { background: #1648c4; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .msg { margin-top: 16px; padding: 12px; border-radius: 8px; font-size: .9rem; display: none; }
+    .msg.error { background: #fdecea; color: #c62828; display: block; }
+    .msg.warning { background: #fff8e1; color: #e65100; display: block; }
+    .links { display: flex; justify-content: space-between; margin-top: 20px; font-size: .85rem; }
+    .links a { color: #1a56db; text-decoration: none; }
+    .links a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
-  <div class="page-center">
-    <div class="card">
-      <div class="brand">
-        <h1>🇧🇷 Clube USA</h1>
-        <p>Entre na sua conta</p>
+  <div class="card">
+    <h1>Clube USA</h1>
+    <p class="subtitle">Entre na sua conta</p>
+
+    <form id="form">
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="seu@email.com" required autocomplete="username">
       </div>
+      <div class="field">
+        <label for="password">Senha</label>
+        <input id="password" type="password" placeholder="Sua senha" required autocomplete="current-password">
+      </div>
+      <button type="submit" id="btn">Entrar</button>
+    </form>
 
-      <div id="alert" class="alert"></div>
+    <div id="msg" class="msg"></div>
 
-      <form id="form" novalidate>
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" placeholder="joao@email.com" autocomplete="email" required>
-        </div>
-
-        <div class="form-group">
-          <label for="password">Senha</label>
-          <input type="password" id="password" name="password" placeholder="Sua senha" autocomplete="current-password" required>
-        </div>
-
-        <button type="submit" class="btn btn-primary mt-4" id="btn-submit">
-          Entrar
-        </button>
-      </form>
-
-      <p class="text-center mt-4">
-        <a href="register.html" class="text-link">Ainda não tem conta? Cadastre-se →</a>
-      </p>
+    <div class="links">
+      <a href="/register.html">Criar conta</a>
+      <a href="#" id="resend-link" style="display:none">Reenviar confirmação</a>
     </div>
   </div>
 
-  <script type="module">
-    import { API, Auth } from './static/js/api.js';
-
-    if (Auth.isLoggedIn()) window.location.href = 'profile.html';
-
+  <script>
+    const API = '/api';
     const form = document.getElementById('form');
-    const alertEl = document.getElementById('alert');
-    const btn = document.getElementById('btn-submit');
+    const btn  = document.getElementById('btn');
+    const msg  = document.getElementById('msg');
+    const resendLink = document.getElementById('resend-link');
+    let lastEmail = '';
 
-    function showAlert(msg, type) {
-      alertEl.textContent = msg;
-      alertEl.className = `alert alert-${type} show`;
-    }
-    function setLoading(loading) {
-      btn.disabled = loading;
-      btn.innerHTML = loading ? '<span class="spinner"></span>Entrando…' : 'Entrar';
+    function showMsg(text, type) {
+      msg.textContent = text;
+      msg.className = `msg ${type}`;
     }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      alertEl.className = 'alert';
-      setLoading(true);
+      btn.disabled = true;
+      btn.textContent = 'Entrando...';
+      msg.className = 'msg';
+      resendLink.style.display = 'none';
+
+      lastEmail = document.getElementById('email').value.trim();
 
       try {
-        await API.login({
-          email: form.email.value.trim().toLowerCase(),
-          password: form.password.value,
+        const r = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email:    lastEmail,
+            password: document.getElementById('password').value,
+          }),
         });
-        window.location.href = 'profile.html';
-      } catch (err) {
-        showAlert(err.message || 'Erro ao fazer login. Tente novamente.', 'error');
+        const data = await r.json();
+
+        if (r.ok) {
+          localStorage.setItem('access_token', data.access_token);
+          localStorage.setItem('refresh_token', data.refresh_token);
+          window.location.href = '/profile.html';
+        } else {
+          const detail = data.detail || 'Erro ao entrar';
+          const isUnconfirmed = detail.toLowerCase().includes('confirmado');
+          showMsg(detail, isUnconfirmed ? 'warning' : 'error');
+          if (isUnconfirmed) resendLink.style.display = 'inline';
+        }
+      } catch {
+        showMsg('Erro de conexão. Tente novamente.', 'error');
       } finally {
-        setLoading(false);
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+      }
+    });
+
+    resendLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (!lastEmail) return;
+      resendLink.textContent = 'Enviando...';
+      try {
+        await fetch(`${API}/auth/resend-confirmation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: lastEmail }),
+        });
+        showMsg('Email de confirmação reenviado. Verifique sua caixa de entrada.', 'warning');
+      } catch {
+        showMsg('Erro ao reenviar. Tente novamente.', 'error');
+      } finally {
+        resendLink.textContent = 'Reenviar confirmação';
       }
     });
   </script>
