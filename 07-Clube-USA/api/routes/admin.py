@@ -6,9 +6,24 @@ from supabase import Client
 
 from config import settings
 from deps import get_db
-from models import AdminMetrics, EventMetrics, ReferralMetrics, UsersMetrics
+from models import (
+    AdminMetrics,
+    CreatePromotionRequest,
+    EventMetrics,
+    MessageResponse,
+    PromotionListResponse,
+    PromotionResponse,
+    ReferralMetrics,
+    UpdatePromotionRequest,
+    UsersMetrics,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+_PROMO_FIELDS = (
+    "id, title, description, url, image_url, category, zip_code, state,"
+    " expires_at, is_featured, is_active, created_at"
+)
 
 
 def _require_admin(x_admin_key: Annotated[str, Header()] = "") -> None:
@@ -99,3 +114,92 @@ async def get_metrics(
         ),
         as_of=now.isoformat(),
     )
+
+
+# ─── Promoções (admin CRUD) ───────────────────────────────────────────────────
+
+@router.post(
+    "/promotions",
+    response_model=PromotionResponse,
+    status_code=201,
+    dependencies=[Depends(_require_admin)],
+    summary="Cria promoção (admin)",
+)
+async def create_promotion(
+    body: CreatePromotionRequest,
+    db: Annotated[Client, Depends(get_db)],
+) -> PromotionResponse:
+    data = {
+        "title": body.title,
+        "description": body.description,
+        "url": body.url,
+        "image_url": body.image_url,
+        "category": body.category.value,
+        "zip_code": body.zip_code,
+        "state": body.state,
+        "expires_at": body.expires_at,
+        "is_featured": body.is_featured,
+        "is_active": True,
+    }
+    result = db.table("promotions").insert(data).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Erro ao criar promoção")
+    return PromotionResponse.from_db(result.data[0])
+
+
+@router.get(
+    "/promotions",
+    response_model=PromotionListResponse,
+    dependencies=[Depends(_require_admin)],
+    summary="Lista todas as promoções, incluindo inativas (admin)",
+)
+async def list_promotions_admin(
+    db: Annotated[Client, Depends(get_db)],
+) -> PromotionListResponse:
+    result = (
+        db.table("promotions")
+        .select(_PROMO_FIELDS)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    items = [PromotionResponse.from_db(p) for p in (result.data or [])]
+    return PromotionListResponse(items=items, total=len(items))
+
+
+@router.put(
+    "/promotions/{promotion_id}",
+    response_model=PromotionResponse,
+    dependencies=[Depends(_require_admin)],
+    summary="Atualiza promoção (admin)",
+)
+async def update_promotion(
+    promotion_id: str,
+    body: UpdatePromotionRequest,
+    db: Annotated[Client, Depends(get_db)],
+) -> PromotionResponse:
+    updates = body.model_dump(exclude_none=True)
+    if updates:
+        db.table("promotions").update(updates).eq("id", promotion_id).execute()
+    result = (
+        db.table("promotions")
+        .select(_PROMO_FIELDS)
+        .eq("id", promotion_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Promoção não encontrada")
+    return PromotionResponse.from_db(result.data[0])
+
+
+@router.delete(
+    "/promotions/{promotion_id}",
+    response_model=MessageResponse,
+    dependencies=[Depends(_require_admin)],
+    summary="Desativa promoção (soft delete) (admin)",
+)
+async def delete_promotion(
+    promotion_id: str,
+    db: Annotated[Client, Depends(get_db)],
+) -> MessageResponse:
+    db.table("promotions").update({"is_active": False}).eq("id", promotion_id).execute()
+    return MessageResponse(message="Promoção desativada com sucesso")

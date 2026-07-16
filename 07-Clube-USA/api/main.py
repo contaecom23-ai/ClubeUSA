@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 
 from config import settings
 from models import MessageResponse
-from routes import admin, auth, referral, users
+from routes import admin, auth, promotions, referral, users
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -64,6 +64,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(referral.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(promotions.router, prefix="/api")
 app.include_router(referral.redirect_router)  # /i/{code} sem prefixo /api
 
 

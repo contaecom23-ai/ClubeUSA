@@ -94,6 +94,38 @@ CREATE TRIGGER trg_users_updated_at
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- =============================================================
+-- TABELA: promotions
+-- Promoções/achados curados — leitura pública, escrita via admin
+-- =============================================================
+CREATE TABLE IF NOT EXISTS promotions (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title       TEXT NOT NULL,
+    description TEXT NOT NULL,
+    url         TEXT NOT NULL,              -- link para o deal original (externo)
+    image_url   TEXT,
+    category    TEXT NOT NULL,              -- supermercado | restaurante | roupa | eletronica | servicos | saude | educacao | transporte | outros
+    zip_code    TEXT,                       -- NULL = nacional / todos os ZIPs
+    state       TEXT,                       -- NULL = nacional
+    expires_at  TIMESTAMPTZ,               -- NULL = sem expiração
+    is_featured BOOLEAN NOT NULL DEFAULT false,
+    is_active   BOOLEAN NOT NULL DEFAULT true,
+    created_by  UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_promotions_is_active  ON promotions(is_active);
+CREATE INDEX IF NOT EXISTS idx_promotions_category   ON promotions(category);
+CREATE INDEX IF NOT EXISTS idx_promotions_state      ON promotions(state);
+CREATE INDEX IF NOT EXISTS idx_promotions_zip_code   ON promotions(zip_code);
+CREATE INDEX IF NOT EXISTS idx_promotions_expires_at ON promotions(expires_at);
+
+DROP TRIGGER IF EXISTS trg_promotions_updated_at ON promotions;
+CREATE TRIGGER trg_promotions_updated_at
+    BEFORE UPDATE ON promotions
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- =============================================================
 -- RLS (Row Level Security) — endgame, ativar após validação
 -- Até lá: acesso exclusivamente server-side via service_role
 -- =============================================================
