@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+import string
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -32,6 +33,13 @@ def create_access_token(user_id: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=settings.ACCESS_TOKEN_TTL_DAYS)
     payload = {"sub": user_id, "exp": expire, "type": "access"}
     return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+
+
+_REFERRAL_ALPHABET = string.ascii_lowercase + string.digits
+
+
+def generate_referral_code(n_chars: int = 8) -> str:
+    return "".join(secrets.choice(_REFERRAL_ALPHABET) for _ in range(n_chars))
 
 
 def decode_access_token(token: str) -> str | None:

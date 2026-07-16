@@ -23,6 +23,15 @@
     input, select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: .95rem; transition: border-color .2s; }
     input:focus, select:focus { outline: none; border-color: #1a56db; }
     input:read-only { background: #f9f9f9; color: #666; cursor: default; }
+    .referral-box { background: #f0f4ff; border-radius: 10px; padding: 16px; margin-bottom: 8px; }
+    .referral-hint { font-size: .82rem; color: #666; margin-bottom: 10px; }
+    .referral-link-row { display: flex; gap: 8px; }
+    .referral-link-row input { flex: 1; background: white; }
+    .copy-btn { padding: 10px 16px; background: #1a56db; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; font-size: .9rem; transition: background .2s; }
+    .copy-btn:hover { background: #1648c4; }
+    .copy-btn.copied { background: #2e7d32; }
+    .referral-count { margin-top: 10px; font-size: .88rem; color: #555; }
+    .referral-count strong { color: #1a56db; }
     .actions { display: flex; gap: 12px; margin-top: 8px; }
     .save-btn { flex: 1; padding: 12px; background: #1a56db; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .2s; }
     .save-btn:hover:not(:disabled) { background: #1648c4; }
@@ -102,6 +111,19 @@
     </form>
 
     <div id="msg" class="msg"></div>
+
+    <div class="section-title">Seu Link de Indicação</div>
+    <div id="referral-loading" style="color:#888;font-size:.9rem;padding:8px 0">Carregando...</div>
+    <div id="referral-content" style="display:none">
+      <div class="referral-box">
+        <p class="referral-hint">Compartilhe seu link. Cada pessoa que se cadastrar através dele será vinculada a você.</p>
+        <div class="referral-link-row">
+          <input id="referral-link" type="text" readonly aria-label="Seu link de indicação">
+          <button type="button" class="copy-btn" id="copy-btn">Copiar</button>
+        </div>
+        <p class="referral-count">Pessoas indicadas: <strong id="referral-count">0</strong></p>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -215,6 +237,32 @@
       }
     });
 
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      const link = document.getElementById('referral-link').value;
+      navigator.clipboard.writeText(link).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copiado!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+
+    async function loadReferralStats() {
+      try {
+        const r = await fetch(`${API}/referral/stats`, {
+          headers: { 'Authorization': `Bearer ${token()}` },
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        document.getElementById('referral-link').value = data.referral_url || '';
+        document.getElementById('referral-count').textContent = data.referral_count;
+        document.getElementById('referral-loading').style.display = 'none';
+        document.getElementById('referral-content').style.display = 'block';
+      } catch {
+        document.getElementById('referral-loading').textContent = 'Erro ao carregar link de indicação.';
+      }
+    }
+
     // Inicializa: carrega perfil ou redireciona para login
     (async () => {
       if (!token()) { window.location.href = '/login.html'; return; }
@@ -232,6 +280,7 @@
         populate(data);
         document.getElementById('loading').style.display = 'none';
         document.getElementById('card').style.display = 'block';
+        loadReferralStats();
       } catch {
         document.getElementById('loading').textContent = 'Erro ao carregar perfil. Recarregue a página.';
       }

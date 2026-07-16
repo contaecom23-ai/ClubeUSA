@@ -19,6 +19,7 @@ from models import (
 )
 from security import (
     create_access_token,
+    generate_referral_code,
     generate_token,
     hash_password,
     hash_token,
@@ -63,6 +64,14 @@ async def register(
         if ref.data:
             referred_by_user_id = ref.data[0]["id"]
 
+    # Gera código de indicação único para o novo usuário
+    referral_code = None
+    for _ in range(10):
+        candidate = generate_referral_code()
+        if not db.table("users").select("id").eq("referral_code", candidate).execute().data:
+            referral_code = candidate
+            break
+
     confirm_token = generate_token()
     token_expires = datetime.now(timezone.utc) + timedelta(
         hours=settings.EMAIL_CONFIRM_TOKEN_TTL_HOURS
@@ -78,6 +87,7 @@ async def register(
             "city": body.city,
             "zip_code": body.zip_code,
             "referred_by_user_id": referred_by_user_id,
+            "referral_code": referral_code,
             "email_confirm_token": confirm_token,
             "email_confirm_token_expires_at": token_expires.isoformat(),
         }

@@ -63,6 +63,12 @@ class UserProfile(BaseModel):
     created_at: str
 
 
+class ReferralStats(BaseModel):
+    referral_code: str | None
+    referral_count: int
+    referral_url: str | None
+
+
 class UpdateProfileRequest(BaseModel):
     name: str | None = None
     phone: str | None = None
