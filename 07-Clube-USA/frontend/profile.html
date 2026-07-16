@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4ff; min-height: 100vh; padding: 24px 16px; }
+    header { max-width: 600px; margin: 0 auto 24px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { color: #1a56db; font-size: 1.3rem; }
+    .logout-btn { background: none; border: 1px solid #ddd; padding: 8px 16px; border-radius: 8px; cursor: pointer; color: #666; font-size: .85rem; transition: border-color .2s; }
+    .logout-btn:hover { border-color: #999; }
+    .card { background: white; border-radius: 12px; padding: 32px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: .8rem; font-weight: 500; margin-left: 8px; }
+    .badge.confirmed { background: #e8f5e9; color: #2e7d32; }
+    .badge.pending { background: #fff8e1; color: #e65100; }
+    .section-title { font-size: .85rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .05em; margin: 24px 0 12px; }
+    .row { display: flex; gap: 12px; }
+    .row .field { flex: 1; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: .85rem; font-weight: 500; color: #333; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: .95rem; transition: border-color .2s; }
+    input:focus, select:focus { outline: none; border-color: #1a56db; }
+    input:read-only { background: #f9f9f9; color: #666; cursor: default; }
+    .referral-box { background: #f0f4ff; border-radius: 10px; padding: 16px; margin-bottom: 8px; }
+    .referral-hint { font-size: .82rem; color: #666; margin-bottom: 10px; }
+    .referral-link-row { display: flex; gap: 8px; }
+    .referral-link-row input { flex: 1; background: white; }
+    .copy-btn { padding: 10px 16px; background: #1a56db; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; font-size: .9rem; transition: background .2s; }
+    .copy-btn:hover { background: #1648c4; }
+    .copy-btn.copied { background: #2e7d32; }
+    .referral-count { margin-top: 10px; font-size: .88rem; color: #555; }
+    .referral-count strong { color: #1a56db; }
+    .validity-banner { border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; font-size: .9rem; }
+    .validity-banner.valid { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .validity-banner.invalid { background: #fff8e1; color: #e65100; border: 1px solid #ffe082; }
+    .validity-banner ul { margin: 6px 0 0 18px; }
+    .actions { display: flex; gap: 12px; margin-top: 8px; }
+    .save-btn { flex: 1; padding: 12px; background: #1a56db; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+    .save-btn:hover:not(:disabled) { background: #1648c4; }
+    .save-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .cancel-btn { padding: 12px 20px; background: none; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; color: #555; font-size: 1rem; }
+    .msg { margin-top: 16px; padding: 12px; border-radius: 8px; font-size: .9rem; display: none; }
+    .msg.success { background: #e8f5e9; color: #2e7d32; display: block; }
+    .msg.error { background: #fdecea; color: #c62828; display: block; }
+    #loading { text-align: center; color: #888; padding: 48px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Clube USA</h1>
+    <button class="logout-btn" id="logout-btn">Sair</button>
+  </header>
+
+  <div id="loading">Carregando perfil...</div>
+
+  <div id="validity-banner" style="display:none;max-width:600px;margin:0 auto 0"></div>
+
+  <div class="card" id="card" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <strong id="display-name" style="font-size:1.2rem"></strong>
+      <span id="confirmed-badge" class="badge"></span>
+    </div>
+    <div id="display-email" style="color:#666;font-size:.9rem;margin-bottom:8px"></div>
+    <div id="display-member" style="color:#aaa;font-size:.8rem"></div>
+
+    <div class="section-title">Editar perfil</div>
+
+    <form id="form">
+      <div class="field">
+        <label for="name">Nome</label>
+        <input id="name" type="text" required>
+      </div>
+      <div class="field">
+        <label for="email-ro">Email</label>
+        <input id="email-ro" type="email" readonly tabindex="-1">
+      </div>
+      <div class="field">
+        <label for="phone">Telefone</label>
+        <input id="phone" type="tel" placeholder="+1 305 555-0100">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="state">Estado</label>
+          <select id="state">
+            <option value="">Selecione</option>
+            <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+            <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+            <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+            <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+            <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+            <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+            <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+            <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+            <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+            <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+            <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+            <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+            <option>WI</option><option>WY</option><option>DC</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="city">Cidade</label>
+          <input id="city" type="text" placeholder="Miami">
+        </div>
+        <div class="field">
+          <label for="zip">ZIP</label>
+          <input id="zip" type="text" placeholder="33101" maxlength="10">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="cancel-btn" id="cancel-btn">Cancelar</button>
+        <button type="submit" class="save-btn" id="save-btn">Salvar</button>
+      </div>
+    </form>
+
+    <div id="msg" class="msg"></div>
+
+    <div class="section-title">Seu Link de Indicação</div>
+    <div id="referral-loading" style="color:#888;font-size:.9rem;padding:8px 0">Carregando...</div>
+    <div id="referral-content" style="display:none">
+      <div class="referral-box">
+        <p class="referral-hint">Compartilhe seu link. Cada pessoa que se cadastrar através dele será vinculada a você.</p>
+        <div class="referral-link-row">
+          <input id="referral-link" type="text" readonly aria-label="Seu link de indicação">
+          <button type="button" class="copy-btn" id="copy-btn">Copiar</button>
+        </div>
+        <p class="referral-count">Pessoas indicadas: <strong id="referral-count">0</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api';
+    let originalData = {};
+
+    function token() { return localStorage.getItem('access_token'); }
+
+    function showMsg(text, type) {
+      const el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = `msg ${type}`;
+      setTimeout(() => el.className = 'msg', 4000);
+    }
+
+    function formatDate(iso) {
+      return new Date(iso).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    }
+
+    function populate(u) {
+      originalData = u;
+      document.getElementById('display-name').textContent = u.name;
+      document.getElementById('display-email').textContent = u.email;
+      document.getElementById('display-member').textContent = `Membro desde ${formatDate(u.created_at)}`;
+
+      const badge = document.getElementById('confirmed-badge');
+      if (u.email_confirmed) {
+        badge.textContent = '✓ Email confirmado';
+        badge.className = 'badge confirmed';
+      } else {
+        badge.textContent = '⚠ Email não confirmado';
+        badge.className = 'badge pending';
+      }
+
+      document.getElementById('name').value     = u.name || '';
+      document.getElementById('email-ro').value = u.email || '';
+      document.getElementById('phone').value    = u.phone || '';
+      document.getElementById('city').value     = u.city || '';
+      document.getElementById('zip').value      = u.zip_code || '';
+
+      const stateEl = document.getElementById('state');
+      stateEl.value = u.state || '';
+    }
+
+    function resetForm() { populate(originalData); }
+
+    document.getElementById('cancel-btn').addEventListener('click', resetForm);
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      const rt = localStorage.getItem('refresh_token');
+      if (rt) {
+        try {
+          await fetch(`${API}/auth/logout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: rt }),
+          });
+        } catch {}
+      }
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      window.location.href = '/login.html';
+    });
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('save-btn');
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+
+      const body = {};
+      const name  = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const state = document.getElementById('state').value;
+      const city  = document.getElementById('city').value.trim();
+      const zip   = document.getElementById('zip').value.trim();
+
+      if (name  !== originalData.name)     body.name     = name;
+      if (phone !== (originalData.phone  || '')) body.phone = phone || null;
+      if (state !== (originalData.state  || '')) body.state = state || null;
+      if (city  !== (originalData.city   || '')) body.city  = city  || null;
+      if (zip   !== (originalData.zip_code || '')) body.zip_code = zip || null;
+
+      try {
+        const r = await fetch(`${API}/users/me`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token()}`,
+          },
+          body: JSON.stringify(body),
+        });
+        const data = await r.json();
+        if (r.ok) {
+          populate(data);
+          showMsg('Perfil atualizado com sucesso!', 'success');
+        } else if (r.status === 401) {
+          localStorage.removeItem('access_token');
+          window.location.href = '/login.html';
+        } else {
+          const detail = Array.isArray(data.detail)
+            ? data.detail.map(d => d.msg).join('; ')
+            : (data.detail || 'Erro ao salvar');
+          showMsg(detail, 'error');
+        }
+      } catch {
+        showMsg('Erro de conexão. Tente novamente.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Salvar';
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      const link = document.getElementById('referral-link').value;
+      navigator.clipboard.writeText(link).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copiado!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+
+    async function loadValidity() {
+      try {
+        const r = await fetch(`${API}/users/me/validity`, {
+          headers: { 'Authorization': `Bearer ${token()}` },
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        const banner = document.getElementById('validity-banner');
+        if (data.is_valid) {
+          banner.innerHTML = '<div class="validity-banner valid">✓ <strong>Cadastro validado</strong> — email confirmado e localização preenchida.</div>';
+        } else {
+          const items = data.required_actions.map(a => `<li>${a}</li>`).join('');
+          banner.innerHTML = `<div class="validity-banner invalid">⚠ <strong>Cadastro ainda não validado</strong><ul>${items}</ul></div>`;
+        }
+        banner.style.display = 'block';
+      } catch {}
+    }
+
+    async function loadReferralStats() {
+      try {
+        const r = await fetch(`${API}/referral/stats`, {
+          headers: { 'Authorization': `Bearer ${token()}` },
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        document.getElementById('referral-link').value = data.referral_url || '';
+        document.getElementById('referral-count').textContent = data.referral_count;
+        document.getElementById('referral-loading').style.display = 'none';
+        document.getElementById('referral-content').style.display = 'block';
+      } catch {
+        document.getElementById('referral-loading').textContent = 'Erro ao carregar link de indicação.';
+      }
+    }
+
+    // Inicializa: carrega perfil ou redireciona para login
+    (async () => {
+      if (!token()) { window.location.href = '/login.html'; return; }
+
+      try {
+        const r = await fetch(`${API}/users/me`, {
+          headers: { 'Authorization': `Bearer ${token()}` },
+        });
+        if (r.status === 401 || r.status === 403) {
+          localStorage.removeItem('access_token');
+          window.location.href = '/login.html';
+          return;
+        }
+        const data = await r.json();
+        populate(data);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('card').style.display = 'block';
+        loadValidity();
+        loadReferralStats();
+      } catch {
+        document.getElementById('loading').textContent = 'Erro ao carregar perfil. Recarregue a página.';
+      }
+    })();
+  </script>
+</body>
+</html>

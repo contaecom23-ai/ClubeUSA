@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmação de Email — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4ff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { background: white; border-radius: 12px; padding: 48px 36px; width: 100%; max-width: 420px; box-shadow: 0 4px 24px rgba(0,0,0,.08); text-align: center; }
+    .icon { font-size: 3rem; margin-bottom: 20px; }
+    h1 { color: #1a56db; font-size: 1.4rem; margin-bottom: 12px; }
+    p { color: #555; line-height: 1.6; margin-bottom: 24px; }
+    a.btn { display: inline-block; padding: 12px 28px; background: #1a56db; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; transition: background .2s; }
+    a.btn:hover { background: #1648c4; }
+    .loading { color: #888; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #ddd; border-top-color: #1a56db; border-radius: 50%; animation: spin .8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="loading">
+      <span class="spinner"></span> Confirmando seu email...
+    </div>
+  </div>
+
+  <script>
+    const API = '/api';
+
+    async function confirm() {
+      const token = new URLSearchParams(location.search).get('token');
+      const card = document.getElementById('card');
+
+      if (!token) {
+        card.innerHTML = `
+          <div class="icon">⚠️</div>
+          <h1>Link inválido</h1>
+          <p>Este link de confirmação não é válido. Verifique o email que você recebeu.</p>
+          <a class="btn" href="/register.html">Criar conta</a>
+        `;
+        return;
+      }
+
+      try {
+        const r = await fetch(`${API}/auth/confirm-email?token=${encodeURIComponent(token)}`);
+        const data = await r.json();
+
+        if (r.ok) {
+          card.innerHTML = `
+            <div class="icon">✅</div>
+            <h1>Email confirmado!</h1>
+            <p>${data.message}</p>
+            <a class="btn" href="/login.html">Fazer login</a>
+          `;
+        } else {
+          const isExpired = (data.detail || '').toLowerCase().includes('expirado');
+          card.innerHTML = `
+            <div class="icon">❌</div>
+            <h1>${isExpired ? 'Link expirado' : 'Link inválido'}</h1>
+            <p>${data.detail || 'Não foi possível confirmar seu email.'}</p>
+            ${isExpired
+              ? `<p>Solicite um novo link na tela de <a href="/login.html" style="color:#1a56db">login</a>.</p>`
+              : `<a class="btn" href="/register.html">Cadastrar novamente</a>`
+            }
+          `;
+        }
+      } catch {
+        card.innerHTML = `
+          <div class="icon">🔌</div>
+          <h1>Erro de conexão</h1>
+          <p>Não foi possível conectar ao servidor. Tente novamente em alguns instantes.</p>
+          <a class="btn" href="${location.href}">Tentar novamente</a>
+        `;
+      }
+    }
+
+    confirm();
+  </script>
+</body>
+</html>
