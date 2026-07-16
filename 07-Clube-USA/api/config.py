@@ -33,6 +33,9 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = "development"
 
+    # Admin — chave para acessar /api/admin/* (gerada aleatoriamente, compartilhe só com o dono)
+    ADMIN_KEY: str = ""
+
 
 def _load() -> Settings:
     s = Settings()

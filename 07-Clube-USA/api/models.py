@@ -69,6 +69,34 @@ class ReferralStats(BaseModel):
     referral_url: str | None
 
 
+class UsersMetrics(BaseModel):
+    total: int
+    confirmed: int
+    unconfirmed: int
+    confirmation_rate: float
+    new_last_7d: int
+    new_last_30d: int
+
+
+class ReferralMetrics(BaseModel):
+    total_attributed: int
+    attribution_rate: float
+
+
+class EventMetrics(BaseModel):
+    logins_last_7d: int
+    logins_last_30d: int
+    registrations_last_7d: int
+    registrations_last_30d: int
+
+
+class AdminMetrics(BaseModel):
+    users: UsersMetrics
+    referrals: ReferralMetrics
+    events: EventMetrics
+    as_of: str
+
+
 class UpdateProfileRequest(BaseModel):
     name: str | None = None
     phone: str | None = None

@@ -6,6 +6,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from supabase import Client
 
+from analytics import emit_event
 from config import settings
 from deps import get_db
 from email_service import send_email_confirmation
@@ -77,7 +78,7 @@ async def register(
         hours=settings.EMAIL_CONFIRM_TOKEN_TTL_HOURS
     )
 
-    db.table("users").insert(
+    insert_result = db.table("users").insert(
         {
             "email": body.email,
             "password_hash": hash_password(body.password),
@@ -92,6 +93,12 @@ async def register(
             "email_confirm_token_expires_at": token_expires.isoformat(),
         }
     ).execute()
+
+    new_user_id = insert_result.data[0]["id"] if insert_result.data else None
+    emit_event(db, "user_registered", user_id=new_user_id)
+    if referred_by_user_id and new_user_id:
+        emit_event(db, "referral_used", user_id=new_user_id,
+                   metadata={"referrer_id": referred_by_user_id})
 
     send_email_confirmation(body.email, body.name, confirm_token)
 
@@ -142,6 +149,8 @@ async def confirm_email(
             "email_confirm_token_expires_at": None,
         }
     ).eq("id", user["id"]).execute()
+
+    emit_event(db, "email_confirmed", user_id=user["id"])
 
     return MessageResponse(message="Email confirmado com sucesso! Você já pode fazer login.")
 
@@ -197,6 +206,8 @@ async def login(
             "expires_at": refresh_expires.isoformat(),
         }
     ).execute()
+
+    emit_event(db, "user_login", user_id=user["id"])
 
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 

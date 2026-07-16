@@ -8,6 +8,7 @@ os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
 os.environ.setdefault("EMAIL_PROVIDER", "log")
 os.environ.setdefault("ENVIRONMENT", "development")
+os.environ.setdefault("ADMIN_KEY", "test-admin-key-for-unit-tests")
 
 import pytest
 from fastapi.testclient import TestClient
