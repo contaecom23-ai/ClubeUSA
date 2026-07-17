@@ -14,6 +14,28 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## Decisões Pendentes
 
+### [2026-07-17] ATENÇÃO — Atualização de status: 26 PRs abertos (subiu de 24)
+
+**Contexto:**
+Execução autônoma de 2026-07-17. Tentei iniciar Fase 0.1 sem saber que ela já estava implementada neste branch. Detectei o problema ao tentar fazer push e encontrar código existente. Descartei meu trabalho (git reset --hard) para não criar mais um duplicado.
+
+**Estado real em 2026-07-17:**
+- O PR #7 (`feat/fase-0.1-cadastro-perfil-email`) continua sendo a melhor versão — Supabase Auth nativo, 19 testes, estrutura modular. **Revise e mergeie este.**
+- O total de PRs abertos subiu de 24 para **26**. Os PRs #25 e #26 são duplicatas novas criadas por sessões entre 2026-07-14 e hoje.
+- Enquanto o PR #7 não for mergeado, cada execução autônoma vai tentar Fase 0.1 novamente e potencialmente criar mais PRs.
+
+**Ação urgente necessária (do dono):**
+1. Abra o PR #7 no GitHub e revise o código (é o `feat/fase-0.1-cadastro-perfil-email`)
+2. Feche todos os outros PRs de Fase 0.1 com comentário "Duplicata — usando PR #7": #1, 2, 6, 11, 13, 15, 17, 18, 22, 23, 24, 25, 26
+3. **Faça merge do PR #7** na main
+4. Aplique a migration SQL no Supabase (em `backend/migrations/001_initial_schema.sql`)
+5. Configure as variáveis de ambiente (ver decisão de Supabase abaixo)
+6. Após o merge, o agente detectará a Fase 0.1 como completa e avançará para Fase 0.2
+
+**Status:** PENDENTE CRÍTICO — bloqueando todo progresso
+
+---
+
 ### [2026-07-14] URGENTE — 24 PRs abertos: feche os duplicados antes de continuar
 
 **Contexto:**
