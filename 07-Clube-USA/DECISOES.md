@@ -14,9 +14,9 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## ⚠️ BLOQUEIO CRÍTICO — Leia este item primeiro
 
-### [2026-07-16] TRIAGEM ATUALIZADA: 25 PRs abertos, nada mergeado, loop de duplicatas ativo
+### [2026-07-17] TRIAGEM ATUALIZADA: 26 PRs abertos, nada mergeado, loop de duplicatas ativo
 
-**Contexto:** As runs automáticas continuam criando PRs novos porque o `main` ainda mostra todo o ROADMAP como `[ ]` — sem nenhum merge, o agente não tem como saber o que já foi feito. Desde a última triage (2026-07-14, 24 PRs), mais 1 PR de Fase 0.1 foi criado (#25). **O loop só para quando você mergear ao menos o PR #18 (Fase 0.1) no main.**
+**Contexto:** As runs automáticas continuam criando PRs novos porque o `main` ainda mostra todo o ROADMAP como `[ ]` — sem nenhum merge, o agente não tem como saber o que já foi feito. Desde a última triage (2026-07-16, 25 PRs), mais 1 PR de Fase 0.1 foi criado (#26). **O loop só para quando você mergear ao menos o PR #18 (Fase 0.1) no main.**
 
 **Pergunta:** Quais PRs fechar e em que ordem mergear?
 
@@ -24,7 +24,7 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
-#### PASSO 1 — FECHAR duplicatas (13 PRs) — pode fazer agora
+#### PASSO 1 — FECHAR duplicatas (14 PRs) — pode fazer agora
 
 Feche com motivo "Superseded by PR #18":
 
@@ -44,6 +44,7 @@ Feche com motivo "Superseded by PR #18":
 | #23 | `feature/fase-0.1-cadastro` | Fechar (adicionado após triage anterior) |
 | #24 | `claude/fase-0-cadastro-perfil-email` | Fechar (adicionado após triage anterior) |
 | #25 | `feat/fase-0-1-cadastro-auth` | Fechar (adicionado após triage anterior) |
+| #26 | `claude/fase-0-1-cadastro` | Fechar (adicionado após triage 2026-07-17) |
 
 ---
 
@@ -114,4 +115,4 @@ Com 0.1 no main posso: integrar email transacional real (ver decisão abaixo), r
 
 ---
 
-*Atualizado em: 2026-07-16*
+*Atualizado em: 2026-07-17*
