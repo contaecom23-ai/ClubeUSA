@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar — Clube USA</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="logo">Clube <span>USA</span></div>
+<div class="card">
+  <h1>Entrar</h1>
+  <form id="loginForm" novalidate>
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input id="email" type="email" required autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="password">Senha</label>
+      <input id="password" type="password" required autocomplete="current-password">
+    </div>
+    <button type="submit" class="btn" data-label="Entrar">Entrar</button>
+    <div id="msg" class="msg"></div>
+  </form>
+  <div class="footer-link">Não tem conta? <a href="register.html">Cadastre-se grátis</a></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+document.getElementById("loginForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const btn = this.querySelector("button[type=submit]");
+  const msg = document.getElementById("msg");
+  setLoading(btn, true);
+
+  const { ok, data } = await apiFetch("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({
+      email: document.getElementById("email").value.trim(),
+      password: document.getElementById("password").value,
+    }),
+  });
+
+  setLoading(btn, false);
+  if (ok) {
+    saveTokens(data.access_token, data.refresh_token);
+    window.location.href = "profile.html";
+  } else {
+    const detail = data.detail || "Credenciais inválidas.";
+    showMsg(msg, detail, "error");
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro — Clube USA</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="logo">Clube <span>USA</span></div>
+<div class="card">
+  <h1>Crie sua conta</h1>
+  <form id="registerForm" novalidate>
+    <div class="form-group">
+      <label for="fullName">Nome completo *</label>
+      <input id="fullName" type="text" required placeholder="Maria da Silva" autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label for="email">Email *</label>
+      <input id="email" type="email" required placeholder="maria@email.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="password">Senha * (mín. 8 caracteres)</label>
+      <input id="password" type="password" required minlength="8" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label for="phone">Telefone (opcional)</label>
+      <input id="phone" type="tel" placeholder="+1 (646) 000-0000" autocomplete="tel">
+    </div>
+    <div class="form-group">
+      <label for="zipCode">CEP / ZIP Code (opcional)</label>
+      <input id="zipCode" type="text" placeholder="10001" maxlength="10">
+    </div>
+    <button type="submit" class="btn" data-label="Criar conta">Criar conta</button>
+    <div id="msg" class="msg"></div>
+  </form>
+  <div class="footer-link">Já tem conta? <a href="login.html">Entrar</a></div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+document.getElementById("registerForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const btn = this.querySelector("button[type=submit]");
+  const msg = document.getElementById("msg");
+  setLoading(btn, true);
+
+  const payload = {
+    full_name: document.getElementById("fullName").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    password: document.getElementById("password").value,
+    phone: document.getElementById("phone").value.trim(),
+    zip_code: document.getElementById("zipCode").value.trim(),
+  };
+
+  const { ok, data } = await apiFetch("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  setLoading(btn, false);
+  if (ok) {
+    showMsg(msg, "Conta criada! Verifique seu email para confirmar o cadastro.", "success");
+    this.reset();
+  } else {
+    const detail = data.detail || "Erro ao criar conta. Tente novamente.";
+    showMsg(msg, Array.isArray(detail) ? detail[0].msg : detail, "error");
+  }
+});
+</script>
+</body>
+</html>

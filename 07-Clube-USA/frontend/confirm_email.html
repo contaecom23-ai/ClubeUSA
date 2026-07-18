@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirmar Email — Clube USA</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="logo">Clube <span>USA</span></div>
+<div class="card">
+  <h1>Confirmação de Email</h1>
+  <div id="msg" class="msg show" style="display:block">Verificando...</div>
+  <div class="footer-link" id="links" style="display:none">
+    <a href="login.html">Ir para o login</a>
+  </div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script>
+(async function() {
+  const msg = document.getElementById("msg");
+  const links = document.getElementById("links");
+  const token = new URLSearchParams(window.location.search).get("token");
+
+  if (!token) {
+    showMsg(msg, "Link inválido. Solicite um novo email de confirmação.", "error");
+    return;
+  }
+
+  const { ok, data } = await apiFetch(`/auth/confirm-email?token=${encodeURIComponent(token)}`);
+  if (ok) {
+    showMsg(msg, data.message || "Email confirmado! Você já pode fazer login.", "success");
+  } else {
+    showMsg(msg, data.detail || "Token inválido ou expirado.", "error");
+  }
+  links.style.display = "block";
+})();
+</script>
+</body>
+</html>
