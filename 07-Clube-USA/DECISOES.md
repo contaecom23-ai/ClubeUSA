@@ -14,9 +14,9 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## ⚠️ BLOQUEIO CRÍTICO — Leia este item primeiro
 
-### [2026-07-17] TRIAGEM ATUALIZADA: 26 PRs abertos, nada mergeado, loop de duplicatas ativo
+### [2026-07-18] TRIAGEM ATUALIZADA: 26 PRs abertos, nada mergeado — 6ª vez notificando
 
-**Contexto:** As runs automáticas continuam criando PRs novos porque o `main` ainda mostra todo o ROADMAP como `[ ]` — sem nenhum merge, o agente não tem como saber o que já foi feito. Desde a última triage (2026-07-16, 25 PRs), mais 1 PR de Fase 0.1 foi criado (#26). **O loop só para quando você mergear ao menos o PR #18 (Fase 0.1) no main.**
+**Contexto:** Hoje é 2026-07-18. O agente roda 3x/dia desde ~2026-07-11 e gerou 26 PRs. Nenhum foi mergeado. Esta run verificou: nenhum PR novo foi criado hoje porque o agente reconhece o bloqueio. **Mas o loop de duplicatas retomará na próxima run se o main continuar sem nenhum merge.** A implementação completa já existe — Fases 0.1 a 1.5 codificadas. O único obstáculo é você apertar "Merge" nos PRs abaixo na ordem indicada.
 
 **Pergunta:** Quais PRs fechar e em que ordem mergear?
 
@@ -115,4 +115,4 @@ Com 0.1 no main posso: integrar email transacional real (ver decisão abaixo), r
 
 ---
 
-*Atualizado em: 2026-07-17*
+*Atualizado em: 2026-07-18 | Histórico: 20 PRs (2026-07-12) → 24 (2026-07-14) → 25 (2026-07-16) → 26 (2026-07-17) → 26 (2026-07-18, estável — nenhum novo criado)*
