@@ -14,9 +14,11 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## ⚠️ BLOQUEIO CRÍTICO — Leia este item primeiro
 
-### [2026-07-18] TRIAGEM ATUALIZADA: 26 PRs abertos, nada mergeado — 6ª vez notificando
+### [2026-07-19] TRIAGEM ATUALIZADA: 27 PRs abertos, nada mergeado — 7ª vez notificando
 
-**Contexto:** Hoje é 2026-07-18. O agente roda 3x/dia desde ~2026-07-11 e gerou 26 PRs. Nenhum foi mergeado. Esta run verificou: nenhum PR novo foi criado hoje porque o agente reconhece o bloqueio. **Mas o loop de duplicatas retomará na próxima run se o main continuar sem nenhum merge.** A implementação completa já existe — Fases 0.1 a 1.5 codificadas. O único obstáculo é você apertar "Merge" nos PRs abaixo na ordem indicada.
+**Contexto:** Hoje é 2026-07-19. O agente roda 3x/dia desde ~2026-07-11 e gerou 27 PRs. Nenhum foi mergeado. Esta run NÃO criou PR novo porque reconhece o bloqueio. **O loop de duplicatas retomará em runs futuras enquanto o main não tiver nenhum merge.** A implementação completa já existe — Fases 0.1 a 1.5 codificadas. O único obstáculo é você apertar "Merge" nos PRs abaixo na ordem indicada.
+
+**Novidade desta run:** PR #27 (`feature/fase-0.1-cadastro-email`, criado 2026-07-18) é a versão mais recente e melhor de Fase 0.1. Substituí PR #18 como recomendado. Diferenças: access token de 1h (mais seguro) + adaptador de email com 3 drivers (log/Resend/SendGrid) + frontend mais completo.
 
 **Pergunta:** Quais PRs fechar e em que ordem mergear?
 
@@ -24,9 +26,9 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
-#### PASSO 1 — FECHAR duplicatas (14 PRs) — pode fazer agora
+#### PASSO 1 — FECHAR duplicatas (16 PRs) — pode fazer agora
 
-Feche com motivo "Superseded by PR #18":
+Feche com motivo "Superseded by PR #27":
 
 | PR | Branch | Ação |
 |---|---|---|
@@ -40,11 +42,12 @@ Feche com motivo "Superseded by PR #18":
 | #13 | `claude/fase-0-cadastro-perfil` | Fechar |
 | #15 | `claude/fase-0-cadastro` | Fechar |
 | #17 | `feature/fase-0-1-cadastro` | Fechar |
-| #22 | `feat/fase-0.1-cadastro-auth` | Fechar (adicionado após triage anterior) |
-| #23 | `feature/fase-0.1-cadastro` | Fechar (adicionado após triage anterior) |
-| #24 | `claude/fase-0-cadastro-perfil-email` | Fechar (adicionado após triage anterior) |
-| #25 | `feat/fase-0-1-cadastro-auth` | Fechar (adicionado após triage anterior) |
-| #26 | `claude/fase-0-1-cadastro` | Fechar (adicionado após triage 2026-07-17) |
+| #18 | `claude/fase-0-cadastro-auth` | Fechar (superseded por PR #27, mais seguro) |
+| #22 | `feat/fase-0.1-cadastro-auth` | Fechar |
+| #23 | `feature/fase-0.1-cadastro` | Fechar |
+| #24 | `claude/fase-0-cadastro-perfil-email` | Fechar |
+| #25 | `feat/fase-0-1-cadastro-auth` | Fechar |
+| #26 | `claude/fase-0-1-cadastro` | Fechar |
 
 ---
 
@@ -55,7 +58,7 @@ Merge na ordem abaixo — cada um pode depender do anterior no main:
 | Ordem | PR | O que entrega |
 |---|---|---|
 | 1 | **#21** (este PR) | Atualiza DECISOES.md + ROADMAP.md no main com este plano |
-| 2 | **#18** `claude/fase-0-cadastro-auth` | **Fase 0.1** — cadastro, login, perfil, confirmação de email |
+| 2 | **#27** `feature/fase-0.1-cadastro-email` | **Fase 0.1** — cadastro, login, perfil, email confirmado (melhor versão) |
 | 3 | **#9** `claude/fase-0-security-polish` | Security polish: headers HTTP, senha forte real |
 | 4 | **#3** `claude/fase-0.2-referral` | **Fase 0.2** — referral rastreável |
 | 5 | **#4** `claude/fase-0.3-analytics` | **Fase 0.3** — analytics básico |
@@ -66,13 +69,13 @@ Merge na ordem abaixo — cada um pode depender do anterior no main:
 | 10 | **#19** `claude/fase-1.4-empregos` | **Fase 1.4** — board de empregos |
 | 11 | **#20** `claude/fase-1.5-moradia` | **Fase 1.5** — moradia/roommates |
 
-> **Aviso real:** PRs #3–#20 foram criados sem 0.1 no main. Provavelmente funcionam standalone, mas pode haver conflitos de schema/imports. Se houver conflito ao mergear, me informe e resolvo.
+> **Aviso real:** PRs #3–#20 foram criados sem 0.1 no main. Podem ter conflitos de schema/imports. Se houver conflito ao mergear, me informe e resolvo em 1 ciclo.
 
 ---
 
-#### PASSO 3 — Depois de mergear PR #18, me diga e eu continuo
+#### PASSO 3 — Depois de mergear PR #27, me diga e eu continuo
 
-Com 0.1 no main posso: integrar email transacional real (ver decisão abaixo), rodar a migration no Supabase, e avançar pelo ROADMAP em ordem. **Enquanto o main não tiver nenhum merge, o agente continuará criando PRs duplicados a cada run.**
+Com 0.1 no main posso: integrar email transacional real (ver decisão abaixo), rodar a migration no Supabase, e avançar pelo ROADMAP em ordem. **Enquanto o main não tiver nenhum merge, o agente continuará reconhecendo o bloqueio e não criará novos PRs — mas também não avança.**
 
 **Status:** PENDENTE — aguardando ação do dono
 
@@ -82,7 +85,7 @@ Com 0.1 no main posso: integrar email transacional real (ver decisão abaixo), r
 
 ### [2026-07-11] Provedor de email transacional
 
-**Contexto:** A Fase 0.1 (PR #18) está pronta. O fluxo de verificação de email funciona em modo `log` (imprime no terminal). Para produção precisa de um provedor real.
+**Contexto:** A Fase 0.1 (PR #27) está pronta. O fluxo de verificação de email funciona em modo `log` (imprime no terminal). Para produção precisa de um provedor real.
 
 **Pergunta:** Qual provedor usar para envio de emails transacionais?
 
@@ -101,7 +104,7 @@ Com 0.1 no main posso: integrar email transacional real (ver decisão abaixo), r
 
 ### [2026-07-11] Credenciais do Supabase + domínio da app
 
-**Contexto:** O backend (PR #18) está pronto para deploy mas precisa de variáveis de ambiente reais. Todas documentadas em `07-Clube-USA/backend/.env.example`.
+**Contexto:** O backend (PR #27) está pronto para deploy mas precisa de variáveis de ambiente reais. Todas documentadas em `07-Clube-USA/backend/.env.example`.
 
 **O que preciso:**
 - `SUPABASE_URL` — ex: `https://xyzxyz.supabase.co`
@@ -115,4 +118,4 @@ Com 0.1 no main posso: integrar email transacional real (ver decisão abaixo), r
 
 ---
 
-*Atualizado em: 2026-07-18 | Histórico: 20 PRs (2026-07-12) → 24 (2026-07-14) → 25 (2026-07-16) → 26 (2026-07-17) → 26 (2026-07-18, estável — nenhum novo criado)*
+*Atualizado em: 2026-07-19 | Histórico: 20 PRs (2026-07-12) → 24 (2026-07-14) → 25 (2026-07-16) → 26 (2026-07-17) → 26 (2026-07-18) → 27 (2026-07-18 noite, PR #27 é o melhor 0.1) → 27 (2026-07-19, nenhum novo — agente em modo bloqueio)*

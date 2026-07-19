@@ -2,14 +2,14 @@
 
 > Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas (mergeadas no main).
 
-> **Estado atual (2026-07-16):** 25 PRs abertos, nenhum mergeado no main ainda.
+> **Estado atual (2026-07-19):** 27 PRs abertos, nenhum mergeado no main ainda.
 > Código de todas as fases (0.1 → 1.5) existe em branches — veja DECISOES.md para o plano de triage e ordem de merge.
 
 ---
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado *(código pronto: PR #18)*
+- [ ] **0.1** Cadastro + perfil mínimo + email confirmado *(código pronto: PR #27 — versão mais recente e segura)*
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link) *(código pronto: PR #3)*
 - [ ] **0.3** Analytics básico *(código pronto: PR #4)*
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude *(código pronto: PR #5)*
@@ -68,4 +68,4 @@
 
 ---
 
-*Atualizado em: 2026-07-16*
+*Atualizado em: 2026-07-19*
