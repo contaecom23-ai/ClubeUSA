@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar conta — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <a href="/" class="logo">Clube<span>USA</span></a>
+
+  <div class="card">
+    <h1>Criar conta grátis</h1>
+    <p class="subtitle">Junte-se à comunidade brasileira nos EUA.</p>
+
+    <div class="alert error" id="alert"></div>
+
+    <form id="form">
+      <div class="field">
+        <label for="full_name">Nome completo</label>
+        <input id="full_name" type="text" placeholder="João da Silva" required autocomplete="name">
+      </div>
+
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" placeholder="joao@email.com" required autocomplete="email">
+      </div>
+
+      <div class="field">
+        <label for="password">Senha</label>
+        <input id="password" type="password"
+               placeholder="Mín. 8 caracteres com letras e números"
+               required autocomplete="new-password">
+      </div>
+
+      <button class="btn" id="btn" type="submit" data-label="Criar conta">Criar conta</button>
+    </form>
+
+    <div class="link-row">
+      Já tem conta? <a href="login.html">Entrar</a>
+    </div>
+  </div>
+
+  <script src="assets/api.js"></script>
+  <script>
+    if (Auth.isLoggedIn()) window.location.href = "profile.html";
+
+    document.getElementById("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      hideAlert("alert");
+      setLoading("btn", true);
+
+      const email    = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const fullName = document.getElementById("full_name").value.trim();
+
+      try {
+        await ClubeAPI.register(email, password, fullName);
+        // Exibe confirmação sem revelar se o email já existia
+        document.getElementById("form").innerHTML = `
+          <div class="alert success show" style="display:block">
+            ✅ Quase lá! Enviamos um link de confirmação para <strong>${email}</strong>.
+            Verifique sua caixa de entrada (e a pasta de spam).
+          </div>
+          <div class="link-row" style="margin-top:12px">
+            Não recebeu? <a href="#" id="resend">Reenviar e-mail</a>
+          </div>
+        `;
+        document.getElementById("resend")?.addEventListener("click", async ev => {
+          ev.preventDefault();
+          await ClubeAPI.resendVerification(email).catch(() => null);
+          ev.target.textContent = "Enviado!";
+        });
+      } catch (err) {
+        showAlert("alert", err.message);
+      } finally {
+        setLoading("btn", false);
+      }
+    });
+  </script>
+</body>
+</html>

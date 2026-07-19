@@ -4,9 +4,29 @@
 
 ---
 
+## REGRAS DE SEGURANÇA (obrigatórias em toda feature)
+
+- Auth global: TODA rota exige token válido; lista explícita e mínima de rotas públicas.
+- Multi-tenant/isolamento: todo dado isolado por `user_id`; o dono vem SEMPRE do servidor (do token), nunca do input do cliente; acesso a recurso de outro retorna 404.
+- RLS (Row Level Security) no Supabase como endgame; até lá acesso só server-side com `service_role`; nunca expor `anon key` com dados sensíveis no client.
+- Segredos sempre via env var, nunca hardcoded, sem default forjável.
+- Rate-limit em login e registro (anti brute-force).
+- Proteção contra XSS (escape/sanitização), SQL injection (queries parametrizadas), IDOR (sempre checar dono do recurso).
+- CORS restrito a origens conhecidas.
+- Webhooks externos com verificação de assinatura + janela anti-replay.
+- Nunca expor segredos ou PII em logs.
+
+---
+
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Backend FastAPI: `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/refresh`, `/users/me`
+  - SQL migration: tabela `profiles` + trigger automático no Supabase
+  - Frontend HTML: index, register, login, verify-email, profile
+  - Testes: auth (registro, login, email não verificado) + isolamento multi-tenant
+  - *PR aberto: feat/fase-0.1-cadastro-perfil-email*
+  - *Pendente: owner configurar Supabase e variáveis de ambiente — ver DECISOES.md*
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
@@ -65,4 +85,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-07-14*

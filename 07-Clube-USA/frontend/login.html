@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <a href="/" class="logo">Clube<span>USA</span></a>
+
+  <div class="card">
+    <h1>Entrar na sua conta</h1>
+    <p class="subtitle">Bem-vindo de volta!</p>
+
+    <div class="alert error"   id="alert-err"></div>
+    <div class="alert success" id="alert-ok"></div>
+
+    <form id="form">
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" placeholder="joao@email.com"
+               required autocomplete="email">
+      </div>
+
+      <div class="field">
+        <label for="password">Senha</label>
+        <input id="password" type="password" placeholder="Sua senha"
+               required autocomplete="current-password">
+      </div>
+
+      <button class="btn" id="btn" type="submit" data-label="Entrar">Entrar</button>
+    </form>
+
+    <div class="link-row">
+      Ainda não tem conta? <a href="register.html">Cadastrar grátis</a>
+    </div>
+  </div>
+
+  <script src="assets/api.js"></script>
+  <script>
+    if (Auth.isLoggedIn()) window.location.href = "profile.html";
+
+    // Mensagem vinda da verificação de e-mail
+    const params = new URLSearchParams(location.search);
+    if (params.get("verified") === "1") {
+      showAlert("alert-ok", "✅ E-mail confirmado! Faça login para continuar.", "success");
+    }
+
+    document.getElementById("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      hideAlert("alert-err");
+      setLoading("btn", true);
+
+      const email    = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      try {
+        await ClubeAPI.login(email, password);
+        window.location.href = "profile.html";
+      } catch (err) {
+        showAlert("alert-err", err.message);
+      } finally {
+        setLoading("btn", false);
+      }
+    });
+  </script>
+</body>
+</html>

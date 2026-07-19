@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificando e-mail — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .icon-big { font-size: 3rem; margin-bottom: 16px; display: block; text-align: center; }
+  </style>
+</head>
+<body>
+  <a href="/" class="logo">Clube<span>USA</span></a>
+
+  <div class="card" style="text-align:center">
+    <span class="icon-big" id="icon">⏳</span>
+    <h1 id="title">Verificando seu e-mail…</h1>
+    <p class="subtitle" id="subtitle">Por favor, aguarde um momento.</p>
+    <div id="action" style="margin-top:20px"></div>
+  </div>
+
+  <script src="assets/api.js"></script>
+  <script>
+    /**
+     * O Supabase redireciona o link de verificação para esta página com os
+     * parâmetros token_hash e type na URL (configurado em Auth > URL Configuration
+     * no dashboard do Supabase: Site URL + Redirect URLs).
+     *
+     * Formato esperado:
+     *   /verify-email.html?token_hash=<hash>&type=email
+     */
+    (async () => {
+      const params = new URLSearchParams(location.search);
+      const tokenHash = params.get("token_hash");
+      const type      = params.get("type") || "email";
+
+      if (!tokenHash) {
+        document.getElementById("icon").textContent = "❌";
+        document.getElementById("title").textContent = "Link inválido";
+        document.getElementById("subtitle").textContent =
+          "Este link de verificação não é válido. Tente cadastrar-se novamente.";
+        document.getElementById("action").innerHTML =
+          '<a class="btn" href="register.html" style="display:inline-block;width:auto;padding:10px 24px">Cadastrar</a>';
+        return;
+      }
+
+      try {
+        await ClubeAPI.verifyEmail(tokenHash, type);
+        document.getElementById("icon").textContent = "✅";
+        document.getElementById("title").textContent = "E-mail confirmado!";
+        document.getElementById("subtitle").textContent =
+          "Sua conta está ativa. Faça login para continuar.";
+        document.getElementById("action").innerHTML =
+          '<a class="btn" href="login.html?verified=1" style="display:inline-block;width:auto;padding:10px 24px">Fazer login</a>';
+      } catch (err) {
+        document.getElementById("icon").textContent = "❌";
+        document.getElementById("title").textContent = "Link expirado";
+        document.getElementById("subtitle").textContent =
+          "Este link de verificação expirou ou já foi usado. Solicite um novo.";
+        document.getElementById("action").innerHTML =
+          '<a class="btn" href="register.html" style="display:inline-block;width:auto;padding:10px 24px">Tentar novamente</a>';
+      }
+    })();
+  </script>
+</body>
+</html>

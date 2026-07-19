@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Sua comunidade brasileira nos EUA</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    body { justify-content: center; text-align: center; gap: 16px; }
+    .hero { max-width: 480px; }
+    .hero h1 { font-size: 2rem; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
+    .hero p  { color: var(--gray-500); font-size: 1.05rem; margin-bottom: 32px; }
+    .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-outline {
+      padding: 12px 28px; border: 2px solid var(--green); color: var(--green);
+      border-radius: var(--radius); font-weight: 700; text-decoration: none;
+      background: transparent; font-size: 1rem;
+    }
+    .btn-primary {
+      padding: 12px 28px; background: var(--green); color: #fff;
+      border-radius: var(--radius); font-weight: 700; text-decoration: none;
+      font-size: 1rem; border: 2px solid var(--green);
+    }
+    .btn-primary:hover { background: var(--green-dk); border-color: var(--green-dk); }
+    .features { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-top: 48px; }
+    .feature-card {
+      background: #fff; border-radius: var(--radius); padding: 20px;
+      box-shadow: var(--shadow); max-width: 200px; text-align: left;
+    }
+    .feature-card .icon { font-size: 1.6rem; margin-bottom: 8px; }
+    .feature-card h3 { font-size: .95rem; margin-bottom: 4px; }
+    .feature-card p { font-size: .83rem; color: var(--gray-500); }
+  </style>
+</head>
+<body>
+  <a href="/" class="logo">Clube<span>USA</span></a>
+
+  <div class="hero">
+    <h1>Viver nos EUA<br>fica mais fácil</h1>
+    <p>A plataforma para brasileiros nos Estados Unidos.<br>Promoções, empregos, moradia e comunidade — tudo em um lugar.</p>
+    <div class="cta-row">
+      <a href="register.html" class="btn-primary">Criar conta grátis</a>
+      <a href="login.html"    class="btn-outline">Entrar</a>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="feature-card">
+      <div class="icon">🛍️</div>
+      <h3>Promoções</h3>
+      <p>Achados e ofertas perto de você, por ZIP code.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">💼</div>
+      <h3>Empregos</h3>
+      <p>Vagas para brasileiros em todo o território americano.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🏠</div>
+      <h3>Moradia</h3>
+      <p>Quartos, roommates e casas para alugar.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🤝</div>
+      <h3>Comunidade</h3>
+      <p>Conecte-se com outros brasileiros na sua região.</p>
+    </div>
+  </div>
+
+  <script src="assets/api.js"></script>
+  <script>
+    if (Auth.isLoggedIn()) window.location.href = "profile.html";
+  </script>
+</body>
+</html>
