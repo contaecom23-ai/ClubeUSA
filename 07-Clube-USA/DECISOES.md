@@ -14,6 +14,27 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## Decisões Pendentes
 
+### [2026-07-19] Status da execução autônoma — 27 PRs, bloqueio persiste (3ª notificação no dia)
+
+**Contexto:** Execução autônoma de 2026-07-19. Detectei o bloqueio ao tentar push — o branch já contém o código completo de Fase 0.1. Descartei meu trabalho duplicado (git reset --hard). **Nenhum PR novo criado nesta run.**
+
+**Estado em 2026-07-19:**
+- 27 PRs abertos, zero mergeado até agora.
+- O PR de triagem (#21 — `claude/triage-prs-2026-07-12`) tem o plano completo de quais fechar e em que ordem mergear.
+- PR #27 (`feature/fase-0.1-cadastro-email`) é a versão mais recente de Fase 0.1 — Supabase Auth nativo, adaptador de email com 3 drivers, 19 testes.
+- **O loop para quando você apertar Merge em algo.** Enquanto o main não mudar, o agente continuará detectando Fase 0.1 como não concluída e re-implementando.
+
+**Ação necessária (do dono — 15 minutos de trabalho):**
+1. Leia PR #21 para o plano completo.
+2. Feche os PRs duplicados de Fase 0.1 listados lá.
+3. Mergeie PR #27 na main.
+4. Rode `backend/migrations/001_initial_schema.sql` no SQL Editor do Supabase.
+5. Me informe (ou crie uma issue) e na próxima run avanço para Fase 0.2.
+
+**Status:** PENDENTE CRÍTICO — bloqueando todo progresso
+
+---
+
 ### [2026-07-17] ATENÇÃO — Atualização de status: 26 PRs abertos (subiu de 24)
 
 **Contexto:**
