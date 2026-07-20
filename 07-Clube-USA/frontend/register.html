@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a; color: #f1f5f9;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: #1e293b; border-radius: 12px; padding: 2rem;
+      width: 100%; max-width: 420px; box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    h1 { font-size: 1.6rem; color: #38bdf8; margin-bottom: 0.3rem; }
+    .sub { color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.8rem; }
+    label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 0.3rem; }
+    input, select {
+      width: 100%; padding: 0.7rem 0.9rem; border-radius: 8px;
+      border: 1px solid #334155; background: #0f172a; color: #f1f5f9;
+      font-size: 0.95rem; margin-bottom: 1rem; outline: none;
+    }
+    input:focus, select:focus { border-color: #38bdf8; }
+    .btn {
+      width: 100%; padding: 0.85rem; background: #38bdf8; color: #0f172a;
+      border: none; border-radius: 8px; font-size: 1rem; font-weight: 700;
+      cursor: pointer; margin-top: 0.5rem;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { padding: 0.75rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1rem; display: none; }
+    .msg.error { background: #7f1d1d; color: #fca5a5; display: block; }
+    .msg.success { background: #14532d; color: #86efac; display: block; }
+    .link { text-align: center; margin-top: 1.2rem; font-size: 0.88rem; color: #94a3b8; }
+    .link a { color: #38bdf8; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Criar conta</h1>
+    <p class="sub">Junte-se à comunidade brasileira nos EUA</p>
+
+    <div id="msg" class="msg"></div>
+
+    <form id="form" novalidate>
+      <label for="full_name">Nome completo</label>
+      <input id="full_name" type="text" placeholder="Seu nome" required maxlength="100" />
+
+      <label for="email">E-mail</label>
+      <input id="email" type="email" placeholder="seu@email.com" required />
+
+      <label for="password">Senha</label>
+      <input id="password" type="password" placeholder="Mínimo 8 caracteres" required minlength="8" />
+
+      <label for="state_us">Estado (EUA)</label>
+      <select id="state_us">
+        <option value="">Selecione...</option>
+        <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+        <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+        <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+        <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+        <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+        <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+        <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+        <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+        <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+        <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+        <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+        <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+        <option>WI</option><option>WY</option>
+      </select>
+
+      <label for="city">Cidade</label>
+      <input id="city" type="text" placeholder="Ex: Orlando" maxlength="100" />
+
+      <button class="btn" id="btn" type="submit">Criar conta</button>
+    </form>
+
+    <div class="link">Já tem conta? <a href="login.html">Entrar</a></div>
+  </div>
+
+  <script type="module">
+    // =====================================================
+    // CONFIGURAÇÃO — substitua pelos seus valores Supabase
+    // =====================================================
+    const SUPABASE_URL = "SUBSTITUA_AQUI";
+    const SUPABASE_ANON_KEY = "SUBSTITUA_AQUI";
+    const BACKEND_URL = "http://localhost:8000";
+    // =====================================================
+
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const form = document.getElementById("form");
+    const btn = document.getElementById("btn");
+    const msg = document.getElementById("msg");
+
+    function showMsg(text, type) {
+      msg.textContent = text;
+      msg.className = `msg ${type}`;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = "Aguarde...";
+      msg.className = "msg";
+
+      const full_name = document.getElementById("full_name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const state_us = document.getElementById("state_us").value;
+      const city = document.getElementById("city").value.trim();
+
+      if (!full_name || !email || !password) {
+        showMsg("Nome, e-mail e senha são obrigatórios.", "error");
+        btn.disabled = false;
+        btn.textContent = "Criar conta";
+        return;
+      }
+      if (password.length < 8) {
+        showMsg("Senha deve ter ao menos 8 caracteres.", "error");
+        btn.disabled = false;
+        btn.textContent = "Criar conta";
+        return;
+      }
+
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name, state_us, city },
+          emailRedirectTo: `${window.location.origin}/verify.html`,
+        },
+      });
+
+      if (error) {
+        showMsg(error.message, "error");
+        btn.disabled = false;
+        btn.textContent = "Criar conta";
+        return;
+      }
+
+      showMsg(
+        "Conta criada! Verifique seu e-mail para confirmar o cadastro.",
+        "success"
+      );
+      form.reset();
+      btn.disabled = false;
+      btn.textContent = "Criar conta";
+    });
+  </script>
+</body>
+</html>
