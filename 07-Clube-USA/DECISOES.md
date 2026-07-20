@@ -67,6 +67,8 @@ Após o PR #11 ser mergeado na main, o Claude vai parar de rebuildar 0.1 e avan�
 
 **Status:** PENDENTE — aguarda ação do dono
 
+**Atualização [2026-07-20 — sessão atual]:** Esta sessão detectou o loop, NÃO criou novo PR duplicado e NÃO fez push de código redundante. O problema persiste apenas porque o dono ainda não mergeou o PR #11.
+
 ---
 
 ### [2026-07-09] Configuração do Supabase necessária para rodar o backend
