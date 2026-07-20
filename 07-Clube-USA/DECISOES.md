@@ -14,6 +14,28 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## Decisões Pendentes
 
+---
+
+### 🚨 [2026-07-20] BLOQUEIO CRÍTICO — 27+ PRs abertos sem merge (loop de duplicatas)
+
+**Contexto:** Cada sessão autônoma do builder viu o `main` vazio (sem código mergeado) e recomeçou a Fase 0.1 do zero, criando uma nova branch e um novo PR. Resultado: 27+ PRs abertos, todos implementando a mesma Fase 0.1, nenhum mergeado. O loop não para até você agir.
+
+**Causa raiz:** O arquivo `.github/workflows/clubeusa-builder.yml` tinha indentação YAML inválida que impedia o `schedule:` de funcionar corretamente. PR #28 (`claude/fix-workflow-e-decisoes-2026-07-19`) corrige isso.
+
+**O que você PRECISA fazer — pela ordem:**
+
+1. **Mergear PR #28 PRIMEIRO** — corrige o workflow YAML. Sem isso o problema continua.
+2. **Escolher UM PR de Fase 0.1 para mergear.** Recomendação: PR #22 (`feat/fase-0.1-cadastro-auth`) — 25 testes passando, usa Supabase Auth, FastAPI com DI correto. Ou PR #2 (`claude/fase-0.1-cadastro-perfil-email`) se quiser código de Fases posteriores também (mais risco, mais scope).
+3. **Fechar todos os outros PRs de Fase 0.1 como "duplicata"** — são: #1, #2, #3 (se não escolhido), #6, #7, #9, #11, #13, #15, #17, #18, #23, #24, #25, #26, #27 e outros com "fase-0.1" ou "cadastro" no título.
+4. **Fechar PRs de Fases futuras** (1.1, 1.2, 1.3, 1.4, 1.5) que estão abertos sem base estável — #12, #14, #16, #19, #20. São código gerado sobre base inexistente no main.
+5. **Configurar Supabase e email** (ver decisão abaixo).
+
+Após o merge, o builder continuará automaticamente da próxima fase não-concluída.
+
+**Status:** 🔴 URGENTE — requer ação humana para desbloquear
+
+---
+
 ### [2026-07-13] Configurar projeto Supabase e fornecer credenciais
 
 **Contexto:** O backend está pronto e usa Supabase para auth e banco. Sem as credenciais, nada sobe.
@@ -66,4 +88,4 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
-*Atualizado em: 2026-07-13*
+*Atualizado em: 2026-07-20*
