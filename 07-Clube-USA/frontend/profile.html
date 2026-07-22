@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">Clube <span>USA</span></div>
+    <button onclick="auth.logout()" class="btn btn-ghost" style="width: auto; padding: 8px 16px; font-size: 0.875rem;">
+      Sair
+    </button>
+  </nav>
+
+  <div class="card" id="loadingCard">
+    <p style="color: var(--gray-500); text-align: center;">Carregando perfil...</p>
+  </div>
+
+  <div class="card" id="profileCard" style="display: none;">
+    <div class="profile-header">
+      <div class="avatar" id="avatarInitial">?</div>
+      <div>
+        <div style="font-weight: 700; font-size: 1.1rem;" id="displayName">—</div>
+        <div style="color: var(--gray-500); font-size: 0.875rem;" id="displayEmail">—</div>
+        <div style="margin-top: 4px;" id="emailBadge"></div>
+      </div>
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <hr style="border: none; border-top: 1px solid var(--gray-200); margin-bottom: 20px;">
+
+    <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px;">Informações do perfil</h2>
+
+    <form id="profileForm" novalidate>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label for="zip_code">ZIP Code</label>
+          <input type="text" id="zip_code" placeholder="Ex: 33101">
+        </div>
+        <div class="form-group">
+          <label for="state_code">Estado (sigla)</label>
+          <input type="text" id="state_code" placeholder="FL" maxlength="2">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="city">Cidade</label>
+        <input type="text" id="city" placeholder="Miami">
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Telefone</label>
+        <input type="tel" id="phone" placeholder="(305) 555-0001">
+      </div>
+
+      <div class="form-group">
+        <label for="bio">Sobre você <span style="color: var(--gray-500); font-weight: 400;">(máx. 500 caracteres)</span></label>
+        <textarea id="bio" maxlength="500" placeholder="Brasileiro vivendo em Miami desde 2018..."></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="saveBtn">
+        <span class="spinner" id="spinner"></span>
+        Salvar alterações
+      </button>
+    </form>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error("not authenticated");
+
+    (async () => {
+      const me = await users.me();
+
+      if (!me) {
+        showAlert("alert", "Erro ao carregar perfil. Tente novamente.");
+        return;
+      }
+
+      document.getElementById("loadingCard").style.display = "none";
+      document.getElementById("profileCard").style.display = "block";
+
+      document.getElementById("displayName").textContent = me.full_name;
+      document.getElementById("displayEmail").textContent = me.email;
+      document.getElementById("avatarInitial").textContent =
+        me.full_name ? me.full_name.charAt(0).toUpperCase() : "?";
+
+      const badge = document.getElementById("emailBadge");
+      if (me.email_confirmed) {
+        badge.innerHTML = '<span class="badge badge-green">✓ Email confirmado</span>';
+      } else {
+        badge.innerHTML = '<span class="badge badge-yellow">⚠ Email não confirmado</span>';
+      }
+
+      if (me.profile) {
+        const p = me.profile;
+        document.getElementById("zip_code").value = p.zip_code || "";
+        document.getElementById("state_code").value = p.state_code || "";
+        document.getElementById("city").value = p.city || "";
+        document.getElementById("phone").value = p.phone || "";
+        document.getElementById("bio").value = p.bio || "";
+      }
+    })();
+
+    document.getElementById("profileForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideAlert("alert");
+      setLoading("saveBtn", "spinner", true);
+
+      const payload = {
+        zip_code: document.getElementById("zip_code").value.trim() || null,
+        state_code: document.getElementById("state_code").value.trim().toUpperCase() || null,
+        city: document.getElementById("city").value.trim() || null,
+        phone: document.getElementById("phone").value.trim() || null,
+        bio: document.getElementById("bio").value.trim() || null,
+      };
+
+      try {
+        const { ok, data } = await users.updateProfile(payload);
+        if (ok) {
+          showAlert("alert", "Perfil salvo com sucesso!", "success");
+        } else {
+          showAlert("alert", data?.detail || "Erro ao salvar. Tente novamente.");
+        }
+      } catch {
+        showAlert("alert", "Erro de conexão. Tente novamente.");
+      } finally {
+        setLoading("saveBtn", "spinner", false);
+      }
+    });
+  </script>
+</body>
+</html>

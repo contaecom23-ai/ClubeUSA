@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+  <div class="logo">Clube <span>USA</span></div>
+
+  <div class="card">
+    <h1>Bem-vindo(a) de volta</h1>
+    <p class="subtitle">Entre na sua conta</p>
+
+    <div id="alert" class="alert"></div>
+
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email"
+               placeholder="joao@email.com" autocomplete="email" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password"
+               autocomplete="current-password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">
+        <span class="spinner" id="spinner"></span>
+        Entrar
+      </button>
+    </form>
+
+    <p class="text-sm text-center">
+      Não tem conta? <a href="register.html" class="text-link">Criar conta grátis</a>
+    </p>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script>
+    if (storage.isLoggedIn()) window.location.href = "profile.html";
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideAlert("alert");
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        showAlert("alert", "Preencha email e senha");
+        return;
+      }
+
+      setLoading("submitBtn", "spinner", true);
+
+      try {
+        const { ok, data, status } = await auth.login(email, password);
+
+        if (ok) {
+          window.location.href = "profile.html";
+        } else if (status === 429) {
+          showAlert("alert", "Muitas tentativas. Aguarde um momento.");
+        } else if (status === 403) {
+          showAlert("alert", data.detail || "Acesso negado.");
+        } else {
+          showAlert("alert", data.detail || "Credenciais inválidas.");
+        }
+      } catch {
+        showAlert("alert", "Erro de conexão. Verifique sua internet.");
+      } finally {
+        setLoading("submitBtn", "spinner", false);
+      }
+    });
+  </script>
+</body>
+</html>
