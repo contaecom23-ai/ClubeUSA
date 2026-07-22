@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f0f4ff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,.08); padding: 2.5rem; width: 100%; max-width: 420px; }
+    .logo { font-size: 1.5rem; font-weight: 700; color: #1d4ed8; margin-bottom: 0.25rem; }
+    .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 1.75rem; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: #374151; margin-bottom: 0.35rem; }
+    input { width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color .15s; }
+    input:focus { border-color: #1d4ed8; }
+    .field { margin-bottom: 1.1rem; }
+    .btn { width: 100%; padding: 0.75rem; background: #1d4ed8; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem; transition: background .15s; }
+    .btn:hover { background: #1e40af; }
+    .btn:disabled { background: #93c5fd; cursor: not-allowed; }
+    .msg { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem; margin-top: 1rem; display: none; }
+    .msg.success { background: #dcfce7; color: #166534; }
+    .msg.error   { background: #fee2e2; color: #991b1b; }
+    .link { text-align: center; margin-top: 1.25rem; font-size: 0.875rem; color: #64748b; }
+    .link a { color: #1d4ed8; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🇺🇸 Clube USA</div>
+    <p class="subtitle">A comunidade dos brasileiros nos EUA</p>
+
+    <form id="form">
+      <div class="field">
+        <label for="name">Nome completo</label>
+        <input id="name" type="text" placeholder="Seu nome" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="email">E-mail *</label>
+        <input id="email" type="email" placeholder="voce@email.com" required autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="password">Senha * <span style="font-weight:400;color:#9ca3af">(mín. 8 caracteres)</span></label>
+        <input id="password" type="password" placeholder="••••••••" required autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn" id="btn">Criar conta grátis</button>
+    </form>
+
+    <div class="msg" id="msg"></div>
+    <p class="link">Já tem conta? <a href="login.html">Entrar</a></p>
+  </div>
+
+  <script>
+    const API = (window.API_URL || 'http://localhost:8000');
+    const form = document.getElementById('form');
+    const btn  = document.getElementById('btn');
+    const msg  = document.getElementById('msg');
+
+    function showMsg(text, type) {
+      msg.textContent = text;
+      msg.className = 'msg ' + type;
+      msg.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Criando conta...';
+      msg.style.display = 'none';
+
+      const payload = {
+        email: document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value,
+        full_name: document.getElementById('name').value.trim() || undefined,
+      };
+
+      try {
+        const resp = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+
+        if (resp.ok) {
+          showMsg('✅ ' + data.message, 'success');
+          form.reset();
+        } else {
+          const detail = Array.isArray(data.detail)
+            ? data.detail.map(e => e.msg).join(' · ')
+            : data.detail || 'Erro desconhecido.';
+          showMsg('❌ ' + detail, 'error');
+        }
+      } catch {
+        showMsg('❌ Falha de conexão. Tente novamente.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Criar conta grátis';
+      }
+    });
+  </script>
+</body>
+</html>

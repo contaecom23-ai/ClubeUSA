@@ -6,7 +6,17 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Backend FastAPI com register / confirm-email / login / refresh / forgot-password / reset-password
+  - Perfil: `full_name`, `zip_code`, `us_state`, `bio` — PATCH parcial
+  - JWT HMAC-SHA256 (stdlib, sem dep externa), bcrypt direto
+  - Rate limiting por IP (slowapi); CORS restrito
+  - Schema SQL Supabase-ready (`db/migrations/001_initial.sql`)
+  - 24 testes passando (auth + profile + isolamento multi-tenant)
+  - Frontend HTML: register.html, login.html, confirm.html
+  - Email plugável: console (dev) / Resend / SendGrid
+  - **Pendente decisão:** escolha do provedor de e-mail → ver DECISOES.md
+
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
@@ -65,4 +75,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-07-22*
