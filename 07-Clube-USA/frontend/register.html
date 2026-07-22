@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar Conta — Clube USA</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+  <div class="logo">Clube <span>USA</span></div>
+
+  <div class="card">
+    <h1>Crie sua conta</h1>
+    <p class="subtitle">Junte-se a milhares de brasileiros nos EUA</p>
+
+    <div id="alert" class="alert"></div>
+
+    <form id="registerForm" novalidate>
+      <div class="form-group">
+        <label for="full_name">Nome completo</label>
+        <input type="text" id="full_name" name="full_name"
+               placeholder="João da Silva" autocomplete="name" required>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email"
+               placeholder="joao@email.com" autocomplete="email" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password"
+               placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">
+        <span class="spinner" id="spinner"></span>
+        Criar conta grátis
+      </button>
+    </form>
+
+    <p class="text-sm text-center">
+      Já tem conta? <a href="login.html" class="text-link">Entrar</a>
+    </p>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script>
+    // Redirecionar se já logado
+    if (storage.isLoggedIn()) window.location.href = "profile.html";
+
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideAlert("alert");
+
+      const name = document.getElementById("full_name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!name) { showAlert("alert", "Informe seu nome completo"); return; }
+      if (!email) { showAlert("alert", "Informe seu email"); return; }
+      if (password.length < 8) { showAlert("alert", "Senha deve ter pelo menos 8 caracteres"); return; }
+
+      setLoading("submitBtn", "spinner", true);
+
+      try {
+        const { ok, data, status } = await auth.register(email, password, name);
+
+        if (ok) {
+          showAlert("alert",
+            data.message || "Cadastro realizado! Verifique seu email.",
+            "success"
+          );
+          document.getElementById("registerForm").reset();
+        } else if (status === 429) {
+          showAlert("alert", "Muitas tentativas. Aguarde um momento e tente novamente.");
+        } else {
+          showAlert("alert", data.detail || "Erro ao criar conta. Tente novamente.");
+        }
+      } catch {
+        showAlert("alert", "Erro de conexão. Verifique sua internet e tente novamente.");
+      } finally {
+        setLoading("submitBtn", "spinner", false);
+      }
+    });
+  </script>
+</body>
+</html>

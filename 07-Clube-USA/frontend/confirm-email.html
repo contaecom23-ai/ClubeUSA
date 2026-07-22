@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmar Email — Clube USA</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+  <div class="logo">Clube <span>USA</span></div>
+
+  <div class="card" style="text-align: center;">
+    <div id="loading">
+      <p style="color: var(--gray-500); margin-top: 8px;">Confirmando seu email...</p>
+    </div>
+
+    <div id="success" style="display: none;">
+      <div style="font-size: 2.5rem; margin-bottom: 16px;">✅</div>
+      <h1>Email confirmado!</h1>
+      <p class="subtitle" style="margin-top: 8px; margin-bottom: 24px;">
+        Sua conta está ativa. Faça login para continuar.
+      </p>
+      <a href="login.html" class="btn btn-primary" style="display: inline-flex; width: auto; padding: 11px 28px;">
+        Fazer login
+      </a>
+    </div>
+
+    <div id="error" style="display: none;">
+      <div style="font-size: 2.5rem; margin-bottom: 16px;">❌</div>
+      <h1 style="color: var(--red-600);">Link inválido</h1>
+      <p id="errorMsg" class="subtitle" style="margin-top: 8px; margin-bottom: 24px;">
+        Este link é inválido ou expirou.
+      </p>
+      <a href="register.html" class="btn btn-ghost" style="display: inline-flex; width: auto; padding: 11px 28px;">
+        Criar nova conta
+      </a>
+    </div>
+  </div>
+
+  <script src="assets/js/api.js"></script>
+  <script>
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+
+      if (!token) {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("error").style.display = "block";
+        return;
+      }
+
+      try {
+        const resp = await fetch(`${API_BASE}/auth/confirm-email?token=${encodeURIComponent(token)}`);
+        document.getElementById("loading").style.display = "none";
+
+        if (resp.ok) {
+          document.getElementById("success").style.display = "block";
+        } else {
+          const data = await resp.json();
+          document.getElementById("errorMsg").textContent =
+            data.detail || "Link inválido ou expirado.";
+          document.getElementById("error").style.display = "block";
+        }
+      } catch {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("errorMsg").textContent = "Erro de conexão. Tente novamente.";
+        document.getElementById("error").style.display = "block";
+      }
+    })();
+  </script>
+</body>
+</html>
