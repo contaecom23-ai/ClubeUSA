@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmar E-mail — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f0f4ff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,.08); padding: 2.5rem; width: 100%; max-width: 420px; text-align: center; }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.25rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem; }
+    p { color: #6b7280; font-size: 0.95rem; line-height: 1.5; }
+    .btn { display: inline-block; margin-top: 1.5rem; padding: 0.65rem 1.5rem; background: #1d4ed8; color: #fff; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon" id="icon">⏳</div>
+    <h1 id="title">Confirmando e-mail...</h1>
+    <p id="msg">Aguarde um momento.</p>
+    <a href="login.html" class="btn" id="btnLogin" style="display:none">Fazer login</a>
+  </div>
+
+  <script>
+    const API = (window.API_URL || 'http://localhost:8000');
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    async function confirm() {
+      if (!token) {
+        document.getElementById('icon').textContent = '❌';
+        document.getElementById('title').textContent = 'Link inválido';
+        document.getElementById('msg').textContent = 'Nenhum token encontrado. Use o link do e-mail.';
+        return;
+      }
+
+      try {
+        const resp = await fetch(`${API}/auth/confirm-email?token=${encodeURIComponent(token)}`);
+        const data = await resp.json();
+
+        if (resp.ok) {
+          document.getElementById('icon').textContent = '✅';
+          document.getElementById('title').textContent = 'E-mail confirmado!';
+          document.getElementById('msg').textContent = 'Sua conta está ativa. Faça login para continuar.';
+          document.getElementById('btnLogin').style.display = 'inline-block';
+        } else {
+          document.getElementById('icon').textContent = '❌';
+          document.getElementById('title').textContent = 'Falha na confirmação';
+          document.getElementById('msg').textContent = data.detail || 'Token inválido ou expirado.';
+        }
+      } catch {
+        document.getElementById('icon').textContent = '❌';
+        document.getElementById('title').textContent = 'Erro de conexão';
+        document.getElementById('msg').textContent = 'Não foi possível conectar ao servidor. Tente novamente.';
+      }
+    }
+
+    confirm();
+  </script>
+</body>
+</html>
