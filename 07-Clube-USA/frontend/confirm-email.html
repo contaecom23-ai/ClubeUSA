@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmando email — Clube USA</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="auth-wrapper">
+  <a href="/" class="logo">🇺🇸 Clube USA</a>
+  <div class="card" style="text-align:center">
+    <div id="loading">
+      <p style="color:var(--gray-5);margin-bottom:8px">⏳ Verificando seu email…</p>
+    </div>
+
+    <div id="success" style="display:none">
+      <p style="font-size:2.5rem;margin-bottom:12px">✅</p>
+      <h1 style="margin-bottom:8px">Email confirmado!</h1>
+      <p class="subtitle" style="margin-bottom:24px">
+        Sua conta está ativa. Bem-vindo(a) ao Clube USA!
+      </p>
+      <a href="/dashboard.html" class="btn btn-primary">Ir para meu painel</a>
+    </div>
+
+    <div id="error" style="display:none">
+      <p style="font-size:2.5rem;margin-bottom:12px">❌</p>
+      <h1 style="margin-bottom:8px" id="errTitle">Link inválido</h1>
+      <p class="subtitle" id="errMsg" style="margin-bottom:24px">
+        Este link já foi usado ou expirou.
+      </p>
+      <a href="/register.html" class="btn btn-secondary">Criar nova conta</a>
+      <a href="/login.html"    class="btn btn-secondary">Já tenho conta</a>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/auth.js"></script>
+<script>
+  (async function () {
+    const token  = new URLSearchParams(window.location.search).get("token");
+    const loading = document.getElementById("loading");
+    const success = document.getElementById("success");
+    const error   = document.getElementById("error");
+
+    if (!token) {
+      loading.style.display = "none";
+      document.getElementById("errTitle").textContent = "Link inválido";
+      document.getElementById("errMsg").textContent   = "Nenhum token encontrado na URL.";
+      error.style.display = "";
+      return;
+    }
+
+    try {
+      const data = await apiFetch(`/auth/confirm-email?token=${encodeURIComponent(token)}`);
+      setToken(data.access_token);
+      setUser(data.user);
+      loading.style.display = "none";
+      success.style.display = "";
+    } catch (err) {
+      loading.style.display = "none";
+      if (err.status === 410) {
+        document.getElementById("errTitle").textContent = "Link expirado";
+        document.getElementById("errMsg").textContent   = "Este link de confirmação expirou (válido por 24h). Crie uma nova conta.";
+      } else if (err.status === 409) {
+        document.getElementById("errTitle").textContent = "Já confirmado";
+        document.getElementById("errMsg").textContent   = "Este email já foi confirmado. Faça login.";
+        document.getElementById("error").innerHTML += `<a href="/login.html" class="btn btn-primary" style="margin-top:8px">Fazer login</a>`;
+      } else {
+        document.getElementById("errTitle").textContent = "Link inválido";
+        document.getElementById("errMsg").textContent   = err.message || "Este link não é válido.";
+      }
+      error.style.display = "";
+    }
+  })();
+</script>
+</body>
+</html>

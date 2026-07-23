@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Painel — Clube USA</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="dashboard-wrapper">
+  <nav>
+    <span class="brand">🇺🇸 Clube USA</span>
+    <a href="#" id="logoutBtn">Sair</a>
+  </nav>
+
+  <!-- Loading state -->
+  <div id="loadingState" style="text-align:center;padding:40px;color:var(--gray-5)">
+    Carregando…
+  </div>
+
+  <!-- Main content (hidden until loaded) -->
+  <div id="mainContent" style="display:none">
+
+    <!-- Greeting -->
+    <h1 id="greeting" style="font-size:1.3rem;margin-bottom:24px"></h1>
+
+    <!-- Stats row -->
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="num" id="statReferrals">—</div>
+        <div class="lbl">Indicações</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statConfirmed">—</div>
+        <div class="lbl">Cadastros válidos</div>
+      </div>
+    </div>
+
+    <!-- Referral section -->
+    <div class="section-card">
+      <h2>🔗 Seu link de indicação</h2>
+      <p style="font-size:.875rem;color:var(--gray-5);margin-bottom:12px">
+        Compartilhe este link. Quando alguém se cadastrar por ele, você aparece no ranking de indicadores.
+      </p>
+      <div class="referral-box" id="referralLink" title="Clique para copiar">
+        Carregando…
+      </div>
+      <p id="copyMsg" style="color:var(--green);font-size:.8rem;margin-top:6px;display:none">
+        ✓ Copiado!
+      </p>
+    </div>
+
+    <!-- Profile section -->
+    <div class="section-card">
+      <h2>✏️ Meu perfil</h2>
+      <div id="profileAlert" class="alert" role="alert"></div>
+
+      <form id="profileForm" novalidate>
+        <div class="form-group">
+          <label for="full_name">Nome completo</label>
+          <input type="text" id="full_name" name="full_name" placeholder="Seu nome" required>
+        </div>
+
+        <div class="inline-row">
+          <div class="form-group">
+            <label for="us_state">Estado</label>
+            <select id="us_state" name="us_state">
+              <option value="">— Selecione —</option>
+              <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+              <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+              <option>DC</option><option>FL</option><option>GA</option><option>HI</option>
+              <option>ID</option><option>IL</option><option>IN</option><option>IA</option>
+              <option>KS</option><option>KY</option><option>LA</option><option>ME</option>
+              <option>MD</option><option>MA</option><option>MI</option><option>MN</option>
+              <option>MS</option><option>MO</option><option>MT</option><option>NE</option>
+              <option>NV</option><option>NH</option><option>NJ</option><option>NM</option>
+              <option>NY</option><option>NC</option><option>ND</option><option>OH</option>
+              <option>OK</option><option>OR</option><option>PA</option><option>RI</option>
+              <option>SC</option><option>SD</option><option>TN</option><option>TX</option>
+              <option>UT</option><option>VT</option><option>VA</option><option>WA</option>
+              <option>WV</option><option>WI</option><option>WY</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="us_city">Cidade</label>
+            <input type="text" id="us_city" name="us_city" placeholder="Ex: Boston">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="whatsapp">WhatsApp <span style="color:var(--gray-5);font-weight:400">(opcional)</span></label>
+          <input type="text" id="whatsapp" name="whatsapp" placeholder="+1 (617) 000-0000">
+        </div>
+
+        <div class="form-group">
+          <label for="bio">Sobre você <span style="color:var(--gray-5);font-weight:400">(opcional, máx. 500 chars)</span></label>
+          <textarea id="bio" name="bio" placeholder="De onde você é, há quanto tempo está nos EUA…" maxlength="500"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="saveBtn">Salvar alterações</button>
+      </form>
+    </div>
+
+    <!-- Account info -->
+    <div class="section-card">
+      <h2>🔐 Conta</h2>
+      <p style="font-size:.875rem;color:var(--gray-5)">Email: <strong id="userEmail"></strong></p>
+      <p style="font-size:.875rem;color:var(--green);margin-top:4px" id="confirmedBadge">✓ Email confirmado</p>
+    </div>
+
+  </div><!-- /mainContent -->
+</div>
+
+<script src="/static/js/auth.js"></script>
+<script>
+  if (!requireAuth()) { /* redirected */ }
+
+  async function loadDashboard() {
+    try {
+      const { user, profile } = await apiFetch("/api/me");
+      const stats = await apiFetch("/api/referral-stats");
+
+      // Greeting
+      const firstName = (user.full_name || "").split(" ")[0];
+      document.getElementById("greeting").textContent = `Olá, ${firstName}! 👋`;
+
+      // Stats
+      document.getElementById("statReferrals").textContent = stats.total_referrals;
+      document.getElementById("statConfirmed").textContent = stats.confirmed_referrals;
+
+      // Referral link
+      const rl = document.getElementById("referralLink");
+      rl.textContent = stats.referral_link;
+      rl.addEventListener("click", () => {
+        navigator.clipboard.writeText(stats.referral_link).then(() => {
+          document.getElementById("copyMsg").style.display = "";
+          setTimeout(() => { document.getElementById("copyMsg").style.display = "none"; }, 2000);
+        });
+      });
+
+      // Profile form
+      document.getElementById("full_name").value  = user.full_name  || "";
+      document.getElementById("us_state").value   = profile.us_state || "";
+      document.getElementById("us_city").value    = profile.us_city  || "";
+      document.getElementById("whatsapp").value   = profile.whatsapp || "";
+      document.getElementById("bio").value        = profile.bio      || "";
+
+      // Account info
+      document.getElementById("userEmail").textContent = user.email;
+
+      document.getElementById("loadingState").style.display = "none";
+      document.getElementById("mainContent").style.display  = "";
+    } catch (err) {
+      if (err.status === 401) { clearToken(); window.location.href = "/login.html"; }
+      else document.getElementById("loadingState").textContent = "Erro ao carregar. Recarregue a página.";
+    }
+  }
+
+  document.getElementById("profileForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const alert = document.getElementById("profileAlert");
+    const btn   = document.getElementById("saveBtn");
+    hideAlert(alert);
+    btn.disabled = true;
+    btn.textContent = "Salvando…";
+
+    try {
+      await apiFetch("/api/me", {
+        method: "PUT",
+        body: JSON.stringify({
+          full_name: document.getElementById("full_name").value.trim() || undefined,
+          us_state:  document.getElementById("us_state").value  || undefined,
+          us_city:   document.getElementById("us_city").value.trim() || undefined,
+          whatsapp:  document.getElementById("whatsapp").value.trim() || undefined,
+          bio:       document.getElementById("bio").value.trim() || undefined,
+        }),
+      });
+      showAlert(alert, "Perfil atualizado com sucesso!", "success");
+    } catch (err) {
+      showAlert(alert, err.message || "Erro ao salvar. Tente novamente.", "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Salvar alterações";
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", (e) => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = "/login.html";
+  });
+
+  loadDashboard();
+</script>
+</body>
+</html>
