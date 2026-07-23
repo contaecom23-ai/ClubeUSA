@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar conta — Clube USA</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+<div class="auth-wrapper">
+  <a href="/" class="logo">🇺🇸 Clube USA</a>
+  <div class="card">
+    <h1>Criar conta gratuita</h1>
+    <p class="subtitle">Junte-se à comunidade de brasileiros nos EUA</p>
+
+    <div id="alert" class="alert" role="alert"></div>
+
+    <form id="registerForm" novalidate>
+      <div class="form-group">
+        <label for="full_name">Seu nome completo</label>
+        <input type="text" id="full_name" name="full_name" autocomplete="name"
+               placeholder="Ex: João Silva" required>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="email"
+               placeholder="joao@email.com" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha <span style="color:var(--gray-5);font-weight:400">(mín. 8 caracteres)</span></label>
+        <input type="password" id="password" name="password" autocomplete="new-password"
+               placeholder="Crie uma senha segura" required minlength="8">
+      </div>
+
+      <div class="form-group" id="referral-group" style="display:none">
+        <label for="referral_code">Código de indicação <span style="color:var(--gray-5);font-weight:400">(opcional)</span></label>
+        <input type="text" id="referral_code" name="referral_code"
+               placeholder="Ex: abc12345" maxlength="8">
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">Criar conta</button>
+    </form>
+
+    <div class="card-footer">
+      Já tem conta? <a href="/login.html">Entrar</a>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/auth.js"></script>
+<script>
+  // Show referral input if ?ref= param is present in URL
+  const params = new URLSearchParams(window.location.search);
+  const refCode = params.get("ref") || params.get("r");
+  if (refCode) {
+    document.getElementById("referral-group").style.display = "";
+    document.getElementById("referral_code").value = refCode;
+  } else {
+    // Always show the field — some users will have a code from a friend
+    document.getElementById("referral-group").style.display = "";
+  }
+
+  // Redirect if already logged in
+  if (getToken()) window.location.href = "/dashboard.html";
+
+  document.getElementById("registerForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const alert = document.getElementById("alert");
+    const btn   = document.getElementById("submitBtn");
+
+    hideAlert(alert);
+    btn.disabled = true;
+    btn.textContent = "Criando conta…";
+
+    const body = {
+      full_name:     document.getElementById("full_name").value.trim(),
+      email:         document.getElementById("email").value.trim().toLowerCase(),
+      password:      document.getElementById("password").value,
+      referral_code: document.getElementById("referral_code").value.trim() || undefined,
+    };
+
+    try {
+      const data = await apiFetch("/auth/register", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      showAlert(alert, data.message || "Conta criada! Verifique seu email.", "success");
+      document.getElementById("registerForm").reset();
+    } catch (err) {
+      let msg = "Não foi possível criar a conta. Tente novamente.";
+      if (err.status === 422 && err.data?.detail) {
+        // Pydantic validation errors
+        const d = err.data.detail;
+        msg = Array.isArray(d) ? d.map(x => x.msg).join("; ") : d;
+      } else if (err.message) {
+        msg = err.message;
+      }
+      showAlert(alert, msg, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Criar conta";
+    }
+  });
+</script>
+</body>
+</html>

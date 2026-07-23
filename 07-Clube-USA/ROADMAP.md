@@ -6,7 +6,14 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Schema SQL (migrations/001_initial_schema.sql)
+  - FastAPI: POST /auth/register, GET /auth/confirm-email, POST /auth/login
+  - FastAPI: GET /api/me, PUT /api/me, GET /api/referral-stats
+  - Frontend HTML: index, register, login, confirm-email, dashboard
+  - Segurança: bcrypt, JWT 7d, rate-limit, CORS, security headers, sem email enumeration
+  - Testes: 20 casos cobrindo registro, confirmação, login, perfil, edge cases
+  - _PR: feat/fase-0-1-cadastro-perfil-email_
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
@@ -65,4 +72,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-07-23*

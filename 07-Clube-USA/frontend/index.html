@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — A plataforma dos brasileiros nos EUA</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    .hero { text-align: center; padding: 80px 24px 60px; max-width: 640px; margin: 0 auto; }
+    .hero h1 { font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 800; line-height: 1.2; margin-bottom: 16px; }
+    .hero p  { color: var(--gray-5); font-size: 1.05rem; margin-bottom: 32px; }
+    .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-hero-primary  { background: var(--blue); color: #fff; padding: 13px 28px; border-radius: var(--radius); font-weight: 700; text-decoration: none; font-size: 1rem; }
+    .btn-hero-primary:hover { background: var(--blue-d); }
+    .btn-hero-secondary { background: var(--gray-2); color: var(--gray-7); padding: 13px 28px; border-radius: var(--radius); font-weight: 700; text-decoration: none; font-size: 1rem; }
+    .btn-hero-secondary:hover { background: var(--gray-3); }
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; max-width: 800px; margin: 0 auto 60px; padding: 0 24px; }
+    .feature { background: #fff; border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
+    .feature .icon { font-size: 1.75rem; margin-bottom: 10px; }
+    .feature h3 { font-size: 1rem; margin-bottom: 6px; }
+    .feature p { color: var(--gray-5); font-size: .875rem; }
+    footer { text-align: center; padding: 24px; color: var(--gray-5); font-size: .875rem; border-top: 1px solid var(--gray-3); }
+  </style>
+</head>
+<body>
+  <nav style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--gray-3);background:#fff">
+    <span style="font-weight:800;color:var(--blue);font-size:1.15rem">🇺🇸 Clube USA</span>
+    <div style="display:flex;gap:12px;align-items:center">
+      <a href="/login.html"    style="color:var(--gray-7);font-size:.9rem;text-decoration:none">Entrar</a>
+      <a href="/register.html" style="background:var(--blue);color:#fff;padding:8px 16px;border-radius:var(--radius);font-size:.9rem;font-weight:600;text-decoration:none">Cadastre-se</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <h1>A plataforma dos<br>brasileiros nos EUA</h1>
+    <p>Promoções, empregos, moradia, serviços — tudo em um só lugar.<br>Organizado para a sua vida no país.</p>
+    <div class="hero-buttons">
+      <a href="/register.html" class="btn-hero-primary">Criar conta grátis</a>
+      <a href="/login.html"    class="btn-hero-secondary">Já tenho conta</a>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="feature">
+      <div class="icon">💸</div>
+      <h3>Promoções & Achados</h3>
+      <p>As melhores ofertas do dia, curadas para brasileiros nos EUA.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">💼</div>
+      <h3>Empregos</h3>
+      <p>Vagas de trabalho próximas a você, filtradas por ZIP code.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🏠</div>
+      <h3>Moradia</h3>
+      <p>Quartos, casas e roommates — anúncios da comunidade.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🤝</div>
+      <h3>Comunidade</h3>
+      <p>Rede de brasileiros que já passaram pelo que você está vivendo.</p>
+    </div>
+  </div>
+
+  <footer>© 2026 Clube USA · Feito com ❤️ para a comunidade brasileira nos EUA</footer>
+
+  <script src="/static/js/auth.js"></script>
+  <script>
+    // Auto-redirect logged-in users to dashboard
+    if (getToken()) window.location.href = "/dashboard.html";
+  </script>
+</body>
+</html>
