@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     supabase_service_role_key: str
     supabase_jwt_secret: str
     allowed_origins: str = "http://localhost:8000"
+    environment: str = "development"
 
 
 settings = Settings()

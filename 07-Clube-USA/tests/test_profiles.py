@@ -207,3 +207,37 @@ def test_cross_tenant_isolation_get():
         client.get("/profile", headers=_auth(user_id="user-B"))
 
         eq_mock.assert_called_once_with("id", "user-B")
+
+
+# ─── SECURITY HEADERS ─────────────────────────────────────────
+
+def test_security_headers_on_every_response():
+    """Security headers devem estar presentes em todas as respostas."""
+    r = client.get("/health")
+    assert r.headers.get("X-Content-Type-Options") == "nosniff"
+    assert r.headers.get("X-Frame-Options") == "DENY"
+    assert r.headers.get("X-XSS-Protection") == "1; mode=block"
+    assert r.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+
+
+def test_docs_accessible_in_development():
+    """/docs deve estar acessível em modo development (padrão em testes)."""
+    r = client.get("/docs")
+    assert r.status_code == 200
+
+
+def test_get_profile_tampered_token_returns_401():
+    """Token com assinatura adulterada deve ser rejeitado."""
+    bad_token = _make_token() + "tampered"
+    r = client.get("/profile", headers={"Authorization": f"Bearer {bad_token}"})
+    assert r.status_code == 401
+
+
+def test_update_profile_large_name_rejected():
+    """Campos de texto com >100 chars devem ser rejeitados pela validação."""
+    r = client.put(
+        "/profile",
+        json={"first_name": "A" * 101},
+        headers=_auth(),
+    )
+    assert r.status_code == 422
