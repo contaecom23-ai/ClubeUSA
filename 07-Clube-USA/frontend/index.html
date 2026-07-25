@@ -65,6 +65,18 @@
     .spinner { display: inline-block; width: 30px; height: 30px; border: 3px solid #e0e8ff; border-top-color: #1a56db; border-radius: 50%; animation: spin .8s linear infinite; margin-bottom: 14px; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ZIP search bar */
+    .zip-bar { background: white; border-bottom: 1px solid #e8eaf0; padding: 10px 16px; }
+    .zip-inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .zip-inner label { font-size: .82rem; font-weight: 600; color: #555; white-space: nowrap; }
+    .zip-input { padding: 7px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: .9rem; width: 100px; transition: border-color .2s; }
+    .zip-input:focus { outline: none; border-color: #1a56db; }
+    .radius-select { padding: 7px 8px; border: 1px solid #ddd; border-radius: 8px; font-size: .85rem; background: white; cursor: pointer; }
+    .zip-btn { padding: 7px 14px; background: #1a56db; color: white; border: none; border-radius: 8px; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .2s; }
+    .zip-btn:hover { background: #1648c4; }
+    .zip-clear { padding: 7px 10px; background: none; border: 1px solid #ddd; border-radius: 8px; font-size: .82rem; color: #666; cursor: pointer; display: none; }
+    .zip-clear:hover { border-color: #999; }
+
     footer { text-align: center; padding: 28px 16px; color: #bbb; font-size: .8rem; }
     footer a { color: #1a56db; text-decoration: none; }
   </style>
@@ -85,6 +97,21 @@
   <h1>🇧🇷 Economize em cada compra</h1>
   <p>Promoções e achados curados para a comunidade brasileira nos Estados Unidos.</p>
 </section>
+
+<div class="zip-bar">
+  <div class="zip-inner">
+    <label for="zip-input">📍 Minha região:</label>
+    <input type="text" id="zip-input" class="zip-input" placeholder="ZIP code" maxlength="5" pattern="\d{5}" inputmode="numeric">
+    <select id="radius-select" class="radius-select" title="Raio de busca">
+      <option value="5">5 milhas</option>
+      <option value="10">10 milhas</option>
+      <option value="25">25 milhas</option>
+      <option value="50">50 milhas</option>
+    </select>
+    <button class="zip-btn" id="zip-btn">Buscar</button>
+    <button class="zip-clear" id="zip-clear">✕ Limpar filtro</button>
+  </div>
+</div>
 
 <div class="tabs-wrap">
   <div class="tabs" id="tabs">
@@ -119,6 +146,8 @@
   const API = '/api';
   let allItems = [];
   let activeCategory = '';
+  let activeZip = '';
+  let activeRadius = 5;
 
   // Atualiza header se usuário estiver logado
   (function initHeader() {
@@ -230,9 +259,26 @@
     fetch(`${API}/promotions/${encodeURIComponent(promotionId)}/click`, {method:'POST'}).catch(()=>{});
   }
 
-  (async function loadPromotions() {
+  // ─── ZIP SEARCH ──────────────────────────────────────────────────────────────
+  const zipInput    = document.getElementById('zip-input');
+  const radiusSelect = document.getElementById('radius-select');
+  const zipBtn      = document.getElementById('zip-btn');
+  const zipClear    = document.getElementById('zip-clear');
+
+  function buildPromoUrl() {
+    const params = new URLSearchParams();
+    if (activeZip) {
+      params.set('zip_code', activeZip);
+      params.set('radius_miles', String(activeRadius));
+    }
+    return `${API}/promotions?${params.toString()}`;
+  }
+
+  async function loadPromotions() {
+    document.getElementById('grid-container').innerHTML = `
+      <div class="placeholder"><div class="spinner"></div><p>Carregando promoções...</p></div>`;
     try {
-      const r = await fetch(`${API}/promotions`);
+      const r = await fetch(buildPromoUrl());
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
       allItems = data.items || [];
@@ -245,7 +291,35 @@
           <p>Verifique sua conexão e recarregue a página.</p>
         </div>`;
     }
-  })();
+  }
+
+  zipBtn.addEventListener('click', () => {
+    const z = zipInput.value.trim();
+    if (z && !/^\d{5}$/.test(z)) {
+      zipInput.style.borderColor = '#c62828';
+      zipInput.focus();
+      return;
+    }
+    zipInput.style.borderColor = '';
+    activeZip = z;
+    activeRadius = parseInt(radiusSelect.value, 10) || 5;
+    zipClear.style.display = activeZip ? 'inline-block' : 'none';
+    loadPromotions();
+  });
+
+  zipInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') zipBtn.click();
+  });
+
+  zipClear.addEventListener('click', () => {
+    zipInput.value = '';
+    activeZip = '';
+    zipClear.style.display = 'none';
+    zipInput.style.borderColor = '';
+    loadPromotions();
+  });
+
+  loadPromotions();
 </script>
 </body>
 </html>

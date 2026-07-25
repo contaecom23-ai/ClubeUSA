@@ -6,6 +6,7 @@ from supabase import Client
 
 from config import settings
 from deps import get_db
+from geo import lookup_zip_centroid
 from models import (
     AdminMetrics,
     CreatePromotionRequest,
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 _PROMO_FIELDS = (
     "id, title, description, url, image_url, category, zip_code, state,"
-    " expires_at, is_featured, is_active, created_at"
+    " expires_at, is_featured, is_active, created_at, latitude, longitude"
 )
 
 
@@ -129,6 +130,12 @@ async def create_promotion(
     body: CreatePromotionRequest,
     db: Annotated[Client, Depends(get_db)],
 ) -> PromotionResponse:
+    lat, lon = None, None
+    if body.zip_code:
+        centroid = lookup_zip_centroid(db, body.zip_code)
+        if centroid:
+            lat, lon = centroid
+
     data = {
         "title": body.title,
         "description": body.description,
@@ -137,6 +144,8 @@ async def create_promotion(
         "category": body.category.value,
         "zip_code": body.zip_code,
         "state": body.state,
+        "latitude": lat,
+        "longitude": lon,
         "expires_at": body.expires_at,
         "is_featured": body.is_featured,
         "is_active": True,
@@ -178,6 +187,13 @@ async def update_promotion(
     db: Annotated[Client, Depends(get_db)],
 ) -> PromotionResponse:
     updates = body.model_dump(exclude_none=True)
+
+    # Se zip_code foi alterado, re-resolve lat/lng automaticamente
+    if "zip_code" in updates:
+        centroid = lookup_zip_centroid(db, updates["zip_code"]) if updates["zip_code"] else None
+        updates["latitude"] = centroid[0] if centroid else None
+        updates["longitude"] = centroid[1] if centroid else None
+
     if updates:
         db.table("promotions").update(updates).eq("id", promotion_id).execute()
     result = (

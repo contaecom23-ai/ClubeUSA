@@ -16,7 +16,7 @@
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
 - [x] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
-- [ ] **1.2** Busca por ZIP + raio 1–5 milhas
+- [x] **1.2** Busca por ZIP + raio 1–5 milhas
 - [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
 - [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
 - [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
@@ -65,4 +65,4 @@
 
 ---
 
-*Atualizado em: 2026-07-16*
+*Atualizado em: 2026-07-25*

@@ -106,6 +106,8 @@ CREATE TABLE IF NOT EXISTS promotions (
     category    TEXT NOT NULL,              -- supermercado | restaurante | roupa | eletronica | servicos | saude | educacao | transporte | outros
     zip_code    TEXT,                       -- NULL = nacional / todos os ZIPs
     state       TEXT,                       -- NULL = nacional
+    latitude    DOUBLE PRECISION,           -- NULL = promoção nacional (sem geo)
+    longitude   DOUBLE PRECISION,           -- NULL = promoção nacional (sem geo)
     expires_at  TIMESTAMPTZ,               -- NULL = sem expiração
     is_featured BOOLEAN NOT NULL DEFAULT false,
     is_active   BOOLEAN NOT NULL DEFAULT true,
@@ -124,6 +126,25 @@ DROP TRIGGER IF EXISTS trg_promotions_updated_at ON promotions;
 CREATE TRIGGER trg_promotions_updated_at
     BEFORE UPDATE ON promotions
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE INDEX IF NOT EXISTS idx_promotions_geo
+    ON promotions (latitude, longitude)
+    WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
+
+-- =============================================================
+-- TABELA: zip_codes
+-- Centroides de ZIPs dos EUA para busca por raio (Fase 1.2)
+-- Popular via: scripts/seed_zip_codes.py
+-- =============================================================
+CREATE TABLE IF NOT EXISTS zip_codes (
+    zip       TEXT PRIMARY KEY,
+    city      TEXT,
+    state     TEXT NOT NULL,
+    latitude  DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_zip_codes_state ON zip_codes (state);
 
 -- =============================================================
 -- RLS (Row Level Security) — endgame, ativar após validação

@@ -6,13 +6,14 @@ from supabase import Client
 
 from analytics import emit_event
 from deps import get_db
+from geo import filter_promotions_by_zip, lookup_zip_centroid
 from models import MessageResponse, PromotionCategory, PromotionListResponse, PromotionResponse
 
 router = APIRouter(prefix="/promotions", tags=["promotions"])
 
 _SELECT_FIELDS = (
     "id, title, description, url, image_url, category, zip_code, state,"
-    " expires_at, is_featured, is_active, created_at"
+    " expires_at, is_featured, is_active, created_at, latitude, longitude"
 )
 
 
@@ -33,7 +34,18 @@ async def list_promotions(
     category: PromotionCategory | None = None,
     state: str | None = None,
     zip_code: str | None = None,
+    radius_miles: float = 5.0,
 ) -> PromotionListResponse:
+    """
+    Retorna promoções ativas.
+
+    Filtros:
+    - `category`: categoria exata (supermercado, restaurante…)
+    - `state`: estado americano (ex: FL, NY) — inclui promoções nacionais
+    - `zip_code` + `radius_miles` (padrão 5): promoções dentro do raio
+      * Requer que `zip_codes` table esteja populada (ver scripts/seed_zip_codes.py)
+      * Se o ZIP não estiver na tabela, fallback para match exato de ZIP
+    """
     result = (
         db.table("promotions")
         .select(_SELECT_FIELDS)
@@ -51,7 +63,8 @@ async def list_promotions(
         norm = state.upper()
         items = [p for p in items if not p.get("state") or p.get("state") == norm]
     if zip_code:
-        items = [p for p in items if not p.get("zip_code") or p.get("zip_code") == zip_code]
+        centroid = lookup_zip_centroid(db, zip_code)
+        items = filter_promotions_by_zip(items, zip_code, centroid, radius_miles)
 
     responses = [PromotionResponse.from_db(p) for p in items]
     return PromotionListResponse(items=responses, total=len(responses))
