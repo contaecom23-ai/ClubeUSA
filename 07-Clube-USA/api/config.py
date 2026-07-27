@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     # Admin — chave para acessar /api/admin/* (gerada aleatoriamente, compartilhe só com o dono)
     ADMIN_KEY: str = ""
 
+    # Programa de Influenciadores (Fase 1.3)
+    # Valor pago por cada referral válido (USD). 0 = programa ativo mas valor não definido ainda.
+    PAYOUT_RATE_USD: float = 0.0
+    # Orçamento máximo total do programa (USD). 0 = sem teto configurado.
+    PAYOUT_BUDGET_USD: float = 0.0
+
 
 def _load() -> Settings:
     s = Settings()

@@ -16,6 +16,69 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
+### [2026-07-27] CRÍTICO: 32 PRs abertos acumulados — o que fazer
+
+**Contexto:** O builder autônomo rodou muitas vezes sem que nenhum PR fosse mergeado. Isso criou 32 PRs abertos, a maioria de branches deletadas. O código real e mais avançado está na branch `claude/fase-0.1-cadastro-perfil-email`. Os outros PRs são duplicatas ou estão obsoletos.
+
+**Estado atual do código na branch principal:**
+- ✅ Fase 0.1 — Cadastro + perfil + email confirmado
+- ✅ Fase 0.2 — Referral rastreável
+- ✅ Fase 0.3 — Analytics básico
+- ✅ Fase 0.4 — Cadastro válido + anti-fraude
+- ✅ Fase 1.1 — Promoções/Achados
+- ✅ Fase 1.2 — Busca por ZIP + raio
+- ✅ Fase 1.3 — Programa de influenciadores (este PR)
+- 130 testes passando
+
+**O que você PRECISA fazer agora:**
+1. Fechar todos os PRs de #1 a #31 (são duplicatas ou obsoletos).
+2. Mergear o PR mais recente da branch `claude/fase-0.1-cadastro-perfil-email` (ou este PR).
+3. Fornecer credenciais Supabase para que o código possa ser testado em staging.
+
+**Por que o loop aconteceu:** O builder não consegue verificar se um PR foi mergeado ou se o código já está na main. Ele re-implementa o que está no ROADMAP como pendente. Após o merge, o ROADMAP na main terá os itens marcados `[x]` e o loop para.
+
+**Status:** PENDENTE — requer ação do dono
+
+---
+
+### [2026-07-27] Configurações do programa de influenciadores
+
+**Contexto:** O sistema de tracking está implementado (badges, leaderboard, payouts). As decisões de negócio abaixo ainda não foram tomadas — o código usa 0 como default (programa inativo).
+
+**Pergunta:** Quais são os parâmetros de pagamento?
+
+**Decisões necessárias:**
+
+1. **Valor por cadastro válido** (`PAYOUT_RATE_USD`):
+   - Opções: $1, $2, $5 por cadastro válido
+   - Recomendação: $2 por cadastro válido para MVP (alinhado com custo de aquisição de cliente de apps similares)
+   - Com 50 referrals (nível Parceiro) = $100 por influenciador
+
+2. **Orçamento máximo** (`PAYOUT_BUDGET_USD`):
+   - Opções: $500, $1000, $5000 por mês
+   - Recomendação: começar com $500/mês para validar o canal; escalar conforme ROI
+
+3. **Método de pagamento**:
+   - PayPal: melhor para quem não tem conta bancária americana
+   - Venmo / Zelle: comum entre residentes nos EUA
+   - Recomendação: aceitar os três; o admin escolhe caso a caso
+
+4. **Bônus mensal pro 1º lugar** (opcional):
+   - Valor sugerido: $50 extra para o #1 do mês
+   - Implementação: 1 sprint adicional após decisão
+
+**O que você precisa fazer:**
+1. Decidir os valores acima e adicionar ao `.env` do servidor:
+   ```
+   PAYOUT_RATE_USD=2.0
+   PAYOUT_BUDGET_USD=500.0
+   ```
+2. Se quiser bônus mensal, me avisar e eu implemento.
+
+**Status:** PENDENTE
+
+---
+
 ### [2026-07-16] Consolidar implementação backend: `backend/` vs `api/`
 
 **Contexto:** Dois runs autônomos implementaram a Fase 0.1 em paralelo, gerando duas implementações do backend:

@@ -202,6 +202,97 @@ class PromotionListResponse(BaseModel):
     total: int
 
 
+# =============================================================
+# Fase 1.3 — Programa de Influenciadores
+# =============================================================
+
+BADGE_THRESHOLDS: list[tuple[int, str]] = [
+    (1000, "hall_da_fama"),
+    (250, "embaixador"),
+    (50, "parceiro"),
+]
+
+
+def compute_badge(valid_referrals: int) -> tuple[str, str | None, int | None]:
+    """Retorna (badge_atual, proximo_badge, referrals_para_proximo)."""
+    current = "none"
+    for threshold, badge in BADGE_THRESHOLDS:
+        if valid_referrals >= threshold:
+            current = badge
+            break
+    # próximo badge
+    for threshold, badge in reversed(BADGE_THRESHOLDS):
+        if valid_referrals < threshold:
+            return current, badge, threshold
+    return current, None, None
+
+
+class InfluencerStatus(BaseModel):
+    valid_referrals: int
+    badge: str
+    next_badge: str | None
+    next_badge_at: int | None            # quantos referrals faltam para o próximo nível
+    estimated_earning_usd: float | None  # None = taxa não configurada pelo dono
+    total_paid_usd: float
+
+
+class LeaderboardEntry(BaseModel):
+    rank: int
+    display_name: str
+    city: str | None
+    state: str | None
+    valid_referrals: int
+    badge: str
+
+
+class InfluencerLeaderboard(BaseModel):
+    entries: list[LeaderboardEntry]
+    payout_rate_usd: float | None  # None = programa ainda sem valor definido
+
+
+class InfluencerPendingItem(BaseModel):
+    user_id: str
+    display_name: str
+    valid_referrals: int
+    badge: str
+    estimated_owed_usd: float   # (valid_referrals * rate) - total_paid
+    total_paid_usd: float
+
+
+class RegisterPayoutRequest(BaseModel):
+    user_id: str
+    amount_usd: float
+    payment_method: str  # paypal | venmo | zelle | check | other
+    payment_ref: str | None = None
+    notes: str | None = None
+
+    @field_validator("amount_usd")
+    @classmethod
+    def positive_amount(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("Valor do pagamento deve ser positivo")
+        return round(v, 2)
+
+    @field_validator("payment_method")
+    @classmethod
+    def valid_method(cls, v: str) -> str:
+        allowed = {"paypal", "venmo", "zelle", "check", "other"}
+        if v.lower() not in allowed:
+            raise ValueError(f"Método inválido. Use: {', '.join(sorted(allowed))}")
+        return v.lower()
+
+
+class PayoutResponse(BaseModel):
+    id: str
+    user_id: str
+    valid_referrals: int
+    amount_usd: float
+    payment_method: str
+    payment_ref: str | None
+    notes: str | None
+    created_at: str
+
+
 class UpdateProfileRequest(BaseModel):
     name: str | None = None
     phone: str | None = None
