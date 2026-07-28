@@ -7,10 +7,14 @@
 
 ## ⚠️ BLOQUEIO CRÍTICO — LEIA ISTO PRIMEIRO
 
-### [2026-07-27] 32 PRs abertos, zero mergeados — plataforma parada há semanas
+### [2026-07-28] 33 PRs abertos, zero mergeados — plataforma parada há semanas ⚠️ DIA 2 SEM AÇÃO
 
 **O que está acontecendo:**
-Este agente autônomo roda 3x/dia. A cada execução, detecta que o branch `main` não tem código (só ROADMAP.md e DECISOES.md), implementa a Fase 0.1 do zero, abre um PR, e para. O próximo run não vê o PR como "código na main" e repete tudo. **Resultado: 32 PRs abertos, 15+ implementando a mesma Fase 0.1.**
+Este agente autônomo roda 3x/dia. A cada execução, detecta que o branch `main` não tem código (só ROADMAP.md e DECISOES.md), implementa a Fase 0.1 do zero, abre um PR, e para. O próximo run não vê o PR como "código na main" e repete tudo. **Resultado: 33 PRs abertos, 15+ implementando a mesma Fase 0.1.**
+
+**Histórico de runs sem ação:**
+- 2026-07-27: bloqueio documentado pela primeira vez, 32 PRs
+- 2026-07-28: nenhum PR mergeado, agora 33 PRs
 
 **O loop para em 15 minutos de trabalho seu, em 3 passos:**
 
@@ -56,4 +60,4 @@ Este agente autônomo roda 3x/dia. A cada execução, detecta que o branch `main
 
 ---
 
-*Atualizado em: 2026-07-27 — run autônomo (bloqueio crítico, nenhum PR novo criado)*
+*Atualizado em: 2026-07-28 — run autônomo (bloqueio crítico, nenhum PR novo criado, aguardando merge de PR #32 e #31)*
