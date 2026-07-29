@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Clube USA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="logo">Clube <span>USA</span> 🇧🇷</a>
+</nav>
+
+<main class="page">
+  <div class="card">
+    <h1>Crie sua conta</h1>
+    <p class="subtitle">Gratuito. Para brasileiros nos EUA.</p>
+
+    <div id="alert" class="alert"></div>
+
+    <form id="registerForm" novalidate>
+      <div class="form-group">
+        <label for="full_name">Nome completo</label>
+        <input type="text" id="full_name" name="full_name"
+               placeholder="João Silva" autocomplete="name" required>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email"
+               placeholder="joao@email.com" autocomplete="email" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password"
+               placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+        <p class="hint">Ao menos 8 caracteres.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="zip_code">CEP americano <span style="color:#6b7280;font-weight:400">(opcional)</span></label>
+        <input type="text" id="zip_code" name="zip_code"
+               placeholder="10001" autocomplete="postal-code" maxlength="10">
+        <p class="hint">Usado para mostrar ofertas próximas a você.</p>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">
+        Criar conta
+      </button>
+    </form>
+
+    <hr class="divider">
+    <p class="link-row">Já tem conta? <a href="login.html">Entrar</a></p>
+  </div>
+</main>
+
+<footer>© 2026 Clube USA</footer>
+
+<script>
+  const API_URL = 'http://localhost:8000'; // TODO: change to production URL
+
+  const form = document.getElementById('registerForm');
+  const alert = document.getElementById('alert');
+  const submitBtn = document.getElementById('submitBtn');
+
+  function showAlert(msg, type) {
+    alert.textContent = msg;
+    alert.className = `alert alert-${type} show`;
+  }
+
+  function setLoading(loading) {
+    submitBtn.disabled = loading;
+    submitBtn.innerHTML = loading
+      ? '<span class="spinner"></span> Criando conta…'
+      : 'Criar conta';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    alert.className = 'alert';
+
+    const body = {
+      full_name: document.getElementById('full_name').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      password: document.getElementById('password').value,
+      zip_code: document.getElementById('zip_code').value.trim() || null,
+    };
+
+    if (!body.full_name) { showAlert('Informe seu nome completo.', 'error'); return; }
+    if (!body.email) { showAlert('Informe seu email.', 'error'); return; }
+    if (body.password.length < 8) { showAlert('A senha deve ter ao menos 8 caracteres.', 'error'); return; }
+
+    setLoading(true);
+    try {
+      const resp = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await resp.json();
+
+      if (resp.ok) {
+        form.innerHTML = `
+          <div class="alert alert-success show">
+            ✅ ${data.message}<br>
+            <strong>Verifique sua caixa de entrada</strong> (e o spam) para confirmar o email.
+          </div>
+          <p class="link-row"><a href="login.html">Voltar para o login</a></p>
+        `;
+      } else {
+        showAlert(data.detail || 'Erro ao criar conta. Tente novamente.', 'error');
+        setLoading(false);
+      }
+    } catch (err) {
+      showAlert('Erro de conexão. Verifique sua internet e tente novamente.', 'error');
+      setLoading(false);
+    }
+  });
+</script>
+</body>
+</html>

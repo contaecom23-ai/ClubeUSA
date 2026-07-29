@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmação de Email — Clube USA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="logo">Clube <span>USA</span> 🇧🇷</a>
+</nav>
+
+<main class="page">
+  <div class="card" style="text-align:center;">
+    <div id="loading">
+      <div class="spinner" style="width:40px;height:40px;border-width:4px;
+           border-color:rgba(26,86,219,.2);border-top-color:#1a56db;
+           margin:0 auto 16px;"></div>
+      <p style="color:#6b7280;">Verificando seu email…</p>
+    </div>
+
+    <div id="success" style="display:none;">
+      <div style="font-size:56px;margin-bottom:16px;">✅</div>
+      <h1 style="color:#057a55;margin-bottom:8px;">Email confirmado!</h1>
+      <p style="color:#374151;margin-bottom:24px;">
+        Sua conta no Clube USA está ativa. Bem-vindo!
+      </p>
+      <a href="login.html" class="btn btn-primary">Entrar na plataforma</a>
+    </div>
+
+    <div id="error" style="display:none;">
+      <div style="font-size:56px;margin-bottom:16px;">❌</div>
+      <h1 style="color:#c81e1e;margin-bottom:8px;">Link inválido</h1>
+      <p id="errorMsg" style="color:#374151;margin-bottom:24px;"></p>
+      <a href="login.html" class="btn btn-primary">Voltar para o login</a>
+    </div>
+  </div>
+</main>
+
+<footer>© 2026 Clube USA</footer>
+
+<script>
+  const API_URL = 'http://localhost:8000'; // TODO: change to production URL
+
+  (async () => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    if (!token) {
+      show('error', 'Link de confirmação inválido. Verifique seu email e tente novamente.');
+      return;
+    }
+
+    try {
+      const resp = await fetch(
+        `${API_URL}/auth/confirm-email?token=${encodeURIComponent(token)}`
+      );
+      const data = await resp.json();
+
+      if (resp.ok) {
+        show('success');
+      } else {
+        const isExpired = data.detail && data.detail.toLowerCase().includes('expirado');
+        show(
+          'error',
+          isExpired
+            ? 'Este link expirou. Faça login e clique em "Reenviar email de confirmação".'
+            : (data.detail || 'Link inválido.')
+        );
+      }
+    } catch {
+      show('error', 'Erro de conexão. Tente novamente em alguns instantes.');
+    }
+  })();
+
+  function show(state, msg) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById(state).style.display = 'block';
+    if (msg) document.getElementById('errorMsg').textContent = msg;
+  }
+</script>
+</body>
+</html>

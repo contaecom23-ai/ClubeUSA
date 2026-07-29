@@ -1,0 +1,219 @@
+/* Clube USA — Base Styles */
+:root {
+  --color-primary: #1a56db;
+  --color-primary-dark: #1347c4;
+  --color-success: #057a55;
+  --color-error: #c81e1e;
+  --color-warning: #b45309;
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-border: #d1d5db;
+  --color-bg: #f9fafb;
+  --color-card: #ffffff;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Nav ─────────────────────────────────────────────── */
+.navbar {
+  background: var(--color-primary);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.navbar .logo {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.navbar .logo span { opacity: 0.8; font-weight: 400; }
+
+/* ── Page wrapper ────────────────────────────────────── */
+.page {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+}
+
+/* ── Card ────────────────────────────────────────────── */
+.card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.card h1 {
+  font-size: 22px;
+  margin-bottom: 6px;
+  color: var(--color-text);
+}
+.card .subtitle {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+/* ── Form ────────────────────────────────────────────── */
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--color-text);
+}
+.form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 15px;
+  color: var(--color-text);
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.form-group input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(26,86,219,.15);
+}
+.form-group .hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* ── Button ──────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  text-decoration: none;
+}
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+  width: 100%;
+}
+.btn-primary:hover { background: var(--color-primary-dark); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Alerts ──────────────────────────────────────────── */
+.alert {
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  display: none;
+}
+.alert.show { display: block; }
+.alert-success {
+  background: #def7ec;
+  color: var(--color-success);
+  border: 1px solid #84e1bc;
+}
+.alert-error {
+  background: #fde8e8;
+  color: var(--color-error);
+  border: 1px solid #f8b4b4;
+}
+.alert-warning {
+  background: #fef3c7;
+  color: var(--color-warning);
+  border: 1px solid #fcd34d;
+}
+
+/* ── Divider ─────────────────────────────────────────── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 20px 0;
+}
+
+/* ── Link row ────────────────────────────────────────── */
+.link-row {
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-top: 16px;
+}
+.link-row a {
+  color: var(--color-primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+.link-row a:hover { text-decoration: underline; }
+
+/* ── Profile grid ────────────────────────────────────── */
+.profile-field {
+  margin-bottom: 16px;
+}
+.profile-field .field-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+.profile-field .field-value {
+  font-size: 16px;
+  font-weight: 500;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+.badge-confirmed { background: #def7ec; color: var(--color-success); }
+.badge-pending   { background: #fef3c7; color: var(--color-warning); }
+
+/* ── Spinner ─────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Footer ──────────────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}

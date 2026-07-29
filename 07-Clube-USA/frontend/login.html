@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="logo">Clube <span>USA</span> 🇧🇷</a>
+</nav>
+
+<main class="page">
+  <div class="card">
+    <h1>Entrar</h1>
+    <p class="subtitle">Acesse sua conta no Clube USA.</p>
+
+    <div id="alert" class="alert"></div>
+
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email"
+               placeholder="joao@email.com" autocomplete="email" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password"
+               placeholder="Sua senha" autocomplete="current-password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">
+        Entrar
+      </button>
+    </form>
+
+    <div id="resendSection" style="display:none;margin-top:16px;">
+      <hr class="divider">
+      <p style="font-size:14px;color:#374151;margin-bottom:10px;">
+        Não recebeu o email de confirmação?
+      </p>
+      <button class="btn btn-primary" id="resendBtn"
+              style="background:#6b7280;" onclick="resendConfirmation()">
+        Reenviar email de confirmação
+      </button>
+    </div>
+
+    <hr class="divider">
+    <p class="link-row">Não tem conta? <a href="register.html">Cadastre-se grátis</a></p>
+  </div>
+</main>
+
+<footer>© 2026 Clube USA</footer>
+
+<script>
+  const API_URL = 'http://localhost:8000'; // TODO: change to production URL
+
+  const form = document.getElementById('loginForm');
+  const alertEl = document.getElementById('alert');
+  const submitBtn = document.getElementById('submitBtn');
+  const resendSection = document.getElementById('resendSection');
+
+  function showAlert(msg, type) {
+    alertEl.textContent = msg;
+    alertEl.className = `alert alert-${type} show`;
+  }
+
+  function setLoading(loading) {
+    submitBtn.disabled = loading;
+    submitBtn.innerHTML = loading
+      ? '<span class="spinner"></span> Entrando…'
+      : 'Entrar';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    alertEl.className = 'alert';
+    resendSection.style.display = 'none';
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+      showAlert('Preencha email e senha.', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const resp = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await resp.json();
+
+      if (resp.ok) {
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = 'profile.html';
+      } else if (resp.status === 403) {
+        showAlert(data.detail, 'warning');
+        resendSection.style.display = 'block';
+        setLoading(false);
+      } else {
+        showAlert(data.detail || 'Email ou senha incorretos.', 'error');
+        setLoading(false);
+      }
+    } catch (err) {
+      showAlert('Erro de conexão. Tente novamente.', 'error');
+      setLoading(false);
+    }
+  });
+
+  async function resendConfirmation() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('resendBtn');
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+
+    try {
+      const resp = await fetch(`${API_URL}/auth/resend-confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        showAlert('✅ Email de confirmação reenviado. Verifique sua caixa de entrada.', 'success');
+        resendSection.style.display = 'none';
+      } else {
+        showAlert(data.detail || 'Erro ao reenviar email.', 'error');
+      }
+    } catch {
+      showAlert('Erro de conexão. Tente novamente.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Reenviar email de confirmação';
+    }
+  }
+</script>
+</body>
+</html>
