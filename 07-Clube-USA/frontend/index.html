@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Para Brasileiros nos EUA</title>
+  <style>
+    :root {
+      --primary: #1B4FBB;
+      --accent: #F5A623;
+      --bg: #F8F9FA;
+      --text: #212529;
+      --muted: #6C757D;
+      --border: #DEE2E6;
+      --white: #FFFFFF;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+    header { background: var(--primary); color: var(--white); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+    header h1 span { color: var(--accent); }
+    header nav a { color: var(--white); text-decoration: none; margin-left: 20px; font-size: 0.9rem; opacity: 0.9; }
+    header nav a:hover { opacity: 1; text-decoration: underline; }
+
+    .hero { background: var(--primary); color: var(--white); text-align: center; padding: 72px 24px 80px; }
+    .hero h2 { font-size: 2rem; font-weight: 800; margin-bottom: 16px; line-height: 1.2; }
+    .hero p { font-size: 1.1rem; opacity: 0.88; max-width: 540px; margin: 0 auto 36px; }
+    .btn { display: inline-block; padding: 14px 32px; border-radius: 6px; font-size: 1rem; font-weight: 600; text-decoration: none; transition: opacity .15s; }
+    .btn-accent { background: var(--accent); color: #1a1a1a; }
+    .btn-outline { border: 2px solid var(--white); color: var(--white); margin-left: 12px; }
+    .btn:hover { opacity: 0.88; }
+
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; padding: 60px 24px; max-width: 900px; margin: 0 auto; }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 28px 24px; }
+    .card .icon { font-size: 2rem; margin-bottom: 12px; }
+    .card h3 { font-size: 1.1rem; margin-bottom: 8px; color: var(--primary); }
+    .card p { font-size: 0.92rem; color: var(--muted); }
+
+    .cta-strip { background: var(--accent); text-align: center; padding: 40px 24px; }
+    .cta-strip h3 { font-size: 1.4rem; font-weight: 700; margin-bottom: 16px; color: #1a1a1a; }
+    .btn-dark { background: var(--primary); color: var(--white); }
+
+    footer { text-align: center; padding: 32px; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
+
+    #user-bar { display: none; background: #e8f0fe; border: 1px solid #c5d5f5; border-radius: 8px; padding: 16px 20px; margin: 24px auto; max-width: 900px; font-size: 0.95rem; }
+    #user-bar a { color: var(--primary); font-weight: 600; text-decoration: none; }
+    #user-bar .logout { color: var(--muted); margin-left: 16px; cursor: pointer; font-size: 0.85rem; }
+    #user-bar .logout:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Clube <span>USA</span></h1>
+    <nav>
+      <a href="/register.html">Cadastrar</a>
+      <a href="/login.html">Entrar</a>
+    </nav>
+  </header>
+
+  <div id="user-bar">
+    Olá, <strong id="user-name"></strong>! &nbsp;
+    <a href="/profile.html">Meu Perfil</a>
+    <span class="logout" onclick="logout()">Sair</span>
+  </div>
+
+  <section class="hero">
+    <h2>A plataforma do imigrante brasileiro nos EUA</h2>
+    <p>Promoções, empregos, moradia e serviços — tudo em um lugar, em português, para quem vive nos Estados Unidos.</p>
+    <a href="/register.html" class="btn btn-accent">Criar conta grátis</a>
+    <a href="/login.html" class="btn btn-outline">Já tenho conta</a>
+  </section>
+
+  <section class="features">
+    <div class="card">
+      <div class="icon">🛒</div>
+      <h3>Promoções e Achados</h3>
+      <p>As melhores ofertas perto de você, filtradas por ZIP code.</p>
+    </div>
+    <div class="card">
+      <div class="icon">💼</div>
+      <h3>Empregos</h3>
+      <p>Vagas selecionadas para brasileiros, com detalhes em português.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🏠</div>
+      <h3>Moradia</h3>
+      <p>Quartos, roommates e casas — sem barreira de idioma.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🤝</div>
+      <h3>Comunidade</h3>
+      <p>Dicas, recomendações e experiências de quem já passou pelo mesmo.</p>
+    </div>
+  </section>
+
+  <section class="cta-strip">
+    <h3>Comece agora — é grátis</h3>
+    <a href="/register.html" class="btn btn-dark">Criar conta</a>
+  </section>
+
+  <footer>
+    &copy; 2026 Clube USA &mdash; Para imigrantes brasileiros nos EUA
+  </footer>
+
+  <script>
+    (function () {
+      const token = localStorage.getItem("clubeusa_token");
+      const name = localStorage.getItem("clubeusa_first_name");
+      if (token && name) {
+        document.getElementById("user-bar").style.display = "block";
+        document.getElementById("user-name").textContent = name;
+      }
+    })();
+
+    function logout() {
+      localStorage.removeItem("clubeusa_token");
+      localStorage.removeItem("clubeusa_first_name");
+      location.reload();
+    }
+  </script>
+</body>
+</html>

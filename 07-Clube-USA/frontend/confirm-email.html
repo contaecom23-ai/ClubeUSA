@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmação de Email — Clube USA</title>
+  <style>
+    :root { --primary: #1B4FBB; --accent: #F5A623; --bg: #F8F9FA; --text: #212529; --muted: #6C757D; --border: #DEE2E6; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    header { background: var(--primary); color: #fff; padding: 14px 24px; }
+    header a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.2rem; }
+    header a span { color: var(--accent); }
+    main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 16px; }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 48px 36px; width: 100%; max-width: 440px; text-align: center; }
+    .icon { font-size: 3rem; margin-bottom: 20px; }
+    h2 { font-size: 1.5rem; margin-bottom: 12px; color: var(--primary); }
+    p { color: var(--muted); font-size: 0.95rem; margin-bottom: 28px; line-height: 1.6; }
+    .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn { display: inline-block; padding: 12px 28px; background: var(--primary); color: #fff; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.95rem; }
+    .btn:hover { opacity: 0.88; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header><a href="/"><span>Clube</span> USA</a></header>
+  <main>
+    <div class="card">
+      <!-- Estado: verificando -->
+      <div id="state-loading">
+        <div class="spinner"></div>
+        <h2>Verificando seu email…</h2>
+        <p>Aguarde um momento.</p>
+      </div>
+
+      <!-- Estado: sucesso -->
+      <div id="state-success" class="hidden">
+        <div class="icon">✅</div>
+        <h2>Email confirmado!</h2>
+        <p>Sua conta está ativa. Agora você pode entrar no Clube USA.</p>
+        <a href="/login.html" class="btn">Fazer login</a>
+      </div>
+
+      <!-- Estado: erro -->
+      <div id="state-error" class="hidden">
+        <div class="icon">❌</div>
+        <h2>Não foi possível confirmar</h2>
+        <p id="error-msg">O link pode ter expirado ou já foi usado.</p>
+        <a href="/register.html" class="btn">Criar nova conta</a>
+      </div>
+
+      <!-- Estado: sem token na URL -->
+      <div id="state-no-token" class="hidden">
+        <div class="icon">🔗</div>
+        <h2>Link inválido</h2>
+        <p>Acesse este endereço pelo link no email de confirmação.</p>
+        <a href="/" class="btn">Ir para o início</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API = "/api/v1";
+
+    function show(id) {
+      ["state-loading", "state-success", "state-error", "state-no-token"].forEach(s => {
+        document.getElementById(s).classList.toggle("hidden", s !== id);
+      });
+    }
+
+    (async function () {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+
+      if (!token) {
+        show("state-no-token");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/auth/confirm-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          show("state-success");
+        } else {
+          document.getElementById("error-msg").textContent =
+            data.detail || "Link inválido ou expirado.";
+          show("state-error");
+        }
+      } catch (_) {
+        document.getElementById("error-msg").textContent =
+          "Erro de conexão. Tente novamente mais tarde.";
+        show("state-error");
+      }
+    })();
+  </script>
+</body>
+</html>

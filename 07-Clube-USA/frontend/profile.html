@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <style>
+    :root { --primary: #1B4FBB; --accent: #F5A623; --bg: #F8F9FA; --text: #212529; --muted: #6C757D; --border: #DEE2E6; --success: #198754; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    header { background: var(--primary); color: #fff; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+    header a.logo { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.2rem; }
+    header a.logo span { color: var(--accent); }
+    header button.logout { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); border-radius: 4px; padding: 6px 14px; cursor: pointer; font-size: 0.85rem; }
+    header button.logout:hover { background: rgba(255,255,255,.1); }
+    main { flex: 1; padding: 40px 16px; max-width: 600px; margin: 0 auto; width: 100%; }
+    .banner { padding: 12px 16px; border-radius: 8px; font-size: 0.88rem; margin-bottom: 24px; display: none; }
+    .banner.warn { background: #fff3cd; border: 1px solid #ffd900; color: #856404; }
+    .banner.success { background: #d1fae5; border: 1px solid #a7f3d0; color: #065f46; }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 32px; margin-bottom: 24px; }
+    .card h2 { font-size: 1.2rem; margin-bottom: 20px; color: var(--primary); }
+    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.93rem; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--muted); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: .4px; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 0.78rem; font-weight: 600; }
+    .badge.ok { background: #d1fae5; color: #065f46; }
+    .badge.pending { background: #fef9c3; color: #713f12; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+    input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; color: var(--text); }
+    input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(27,79,187,.12); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btn { padding: 11px 24px; background: var(--primary); color: #fff; border: none; border-radius: 6px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+    .btn:hover { opacity: 0.88; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { padding: 10px 14px; border-radius: 6px; font-size: 0.88rem; margin-top: 14px; display: none; }
+    .msg.ok { background: #d1fae5; color: #065f46; }
+    .msg.err { background: #fee2e2; color: #991b1b; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-overlay { text-align: center; padding: 80px 0; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="logo"><span>Clube</span> USA</a>
+    <button class="logout" onclick="logout()">Sair</button>
+  </header>
+
+  <main>
+    <div id="loading-overlay">Carregando perfil…</div>
+
+    <div id="content" style="display:none">
+      <div class="banner warn" id="email-warn">
+        ⚠️ Seu email ainda não foi confirmado. Verifique sua caixa de entrada e clique no link que enviamos.
+      </div>
+
+      <!-- Informações do perfil -->
+      <div class="card" id="info-card">
+        <h2>Meu Perfil</h2>
+        <div class="info-row">
+          <span class="info-label">Email</span>
+          <span id="d-email">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email confirmado</span>
+          <span id="d-email-status">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Nome</span>
+          <span id="d-name">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Telefone</span>
+          <span id="d-phone">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">ZIP Code</span>
+          <span id="d-zip">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Cidade / Estado</span>
+          <span id="d-city">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Membro desde</span>
+          <span id="d-since">—</span>
+        </div>
+      </div>
+
+      <!-- Formulário de edição -->
+      <div class="card">
+        <h2>Editar dados</h2>
+        <form id="edit-form" novalidate>
+          <div class="row">
+            <div class="field">
+              <label for="first_name">Nome</label>
+              <input id="first_name" type="text" placeholder="João">
+            </div>
+            <div class="field">
+              <label for="last_name">Sobrenome</label>
+              <input id="last_name" type="text" placeholder="Silva">
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="zip_code">ZIP Code</label>
+              <input id="zip_code" type="text" placeholder="10001" maxlength="10">
+            </div>
+            <div class="field">
+              <label for="phone">Telefone</label>
+              <input id="phone" type="tel" placeholder="+1 (555) 000-0000">
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="city">Cidade</label>
+              <input id="city" type="text" placeholder="New York">
+            </div>
+            <div class="field">
+              <label for="state">Estado</label>
+              <input id="state" type="text" placeholder="NY" maxlength="50">
+            </div>
+          </div>
+          <button class="btn" type="submit" id="btn-save">Salvar alterações</button>
+          <div class="msg" id="edit-msg"></div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API = "/api/v1";
+
+    const token = localStorage.getItem("clubeusa_token");
+    if (!token) { window.location.href = "/login.html"; }
+
+    async function loadProfile() {
+      const res = await fetch(`${API}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem("clubeusa_token");
+        window.location.href = "/login.html";
+        return;
+      }
+
+      const u = await res.json();
+
+      document.getElementById("loading-overlay").style.display = "none";
+      document.getElementById("content").style.display = "block";
+
+      if (!u.email_confirmed) {
+        document.getElementById("email-warn").style.display = "block";
+      }
+
+      document.getElementById("d-email").textContent = u.email;
+      document.getElementById("d-email-status").innerHTML = u.email_confirmed
+        ? '<span class="badge ok">Confirmado ✓</span>'
+        : '<span class="badge pending">Pendente</span>';
+      document.getElementById("d-name").textContent = `${u.first_name} ${u.last_name}`;
+      document.getElementById("d-phone").textContent = u.phone || "—";
+      document.getElementById("d-zip").textContent = u.zip_code || "—";
+      document.getElementById("d-city").textContent =
+        u.city && u.state ? `${u.city}, ${u.state}` : (u.city || u.state || "—");
+      document.getElementById("d-since").textContent = new Date(u.created_at).toLocaleDateString("pt-BR");
+
+      // Pré-preencher formulário
+      document.getElementById("first_name").value = u.first_name || "";
+      document.getElementById("last_name").value = u.last_name || "";
+      document.getElementById("zip_code").value = u.zip_code || "";
+      document.getElementById("phone").value = u.phone || "";
+      document.getElementById("city").value = u.city || "";
+      document.getElementById("state").value = u.state || "";
+    }
+
+    document.getElementById("edit-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("btn-save");
+      const msg = document.getElementById("edit-msg");
+      msg.style.display = "none";
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Salvando…';
+
+      const body = {};
+      const first_name = document.getElementById("first_name").value.trim();
+      const last_name = document.getElementById("last_name").value.trim();
+      const zip_code = document.getElementById("zip_code").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const city = document.getElementById("city").value.trim();
+      const state = document.getElementById("state").value.trim();
+
+      if (first_name) body.first_name = first_name;
+      if (last_name) body.last_name = last_name;
+      if (zip_code !== undefined) body.zip_code = zip_code;
+      if (phone !== undefined) body.phone = phone;
+      if (city !== undefined) body.city = city;
+      if (state !== undefined) body.state = state;
+
+      try {
+        const res = await fetch(`${API}/auth/profile`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(body),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem("clubeusa_first_name", data.first_name);
+          showEditMsg("Perfil atualizado com sucesso!", "ok");
+          await loadProfile();
+        } else {
+          const detail = Array.isArray(data.detail)
+            ? data.detail.map(d => d.msg).join("; ")
+            : (data.detail || "Erro ao salvar.");
+          showEditMsg(detail, "err");
+        }
+      } catch (_) {
+        showEditMsg("Erro de conexão.", "err");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Salvar alterações";
+      }
+    });
+
+    function showEditMsg(text, type) {
+      const el = document.getElementById("edit-msg");
+      el.textContent = text;
+      el.className = "msg " + type;
+      el.style.display = "block";
+    }
+
+    function logout() {
+      localStorage.removeItem("clubeusa_token");
+      localStorage.removeItem("clubeusa_first_name");
+      window.location.href = "/login.html";
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>
