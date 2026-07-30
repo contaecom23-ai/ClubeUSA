@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmar Email — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="card" style="text-align:center;">
+    <div class="logo">
+      <h1>Clube USA</h1>
+    </div>
+
+    <div id="loading" style="color:#64748b;margin:24px 0;">
+      Verificando seu email...
+    </div>
+
+    <div id="msg" class="msg"></div>
+
+    <div id="action" style="display:none;margin-top:20px;">
+      <a href="login.html" class="btn" style="text-decoration:none;display:inline-block;padding:13px 28px;width:auto;">
+        Fazer login
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const API = (window.CLUBE_USA_API || 'http://localhost:8000');
+
+    function showMsg(text, type) {
+      const msg = document.getElementById('msg');
+      msg.textContent = text;
+      msg.className = 'msg show ' + type;
+      document.getElementById('loading').style.display = 'none';
+    }
+
+    (async () => {
+      // Extrai token da URL: /confirm-email.html?token=XXX  ou  /auth/confirm-email/XXX
+      const params = new URLSearchParams(window.location.search);
+      let token = params.get('token');
+
+      // Suporte alternativo: token na URL hash
+      if (!token && window.location.hash) {
+        token = window.location.hash.replace('#', '');
+      }
+
+      if (!token) {
+        showMsg('Link de confirmação inválido. Solicite um novo cadastro.', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/auth/confirm-email/${encodeURIComponent(token)}`);
+        const data = await res.json();
+        if (res.ok) {
+          showMsg('✅ Email confirmado com sucesso! Faça login para continuar.', 'success');
+          document.getElementById('action').style.display = 'block';
+        } else {
+          showMsg(data.detail || 'Token inválido ou expirado.', 'error');
+        }
+      } catch {
+        showMsg('Erro de conexão. Tente novamente.', 'error');
+      }
+    })();
+  </script>
+</body>
+</html>

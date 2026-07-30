@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>Clube USA</h1>
+      <p>A plataforma do imigrante brasileiro</p>
+    </div>
+
+    <h2>Criar conta</h2>
+
+    <div id="msg" class="msg"></div>
+
+    <form id="form">
+      <div class="field">
+        <label for="full_name">Nome completo</label>
+        <input type="text" id="full_name" name="full_name" placeholder="Seu nome completo" autocomplete="name" required>
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="seuemail@exemplo.com" autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres com número" autocomplete="new-password" required>
+      </div>
+      <button type="submit" class="btn" id="btn">Criar conta</button>
+    </form>
+
+    <div class="footer-link">
+      Já tem conta? <a href="login.html">Fazer login</a>
+    </div>
+  </div>
+
+  <script>
+    const API = (window.CLUBE_USA_API || 'http://localhost:8000');
+    const form = document.getElementById('form');
+    const btn  = document.getElementById('btn');
+    const msg  = document.getElementById('msg');
+
+    function showMsg(text, type) {
+      msg.textContent = text;
+      msg.className = 'msg show ' + type;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = 'Criando conta...';
+      msg.className = 'msg';
+
+      const body = {
+        full_name: document.getElementById('full_name').value.trim(),
+        email:     document.getElementById('email').value.trim(),
+        password:  document.getElementById('password').value,
+      };
+
+      try {
+        const res = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          showMsg('✅ Conta criada! Verifique seu email para confirmar o cadastro.', 'success');
+          form.reset();
+        } else {
+          const detail = data.detail || 'Erro ao criar conta.';
+          showMsg(detail, 'error');
+        }
+      } catch {
+        showMsg('Erro de conexão. Tente novamente.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Criar conta';
+      }
+    });
+  </script>
+</body>
+</html>
