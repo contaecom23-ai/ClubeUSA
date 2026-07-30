@@ -54,4 +54,5 @@ jobs:
           ENVIRONMENT: development
           ALLOWED_ORIGINS: http://localhost:3000
           APP_URL: http://localhost:8000
+          TESTING: "true"
         run: pytest tests/ -v --tb=short

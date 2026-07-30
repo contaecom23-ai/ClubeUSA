@@ -10,14 +10,15 @@ Exemplo:
 Sem TEST_DATABASE_URL os testes são pulados automaticamente.
 
 Notas sobre design:
-- event_loop é session-scoped: asyncpg connections são bound ao event loop onde
-  foram criadas; misturar loop de sessão com loop de função gera o erro
-  "cannot perform operation: another operation is in progress".
+- session_factory é function-scoped: asyncio_mode=auto cria um event loop novo por
+  teste; asyncpg connections ficam bound ao loop em que foram criadas, então cada
+  teste precisa de seu próprio engine criado no loop correto.
 - client e db usam conexões DISTINTAS do pool: a fixture db fornece uma sessão
   para leituras diretas nos testes; override_get_db cria uma sessão nova por
-  request HTTP. Compartilhar a mesma sessão entre os dois causa o mesmo erro acima.
+  request HTTP. Compartilhar a mesma sessão entre os dois causa o erro asyncpg
+  "cannot perform operation: another operation is in progress".
+- Não há fixture event_loop customizada: asyncio_mode=auto gerencia os loops.
 """
-import asyncio
 import os
 
 import pytest
@@ -35,17 +36,12 @@ def _async_db_url(url: str) -> str:
     return url
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Session-scoped para que conexões asyncpg sejam reutilizáveis entre testes."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def session_factory():
-    """Cria schema do banco uma vez por sessão de testes e fornece o factory."""
+    """
+    Cria schema do banco e fornece o factory — function-scoped para que o engine
+    seja criado no mesmo event loop que o teste (requisito asyncpg).
+    """
     if not TEST_DATABASE_URL:
         pytest.skip("TEST_DATABASE_URL não definida")
 

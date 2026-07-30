@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000"
     APP_URL: str = "http://localhost:8000"
     ENVIRONMENT: str = "development"
+    TESTING: bool = False
 
     @property
     def allowed_origins_list(self) -> list[str]:
