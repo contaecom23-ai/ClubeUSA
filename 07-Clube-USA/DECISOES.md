@@ -25,7 +25,54 @@ Formato de cada entrada:
 
 ---
 
-## Decisões Pendentes
+## ⚠️ URGENTE — Decisões Pendentes
+
+### [2026-07-31] BLOQUEADOR CRÍTICO: 37 PRs duplicados abertos — o agente está em loop
+
+**Contexto:** O agente autônomo roda 3x ao dia e a cada execução verifica o ROADMAP. Como nenhum PR foi mergeado na `main`, o ROADMAP ainda mostra a Fase 0.1 como `[ ]` (não feita). Resultado: o agente criou **37 PRs de draft abertos** — mais de 25 são cópias quase idênticas de "Fase 0.1: cadastro + perfil mínimo + email confirmado". O código da Fase 0.1 está pronto, mas sem merge na main o agente continua duplicando.
+
+**Situação atual:**
+- `main` não tem nenhum código da plataforma (só ROADMAP.md e DECISOES.md)
+- PR #37 (`feat/fase-0.1-cadastro-email`, criado em 2026-07-30) é o **mais recente e completo**
+- PRs #8 a #36: duplicatas do mesmo conteúdo (muitas variações menores da Fase 0.1)
+- PRs #12–#20: chegam a Fase 1.4–1.5, mas baseados em branches que nunca foram mergeadas em `main`
+
+**O que o PR #37 contém (revisado e confirmado):**
+- Backend FastAPI: `app/auth/`, `app/users/`, `app/email/`, `config.py`, `database.py`, `deps.py`, `models.py`, `rate_limit.py`, `schemas.py`, `main.py`
+- Migrations SQL: `migrations/001_initial_schema.sql`
+- Frontend HTML: página de cadastro, login e confirmação de email
+- Testes: suite pytest com isolamento multi-tenant
+- `.env.example` com todas as variáveis necessárias
+- 4 decisões pendentes documentadas (Supabase URL, SMTP, domínio, JWT storage)
+
+**Pergunta:** O que fazer com os 37 PRs?
+
+**Opções:**
+
+- **Opção A (RECOMENDADA):** Mergear PR #37 → fechar manualmente os PRs #8 a #36 como "não será mergeado" (stale/duplicado). Isso desbloqueia o agente, que marcará Fase 0.1 como `[x]` e avançará para 0.2 (REFERRAL).
+  - Prós: limpo, histórico preservado, código verificado.
+  - Contras: requer sua ação em ~15 min para fechar os outros 36 PRs.
+
+- **Opção B:** Ignorar e mergear apenas o PR #37. Os outros permanecem abertos mas sem efeito prático. O agente parará de duplicar após o merge na main.
+  - Prós: mais rápido (só 1 ação).
+  - Contras: deixa lixo visual de 36 PRs abertos no repositório.
+
+- **Opção C:** Não agir — o agente continuará criando ~3 novos PRs por dia indefinidamente.
+  - Prós: nenhum.
+  - Contras: PR #38, #39... serão criados nas próximas execuções. Ruído total.
+
+**Recomendação:** **Opção A** — mergear o PR #37 primeiro, depois fechar os outros como "stale". GitHub permite fechar vários PRs em sequência rapidamente. Assim o projeto avança para Fase 0.2 e o agente para de loops.
+
+**Próxima ação do dono:**
+1. Acesse: https://github.com/contaecom23-ai/ClubeUSA/pull/37
+2. Revise o código
+3. Preencha `.env` com as credenciais (veja decisões abaixo)
+4. Mergee o PR #37
+5. Feche os PRs #8 a #36 como "stale"
+
+**Status:** PENDENTE — BLOQUEADOR
+
+---
 
 ### [2026-07-30] Credenciais do Supabase (DATABASE_URL)
 
@@ -90,4 +137,4 @@ Formato de cada entrada:
 
 ---
 
-*Atualizado em: 2026-07-30*
+*Atualizado em: 2026-07-31*
