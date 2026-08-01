@@ -6,7 +6,11 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - `db/schema.sql` — tabela `user_profiles` com RLS, trigger auto-criação
+  - `backend/` — FastAPI + JWT Supabase, GET/PATCH `/profile/me`, rate-limit
+  - `frontend/` — register.html, login.html, verify-email.html, dashboard.html
+  - PR: `feat/0.1-cadastro-perfil-email`
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
@@ -65,4 +69,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-08-01*

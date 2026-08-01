@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 420px;
+    }
+    .logo { font-size: 1.4rem; font-weight: 700; color: #1a56db; margin-bottom: .25rem; }
+    .subtitle { color: #64748b; font-size: .875rem; margin-bottom: 2rem; }
+    label { display: block; font-size: .875rem; font-weight: 500; color: #374151; margin-bottom: .25rem; }
+    input {
+      width: 100%;
+      padding: .6rem .875rem;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+      color: #111827;
+      margin-bottom: 1rem;
+      transition: border-color .15s;
+    }
+    input:focus { outline: none; border-color: #1a56db; }
+    .btn {
+      width: 100%;
+      padding: .7rem;
+      background: #1a56db;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn:hover { background: #1e40af; }
+    .btn:disabled { background: #93c5fd; cursor: not-allowed; }
+    .msg { font-size: .875rem; padding: .6rem .875rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+    .msg.error { background: #fef2f2; color: #dc2626; display: block; }
+    .msg.success { background: #f0fdf4; color: #16a34a; display: block; }
+    .footer-link { text-align: center; margin-top: 1.5rem; font-size: .875rem; color: #64748b; }
+    .footer-link a { color: #1a56db; text-decoration: none; font-weight: 500; }
+    .pwd-hint { font-size: .75rem; color: #6b7280; margin-top: -.75rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Clube USA</div>
+  <div class="subtitle">Crie sua conta gratuita</div>
+
+  <div id="msg" class="msg" role="alert"></div>
+
+  <form id="form" novalidate>
+    <label for="full-name">Nome completo</label>
+    <input id="full-name" type="text" placeholder="Maria Silva" autocomplete="name" required>
+
+    <label for="email">Email</label>
+    <input id="email" type="email" placeholder="maria@email.com" autocomplete="email" required>
+
+    <label for="password">Senha</label>
+    <input id="password" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+    <p class="pwd-hint">Use letras, números e símbolos para uma senha forte.</p>
+
+    <button id="btn" type="submit" class="btn">Criar conta</button>
+  </form>
+
+  <div class="footer-link">Já tem conta? <a href="login.html">Entrar</a></div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+  /* global SUPABASE_URL, SUPABASE_ANON_KEY, supabase */
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const form = document.getElementById("form");
+  const btn  = document.getElementById("btn");
+  const msg  = document.getElementById("msg");
+
+  function showMsg(text, type) {
+    msg.textContent = text;
+    msg.className = `msg ${type}`;
+  }
+
+  function sanitize(str) {
+    const d = document.createElement("div");
+    d.appendChild(document.createTextNode(str));
+    return d.innerHTML;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    msg.className = "msg";
+    msg.textContent = "";
+
+    const fullName = document.getElementById("full-name").value.trim();
+    const email    = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    if (!fullName) { showMsg("Informe seu nome completo.", "error"); return; }
+    if (!email)    { showMsg("Informe seu email.", "error"); return; }
+    if (password.length < 8) {
+      showMsg("A senha deve ter pelo menos 8 caracteres.", "error");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Aguarde…";
+
+    const { error } = await sb.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: sanitize(fullName) },
+        emailRedirectTo: `${location.origin}/verify-email.html`,
+      },
+    });
+
+    btn.disabled = false;
+    btn.textContent = "Criar conta";
+
+    if (error) {
+      showMsg(error.message || "Erro ao criar conta. Tente novamente.", "error");
+    } else {
+      form.reset();
+      showMsg(
+        "Conta criada! Confira seu email e clique no link de confirmação para ativar.",
+        "success"
+      );
+    }
+  });
+</script>
+</body>
+</html>

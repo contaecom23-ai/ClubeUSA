@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      color: #111827;
+    }
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 1.5rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { font-size: 1.2rem; font-weight: 700; color: #1a56db; }
+    .user-email { font-size: .8rem; color: #6b7280; }
+    .logout-btn {
+      background: none;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      padding: .3rem .75rem;
+      font-size: .8rem;
+      cursor: pointer;
+      color: #374151;
+      transition: background .15s;
+    }
+    .logout-btn:hover { background: #f3f4f6; }
+    main { max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    .welcome { font-size: 1.25rem; font-weight: 600; margin-bottom: .25rem; }
+    .subtext { font-size: .875rem; color: #64748b; margin-bottom: 2rem; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+    .field { margin-bottom: 1rem; }
+    label { display: block; font-size: .8rem; font-weight: 500; color: #6b7280; margin-bottom: .2rem; }
+    input, select {
+      width: 100%;
+      padding: .55rem .875rem;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: .95rem;
+      color: #111827;
+      transition: border-color .15s;
+      background: #fff;
+    }
+    input:focus, select:focus { outline: none; border-color: #1a56db; }
+    .btn {
+      padding: .6rem 1.25rem;
+      background: #1a56db;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn:hover { background: #1e40af; }
+    .btn:disabled { background: #93c5fd; cursor: not-allowed; }
+    .save-msg { font-size: .8rem; margin-left: .75rem; color: #16a34a; }
+    .save-msg.error { color: #dc2626; }
+    .loading { color: #6b7280; font-size: .9rem; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">Clube USA</div>
+  <div style="display:flex;align-items:center;gap:.75rem">
+    <span id="header-email" class="user-email"></span>
+    <button class="logout-btn" id="logout-btn">Sair</button>
+  </div>
+</header>
+
+<main>
+  <div id="loading-state">
+    <p class="loading">Carregando perfil…</p>
+  </div>
+
+  <div id="dashboard-content" style="display:none">
+    <p class="welcome" id="welcome-name">Olá!</p>
+    <p class="subtext">Bem-vindo ao Clube USA — sua plataforma para imigrantes brasileiros nos EUA.</p>
+
+    <div class="card">
+      <div class="card-title">Meu Perfil</div>
+
+      <form id="profile-form" novalidate>
+        <div class="field">
+          <label for="full-name">Nome completo</label>
+          <input id="full-name" type="text" required>
+        </div>
+        <div class="field">
+          <label for="city">Cidade</label>
+          <input id="city" type="text" placeholder="Miami">
+        </div>
+        <div class="field">
+          <label for="state">Estado (sigla)</label>
+          <input id="state" type="text" placeholder="FL" maxlength="2" style="text-transform:uppercase">
+        </div>
+        <div class="field">
+          <label for="zip">ZIP Code</label>
+          <input id="zip" type="text" placeholder="33101" maxlength="10">
+        </div>
+        <div class="field">
+          <label for="language">Idioma preferido</label>
+          <select id="language">
+            <option value="pt">Português</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center">
+          <button type="submit" class="btn" id="save-btn">Salvar alterações</button>
+          <span id="save-msg" class="save-msg"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+  /* global SUPABASE_URL, SUPABASE_ANON_KEY, API_BASE_URL, supabase */
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentSession = null;
+
+  async function apiGet(path) {
+    const resp = await fetch(`${API_BASE_URL}${path}`, {
+      headers: { Authorization: `Bearer ${currentSession.access_token}` },
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return resp.json();
+  }
+
+  async function apiPatch(path, body) {
+    const resp = await fetch(`${API_BASE_URL}${path}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${currentSession.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+    return resp.json();
+  }
+
+  function fillForm(profile) {
+    document.getElementById("full-name").value  = profile.full_name || "";
+    document.getElementById("city").value       = profile.city     || "";
+    document.getElementById("state").value      = profile.state    || "";
+    document.getElementById("zip").value        = profile.zip_code || "";
+    document.getElementById("language").value   = profile.language || "pt";
+    document.getElementById("welcome-name").textContent = `Olá, ${profile.full_name || "usuário"}!`;
+  }
+
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      window.location.href = "login.html";
+      return;
+    }
+    currentSession = session;
+    document.getElementById("header-email").textContent = session.user.email;
+
+    try {
+      const profile = await apiGet("/profile/me");
+      fillForm(profile);
+      document.getElementById("loading-state").style.display  = "none";
+      document.getElementById("dashboard-content").style.display = "";
+    } catch (err) {
+      document.getElementById("loading-state").innerHTML =
+        `<p style="color:#dc2626">Erro ao carregar perfil: ${err.message}</p>`;
+    }
+  })();
+
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    await sb.auth.signOut();
+    window.location.href = "login.html";
+  });
+
+  document.getElementById("profile-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const saveMsg = document.getElementById("save-msg");
+    const saveBtn = document.getElementById("save-btn");
+    saveMsg.textContent = "";
+    saveMsg.className = "save-msg";
+
+    const fullName = document.getElementById("full-name").value.trim();
+    if (!fullName) { saveMsg.textContent = "Nome é obrigatório."; saveMsg.className = "save-msg error"; return; }
+
+    const payload = {
+      full_name: fullName,
+      city:      document.getElementById("city").value.trim()  || null,
+      state:     document.getElementById("state").value.trim().toUpperCase() || null,
+      zip_code:  document.getElementById("zip").value.trim()   || null,
+      language:  document.getElementById("language").value,
+    };
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Salvando…";
+
+    try {
+      const updated = await apiPatch("/profile/me", payload);
+      fillForm(updated);
+      saveMsg.textContent = "Salvo com sucesso!";
+    } catch (err) {
+      saveMsg.textContent = err.message;
+      saveMsg.className = "save-msg error";
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Salvar alterações";
+    }
+  });
+</script>
+</body>
+</html>

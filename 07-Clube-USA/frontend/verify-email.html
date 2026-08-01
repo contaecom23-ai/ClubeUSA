@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email confirmado — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      text-align: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 420px;
+    }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.4rem; color: #111827; margin-bottom: .5rem; }
+    p { color: #64748b; font-size: .9rem; margin-bottom: 1.5rem; line-height: 1.5; }
+    .btn {
+      display: inline-block;
+      padding: .7rem 1.5rem;
+      background: #1a56db;
+      color: #fff;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background .15s;
+    }
+    .btn:hover { background: #1e40af; }
+    .error-msg { color: #dc2626; font-size: .875rem; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div id="content-loading">
+    <div class="icon">⏳</div>
+    <h1>Verificando email…</h1>
+    <p>Aguarde um momento.</p>
+  </div>
+
+  <div id="content-success" style="display:none">
+    <div class="icon">✅</div>
+    <h1>Email confirmado!</h1>
+    <p>Sua conta foi ativada com sucesso. Bem-vindo ao Clube USA!</p>
+    <a href="dashboard.html" class="btn">Ir para o painel</a>
+  </div>
+
+  <div id="content-error" style="display:none">
+    <div class="icon">❌</div>
+    <h1>Falha na verificação</h1>
+    <p id="error-detail" class="error-msg">Link inválido ou expirado.</p>
+    <a href="register.html" class="btn">Criar nova conta</a>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+  /* global SUPABASE_URL, SUPABASE_ANON_KEY, supabase */
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function show(id) {
+    ["content-loading", "content-success", "content-error"].forEach((el) => {
+      document.getElementById(el).style.display = el === id ? "" : "none";
+    });
+  }
+
+  (async () => {
+    // Supabase redireciona com hash #access_token=...&type=signup para o emailRedirectTo
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const type = hash.get("type");
+    const accessToken = hash.get("access_token");
+    const refreshToken = hash.get("refresh_token");
+
+    if (type === "signup" && accessToken && refreshToken) {
+      const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      if (error) {
+        document.getElementById("error-detail").textContent = error.message;
+        show("content-error");
+      } else {
+        show("content-success");
+      }
+    } else {
+      document.getElementById("error-detail").textContent =
+        "Link de verificação inválido ou já utilizado.";
+      show("content-error");
+    }
+  })();
+</script>
+</body>
+</html>
