@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu perfil — Clube USA</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    .section-title {
+      font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+      color: #6b7280; letter-spacing: .5px; margin: 24px 0 12px;
+    }
+    #edit-form { display: none; }
+    #edit-form.active { display: block; }
+    .btn-sm {
+      display: inline-block; padding: 8px 16px; font-size: 0.875rem;
+      width: auto; margin-top: 8px;
+    }
+    .row-btns { display: flex; gap: 10px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="brand">🇺🇸 Clube USA</a>
+    <a href="#" id="logout-btn">Sair</a>
+  </nav>
+
+  <div class="container">
+    <div id="alert" class="alert"></div>
+
+    <!-- Modo visualização -->
+    <div id="view-mode">
+      <div class="section-title">Meu perfil</div>
+      <div class="card">
+        <div id="profile-fields"></div>
+        <button class="btn btn-secondary btn-sm" id="edit-btn" style="margin-top:16px">Editar perfil</button>
+      </div>
+    </div>
+
+    <!-- Modo edição -->
+    <div id="edit-form">
+      <div class="section-title">Editar perfil</div>
+      <div class="card">
+        <div id="edit-alert" class="alert"></div>
+        <div class="form-group">
+          <label for="f-name">Nome completo</label>
+          <input id="f-name" type="text">
+        </div>
+        <div class="form-group">
+          <label for="f-estado">Estado</label>
+          <select id="f-estado">
+            <option value="">Nenhum</option>
+            <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+            <option>CA</option><option>CO</option><option>CT</option><option>DC</option>
+            <option>DE</option><option>FL</option><option>GA</option><option>HI</option>
+            <option>ID</option><option>IL</option><option>IN</option><option>IA</option>
+            <option>KS</option><option>KY</option><option>LA</option><option>ME</option>
+            <option>MD</option><option>MA</option><option>MI</option><option>MN</option>
+            <option>MS</option><option>MO</option><option>MT</option><option>NE</option>
+            <option>NV</option><option>NH</option><option>NJ</option><option>NM</option>
+            <option>NY</option><option>NC</option><option>ND</option><option>OH</option>
+            <option>OK</option><option>OR</option><option>PA</option><option>RI</option>
+            <option>SC</option><option>SD</option><option>TN</option><option>TX</option>
+            <option>UT</option><option>VT</option><option>VA</option><option>WA</option>
+            <option>WV</option><option>WI</option><option>WY</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="f-cidade">Cidade</label>
+          <input id="f-cidade" type="text">
+        </div>
+        <div class="form-group">
+          <label for="f-whatsapp">WhatsApp</label>
+          <input id="f-whatsapp" type="tel">
+        </div>
+        <div class="row-btns">
+          <button class="btn btn-primary btn-sm" id="save-btn">Salvar</button>
+          <button class="btn btn-secondary btn-sm" id="cancel-btn" style="background:#6b7280">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script>
+    if (!auth.isLoggedIn()) window.location.href = "/login.html";
+
+    const alertEl  = document.getElementById("alert");
+    const editAlert = document.getElementById("edit-alert");
+    let currentProfile = null;
+
+    function showAlert(el, msg, type) {
+      el.textContent = msg;
+      el.className   = `alert alert-${type} show`;
+    }
+
+    function renderProfile(p) {
+      currentProfile = p;
+      const fields = [
+        { label: "Nome",    value: p.name },
+        { label: "Email",   value: p.email },
+        { label: "Estado",  value: p.estado || "—" },
+        { label: "Cidade",  value: p.cidade || "—" },
+        { label: "WhatsApp",value: p.whatsapp || "—" },
+        { label: "Membro desde", value: new Date(p.created_at).toLocaleDateString("pt-BR") },
+      ];
+      const container = document.getElementById("profile-fields");
+      container.innerHTML = "";
+      fields.forEach(f => {
+        const div = document.createElement("div");
+        div.className = "profile-field";
+        const lbl = document.createElement("span");
+        lbl.className = "label";
+        lbl.textContent = f.label;
+        const val = document.createElement("span");
+        val.className = "value";
+        val.textContent = f.value; // textContent = safe from XSS
+        div.appendChild(lbl);
+        div.appendChild(val);
+        container.appendChild(div);
+      });
+    }
+
+    async function loadProfile() {
+      try {
+        const resp = await api.getMe();
+        if (!resp || !resp.ok) {
+          showAlert(alertEl, "Não foi possível carregar o perfil.", "error");
+          return;
+        }
+        renderProfile(await resp.json());
+      } catch {
+        showAlert(alertEl, "Erro de conexão.", "error");
+      }
+    }
+
+    loadProfile();
+
+    document.getElementById("edit-btn").addEventListener("click", () => {
+      if (!currentProfile) return;
+      document.getElementById("f-name").value    = currentProfile.name;
+      document.getElementById("f-estado").value  = currentProfile.estado || "";
+      document.getElementById("f-cidade").value  = currentProfile.cidade || "";
+      document.getElementById("f-whatsapp").value = currentProfile.whatsapp || "";
+      document.getElementById("view-mode").style.display = "none";
+      document.getElementById("edit-form").classList.add("active");
+    });
+
+    document.getElementById("cancel-btn").addEventListener("click", () => {
+      document.getElementById("edit-form").classList.remove("active");
+      document.getElementById("view-mode").style.display = "";
+      editAlert.className = "alert";
+    });
+
+    document.getElementById("save-btn").addEventListener("click", async () => {
+      editAlert.className = "alert";
+      const btn = document.getElementById("save-btn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Salvando…';
+
+      const data = {
+        name:     document.getElementById("f-name").value.trim() || null,
+        estado:   document.getElementById("f-estado").value || null,
+        cidade:   document.getElementById("f-cidade").value.trim() || null,
+        whatsapp: document.getElementById("f-whatsapp").value.trim() || null,
+      };
+
+      try {
+        const resp = await api.updateMe(data);
+        if (resp && resp.ok) {
+          renderProfile(await resp.json());
+          document.getElementById("edit-form").classList.remove("active");
+          document.getElementById("view-mode").style.display = "";
+          showAlert(alertEl, "Perfil atualizado com sucesso!", "success");
+        } else {
+          showAlert(editAlert, resp ? await apiError(resp) : "Erro.", "error");
+        }
+      } catch {
+        showAlert(editAlert, "Erro de conexão.", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Salvar";
+      }
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await api.logout();
+    });
+  </script>
+</body>
+</html>

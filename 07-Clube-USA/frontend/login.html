@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <h1><a href="/" style="color:inherit;text-decoration:none;">🇺🇸 Clube USA</a></h1>
+      <p>Entre na sua conta</p>
+    </div>
+
+    <div class="card">
+      <div id="alert" class="alert"></div>
+
+      <form id="form" novalidate>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="seuemail@exemplo.com"
+                 autocomplete="email" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input id="password" type="password" placeholder="••••••••"
+                 autocomplete="current-password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="btn">Entrar</button>
+      </form>
+    </div>
+
+    <p class="footer-text">
+      Não tem conta? <a href="/cadastro.html">Cadastre-se grátis</a>
+    </p>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script>
+    if (auth.isLoggedIn()) window.location.href = "/perfil.html";
+
+    const form    = document.getElementById("form");
+    const alertEl = document.getElementById("alert");
+    const btn     = document.getElementById("btn");
+
+    function showAlert(msg, type) {
+      alertEl.textContent = msg;
+      alertEl.className   = `alert alert-${type} show`;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      alertEl.className = "alert";
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Entrando…';
+
+      const email    = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      try {
+        const resp = await api.login(email, password);
+        if (resp && resp.ok) {
+          window.location.href = "/perfil.html";
+        } else if (resp) {
+          const msg = await apiError(resp);
+          if (resp.status === 403 && msg.includes("confirme")) {
+            showAlert("⚠️ Confirme seu email antes de entrar. Verifique sua caixa de entrada.", "info");
+          } else {
+            showAlert(msg, "error");
+          }
+        }
+      } catch {
+        showAlert("Erro de conexão. Tente novamente.", "error");
+      } finally {
+        btn.disabled  = false;
+        btn.textContent = "Entrar";
+      }
+    });
+  </script>
+</body>
+</html>
