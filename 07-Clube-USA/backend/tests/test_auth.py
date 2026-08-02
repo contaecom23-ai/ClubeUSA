@@ -27,11 +27,20 @@ def _setup_existing_user(mock_db, user: dict):
 # ── Testes de registro ────────────────────────────────────────────────────────
 
 def test_register_new_user_returns_201(client, mock_db):
-    chain, _ = _setup_empty_db(mock_db)
-    # insert retorna o novo usuário
+    chain, _ = make_supabase_mock(data=[])
+    mock_db.table.return_value = chain
+
+    # chain.execute() é chamado 3 vezes:
+    # 1. SELECT para checar email existente → vazio
+    # 2. INSERT do usuário → retorna id
+    # 3. INSERT do perfil → não importa
     insert_response = MagicMock()
     insert_response.data = [{"id": "uuid-123"}]
-    chain.insert.return_value.execute.return_value = insert_response
+    chain.execute.side_effect = [
+        MagicMock(data=[]),   # SELECT users: email não existe
+        insert_response,       # INSERT users: novo usuário criado
+        MagicMock(data=[]),   # INSERT profiles
+    ]
 
     with patch("app.routers.auth.send_confirmation_email"):
         res = client.post("/auth/register", json={
