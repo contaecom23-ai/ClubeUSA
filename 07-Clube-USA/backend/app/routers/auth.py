@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import logging
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -10,6 +10,7 @@ from ..email_service import send_confirmation_email
 from ..models import LoginRequest, MessageResponse, RegisterRequest, TokenResponse
 from ..security import (
     create_access_token,
+    dummy_verify,
     generate_email_token,
     hash_password,
     verify_password,
@@ -24,13 +25,14 @@ EMAIL_TOKEN_TTL_HOURS = 24
 
 @router.post("/register", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
-async def register(request: Request, body: RegisterRequest) -> MessageResponse:
+async def register(request: Request, body: RegisterRequest, response: Response) -> MessageResponse:
     db = get_db()
     email = body.email.lower().strip()
 
     existing = db.table("users").select("id").eq("email", email).execute()
     if existing.data:
-        # Resposta genérica — não confirmar se email existe (anti-enumeration)
+        # Anti-enumeration: não confirma se email existe; retorna 200 (não 201) para não vazar
+        response.status_code = status.HTTP_200_OK
         return MessageResponse(message="Se este email for novo, você receberá um link de confirmação.")
 
     confirm_token = generate_email_token()
@@ -50,14 +52,12 @@ async def register(request: Request, body: RegisterRequest) -> MessageResponse:
 
     user_id = result.data[0]["id"]
 
-    # Cria perfil vazio vinculado ao user
     db.table("profiles").insert({"user_id": user_id}).execute()
 
     try:
         send_confirmation_email(email, body.full_name.strip(), confirm_token)
     except Exception:
         logger.exception("Falha ao enviar email de confirmação para %s", email)
-        # Não falha o cadastro — o usuário pode solicitar reenvio
 
     return MessageResponse(message="Conta criada! Verifique seu email para confirmar o cadastro.")
 
@@ -105,9 +105,8 @@ async def login(request: Request, body: LoginRequest) -> TokenResponse:
         "id,password_hash,email_confirmed"
     ).eq("email", email).execute()
 
-    # Timing constante para evitar user enumeration
     if not result.data:
-        verify_password("dummy", "$2b$12$" + "x" * 53)
+        dummy_verify()  # timing constante — anti-enumeration
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
 
     user = result.data[0]
@@ -133,11 +132,10 @@ async def resend_confirmation(request: Request, body: LoginRequest) -> MessageRe
         "id,full_name,password_hash,email_confirmed"
     ).eq("email", email).execute()
 
-    # Resposta genérica sempre
     generic = MessageResponse(message="Se o email existir e não estiver confirmado, você receberá um novo link.")
 
     if not result.data:
-        verify_password("dummy", "$2b$12$" + "x" * 53)
+        dummy_verify()
         return generic
 
     user = result.data[0]

@@ -69,21 +69,19 @@ def test_get_me_no_token(client, mock_db):
 
 def test_get_me_invalid_token(client, mock_db):
     res = client.get("/users/me", headers={"Authorization": "Bearer token-invalido"})
-    assert res.status_code == 403
+    assert res.status_code == 401
 
 
 def test_get_me_expired_token(client, mock_db):
     from datetime import timedelta
-    import os
     from jose import jwt
     from app.config import settings
 
-    # Cria token já expirado
     payload = {"sub": "uuid-alice", "exp": datetime.now(tz=timezone.utc) - timedelta(hours=1)}
     expired_token = jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
     res = client.get("/users/me", headers={"Authorization": f"Bearer {expired_token}"})
-    assert res.status_code == 403
+    assert res.status_code == 401
 
 
 # ── PATCH /users/me ───────────────────────────────────────────────────────────

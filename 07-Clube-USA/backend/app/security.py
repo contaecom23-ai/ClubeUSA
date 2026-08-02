@@ -2,24 +2,34 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from .config import settings
 
-_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 ALGORITHM = "HS256"
+
+# Pre-computed dummy hash used for constant-time anti-enumeration checks.
+# Generated once at startup; never changes at runtime.
+_DUMMY_HASH = bcrypt.hashpw(b"clube-usa-dummy-constant", bcrypt.gensalt())
 
 
 # ── Passwords ─────────────────────────────────────────────────────────────────
 
 def hash_password(plain: str) -> str:
-    return _pwd_ctx.hash(plain)
+    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_ctx.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(plain.encode(), hashed.encode())
+    except Exception:
+        return False
+
+
+def dummy_verify() -> None:
+    """Timing-constant no-op used in anti-enumeration paths."""
+    bcrypt.checkpw(b"dummy", _DUMMY_HASH)
 
 
 # ── JWT ───────────────────────────────────────────────────────────────────────
