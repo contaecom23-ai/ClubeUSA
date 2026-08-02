@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    body { justify-content: flex-start; padding: 0; }
+    .page-wrap { width: 100%; max-width: 800px; }
+    .content { padding: 1.5rem; }
+    .email-banner { background:#fef3c7; border:1px solid #fcd34d; color:#92400e;
+      padding:.75rem 1rem; border-radius:var(--radius); margin-bottom:1rem; font-size:.875rem; }
+    .avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--brand);
+      color: #fff; display:flex; align-items:center; justify-content:center;
+      font-size:1.75rem; font-weight:700; margin-bottom:1rem; }
+    .section-title { font-size:.875rem; font-weight:600; color:var(--gray-600);
+      text-transform:uppercase; letter-spacing:.05em; margin:1.5rem 0 .75rem; }
+    .save-btn { background:var(--brand); color:#fff; border:none; border-radius:var(--radius);
+      padding:.625rem 1.25rem; font-size:.9rem; font-weight:600; cursor:pointer; }
+    .save-btn:hover { background:var(--brand-dark); }
+    .logout { color:var(--danger); font-size:.875rem; cursor:pointer; background:none; border:none; }
+    .logout:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+    <nav class="nav">
+      <span class="brand">Clube USA</span>
+      <button class="logout" onclick="logout()">Sair</button>
+    </nav>
+
+    <div class="content">
+      <div id="email-banner" class="email-banner" style="display:none">
+        ⚠️ Confirme seu email para ter acesso completo.
+        Não recebeu? <a href="#" onclick="resendEmail()">Reenviar</a>
+      </div>
+
+      <div id="loading" style="color:var(--gray-600)">Carregando…</div>
+      <div id="profile-section" style="display:none">
+        <div class="avatar" id="avatar-letter">?</div>
+        <h2 id="user-name" style="font-size:1.25rem"></h2>
+        <p style="color:var(--gray-600);font-size:.875rem" id="user-email"></p>
+
+        <p class="section-title">Localização</p>
+        <form id="profile-form">
+          <div class="field">
+            <label>Cidade</label>
+            <input type="text" id="city" placeholder="Miami">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+            <div class="field">
+              <label>Estado (2 letras)</label>
+              <input type="text" id="state" maxlength="2" placeholder="FL">
+            </div>
+            <div class="field">
+              <label>ZIP Code</label>
+              <input type="text" id="zip_code" placeholder="33101">
+            </div>
+          </div>
+          <div class="field">
+            <label>Bio <small style="color:#9ca3af">(máx 500 caracteres)</small></label>
+            <textarea id="bio" rows="3" maxlength="500"
+              style="width:100%;padding:.625rem .75rem;border:1px solid var(--gray-300);border-radius:var(--radius);font-size:1rem;resize:vertical"></textarea>
+          </div>
+          <button type="submit" class="save-btn">Salvar</button>
+        </form>
+
+        <div class="msg" id="msg" style="margin-top:.75rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = (window.CLUBE_API_URL || 'http://localhost:8000');
+
+    function logout() {
+      localStorage.removeItem('clube_token');
+      localStorage.removeItem('clube_token_expires');
+      localStorage.removeItem('clube_email_confirmed');
+      window.location.href = 'login.html';
+    }
+
+    async function apiFetch(path, opts = {}) {
+      const token = localStorage.getItem('clube_token');
+      if (!token) { window.location.href = 'login.html'; return null; }
+      return fetch(`${API}${path}`, {
+        ...opts,
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      });
+    }
+
+    async function loadProfile() {
+      const res = await apiFetch('/users/me');
+      if (!res) return;
+      if (res.status === 401 || res.status === 403) { logout(); return; }
+
+      const data = await res.json();
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('profile-section').style.display = 'block';
+
+      document.getElementById('avatar-letter').textContent = (data.full_name || '?')[0].toUpperCase();
+      document.getElementById('user-name').textContent = data.full_name;
+      document.getElementById('user-email').textContent = data.email;
+      document.getElementById('city').value = data.city || '';
+      document.getElementById('state').value = data.state || '';
+      document.getElementById('zip_code').value = data.zip_code || '';
+      document.getElementById('bio').value = data.bio || '';
+
+      if (!data.email_confirmed) {
+        document.getElementById('email-banner').style.display = 'block';
+      }
+    }
+
+    async function resendEmail() {
+      const email = document.getElementById('user-email').textContent;
+      const password = prompt('Digite sua senha para reenviar o email de confirmação:');
+      if (!password) return;
+      const res = await fetch(`${API}/auth/resend-confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      alert(data.message);
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('msg');
+      msg.className = 'msg';
+
+      const body = {};
+      const city = document.getElementById('city').value.trim();
+      const state = document.getElementById('state').value.trim().toUpperCase();
+      const zip = document.getElementById('zip_code').value.trim();
+      const bio = document.getElementById('bio').value.trim();
+
+      if (city) body.city = city;
+      if (state) body.state = state;
+      if (zip) body.zip_code = zip;
+      if (bio) body.bio = bio;
+
+      const res = await apiFetch('/users/me', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+      if (!res) return;
+      const data = await res.json();
+
+      if (res.ok) {
+        msg.className = 'msg success show';
+        msg.textContent = 'Perfil atualizado!';
+      } else {
+        const detail = Array.isArray(data.detail)
+          ? data.detail.map(d => d.msg).join(' | ')
+          : (data.detail || 'Erro ao salvar');
+        msg.className = 'msg error show';
+        msg.textContent = detail;
+      }
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>
