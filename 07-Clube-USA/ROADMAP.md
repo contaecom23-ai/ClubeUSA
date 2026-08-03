@@ -1,12 +1,13 @@
 # ROADMAP — Clube USA
 
 > Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
+> `⏳` = PR aberto aguardando merge. Não refaça — o código já existe.
 
 ---
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+- ⏳ **0.1** Cadastro + perfil mínimo + email confirmado → **PR #42** (`claude/fase-0.1-cadastro-perfil`) aguardando merge + config Supabase pelo dono
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
@@ -65,4 +66,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-08-03*
