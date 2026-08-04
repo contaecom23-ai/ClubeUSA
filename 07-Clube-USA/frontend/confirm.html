@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmando email — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+           background: #f3f4f6; min-height: 100vh;
+           display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { background: #fff; border-radius: 12px; padding: 40px 32px;
+            width: 100%; max-width: 420px; box-shadow: 0 4px 24px rgba(0,0,0,.08);
+            text-align: center; }
+    .logo { font-size: 22px; font-weight: 800; color: #1a56db; margin-bottom: 24px; }
+    .icon { font-size: 48px; margin-bottom: 16px; }
+    h2 { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 8px; }
+    p { color: #6b7280; font-size: 15px; line-height: 1.5; }
+    .btn { display: inline-block; margin-top: 24px; padding: 12px 28px;
+           background: #1a56db; color: #fff; border-radius: 8px;
+           text-decoration: none; font-weight: 600; font-size: 15px; }
+    .btn:hover { background: #1648c8; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Clube USA</div>
+  <div class="icon" id="icon">⏳</div>
+  <h2 id="title">Verificando seu email...</h2>
+  <p id="desc">Aguarde um momento.</p>
+  <div id="action"></div>
+</div>
+
+<script>
+  const API = (window.CLUBE_USA_API || 'http://localhost:8000');
+
+  (async () => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const icon = document.getElementById('icon');
+    const title = document.getElementById('title');
+    const desc = document.getElementById('desc');
+    const action = document.getElementById('action');
+
+    if (!token) {
+      icon.textContent = '⚠️';
+      title.textContent = 'Link inválido';
+      desc.textContent = 'Nenhum token encontrado na URL.';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/auth/verify-email?token=${encodeURIComponent(token)}`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        icon.textContent = '✅';
+        title.textContent = 'Email confirmado!';
+        desc.textContent = data.message || 'Sua conta está ativa. Faça login para continuar.';
+        action.innerHTML = '<a href="login.html" class="btn">Fazer login</a>';
+      } else {
+        icon.textContent = '❌';
+        title.textContent = 'Não foi possível confirmar';
+        desc.textContent = data.detail || 'O link pode ter expirado.';
+        action.innerHTML = '<a href="register.html" class="btn">Voltar ao cadastro</a>';
+      }
+    } catch {
+      icon.textContent = '⚠️';
+      title.textContent = 'Erro de conexão';
+      desc.textContent = 'Não foi possível conectar ao servidor. Tente novamente.';
+    }
+  })();
+</script>
+</body>
+</html>
