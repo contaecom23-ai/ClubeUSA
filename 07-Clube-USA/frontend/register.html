@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 420px;
+    }
+    .logo { text-align: center; margin-bottom: 1.5rem; }
+    .logo span { font-size: 2rem; }
+    h1 { font-size: 1.5rem; font-weight: 700; text-align: center; color: #1a202c; margin-bottom: 0.25rem; }
+    .subtitle { text-align: center; color: #718096; font-size: .875rem; margin-bottom: 2rem; }
+    label { display: block; font-size: .875rem; font-weight: 600; color: #4a5568; margin-bottom: .35rem; }
+    input {
+      width: 100%; padding: .75rem 1rem;
+      border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 1rem; color: #1a202c;
+      transition: border-color .15s;
+      margin-bottom: 1rem;
+    }
+    input:focus { outline: none; border-color: #3b82f6; }
+    input.error { border-color: #e53e3e; }
+    .field-error { font-size: .8rem; color: #e53e3e; margin-top: -.75rem; margin-bottom: .75rem; }
+    button[type=submit] {
+      width: 100%; padding: .875rem;
+      background: #3b82f6; color: #fff;
+      font-size: 1rem; font-weight: 600;
+      border: none; border-radius: 8px; cursor: pointer;
+      transition: background .15s;
+      margin-top: .5rem;
+    }
+    button[type=submit]:hover { background: #2563eb; }
+    button[type=submit]:disabled { background: #93c5fd; cursor: not-allowed; }
+    .alert {
+      padding: .875rem 1rem; border-radius: 8px;
+      font-size: .875rem; margin-bottom: 1rem;
+      display: none;
+    }
+    .alert.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .alert.error-box { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .footer-link { text-align: center; margin-top: 1.5rem; font-size: .875rem; color: #718096; }
+    .footer-link a { color: #3b82f6; text-decoration: none; font-weight: 600; }
+    .footer-link a:hover { text-decoration: underline; }
+    .pwd-hint { font-size: .78rem; color: #718096; margin-top: -.75rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><span>🇺🇸</span></div>
+  <h1>Crie sua conta</h1>
+  <p class="subtitle">Plataforma para brasileiros nos EUA</p>
+
+  <div class="alert success" id="msgSuccess"></div>
+  <div class="alert error-box" id="msgError"></div>
+
+  <form id="registerForm" novalidate>
+    <label for="full_name">Nome completo</label>
+    <input type="text" id="full_name" name="full_name" placeholder="Seu nome" autocomplete="name" required>
+    <div class="field-error" id="errName"></div>
+
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" placeholder="seu@email.com" autocomplete="email" required>
+    <div class="field-error" id="errEmail"></div>
+
+    <label for="password">Senha</label>
+    <input type="password" id="password" name="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+    <p class="pwd-hint">Ao menos 8 caracteres, uma letra e um número.</p>
+    <div class="field-error" id="errPassword"></div>
+
+    <button type="submit" id="submitBtn">Cadastrar</button>
+  </form>
+
+  <div class="footer-link">
+    Já tem conta? <a href="login.html">Entrar</a>
+  </div>
+</div>
+
+<script>
+  // Altere para a URL real do backend em produção
+  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : '';
+
+  const form = document.getElementById('registerForm');
+  const submitBtn = document.getElementById('submitBtn');
+
+  function clearErrors() {
+    ['errName', 'errEmail', 'errPassword'].forEach(id => {
+      document.getElementById(id).textContent = '';
+    });
+    ['full_name', 'email', 'password'].forEach(id => {
+      document.getElementById(id).classList.remove('error');
+    });
+    ['msgSuccess', 'msgError'].forEach(id => {
+      const el = document.getElementById(id);
+      el.style.display = 'none';
+      el.textContent = '';
+    });
+  }
+
+  function showGlobalError(msg) {
+    const el = document.getElementById('msgError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function showSuccess(msg) {
+    const el = document.getElementById('msgSuccess');
+    el.textContent = msg;
+    el.style.display = 'block';
+    form.style.display = 'none';
+  }
+
+  function handleValidationErrors(errors) {
+    errors.forEach(err => {
+      const loc = err.loc && err.loc[err.loc.length - 1];
+      if (loc === 'full_name') {
+        document.getElementById('errName').textContent = err.msg;
+        document.getElementById('full_name').classList.add('error');
+      } else if (loc === 'email') {
+        document.getElementById('errEmail').textContent = err.msg;
+        document.getElementById('email').classList.add('error');
+      } else if (loc === 'password') {
+        document.getElementById('errPassword').textContent = err.msg;
+        document.getElementById('password').classList.add('error');
+      }
+    });
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearErrors();
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Cadastrando...';
+
+    const payload = {
+      full_name: document.getElementById('full_name').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      password: document.getElementById('password').value,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showSuccess(data.message || 'Cadastro realizado! Verifique seu email.');
+      } else if (res.status === 422 && data.detail) {
+        if (Array.isArray(data.detail)) {
+          handleValidationErrors(data.detail);
+        } else {
+          showGlobalError(data.detail);
+        }
+      } else {
+        showGlobalError(data.detail || 'Erro inesperado. Tente novamente.');
+      }
+    } catch {
+      showGlobalError('Não foi possível conectar ao servidor. Tente novamente.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Cadastrar';
+    }
+  });
+</script>
+</body>
+</html>
