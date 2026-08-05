@@ -6,6 +6,27 @@
 
 ---
 
+## ⚠️ BLOQUEIO CRÍTICO — LEIA ANTES DE TUDO [2026-08-05]
+
+**Situação:** O projeto está em loop há semanas. Existem **46 PRs abertos** no GitHub, todos implementando a mesma coisa (Fase 0.1 — cadastro). A causa raiz: a `main` nunca recebeu nenhum merge. O Claude não pode fazer merge — só você pode. Então cada sessão cria mais um PR.
+
+**O que você precisa fazer AGORA (30 minutos):**
+
+1. **Escolha um PR e mergee na main.** Os melhores candidatos:
+   - PR #36 (`feat/phase-0.1-auth`) — implementação desta sessão, modular, 15 testes
+   - PR #44 (`claude/fase-0.1-cadastro`) — outra implementação recente completa
+   - PR #46 (`feature/fase-0.1-cadastro-auth`) — o mais recente de todos
+
+2. **Feche os outros 45 PRs** após o merge do escolhido.
+
+3. **Configure Supabase + email** (ver decisões abaixo) para que funcione em produção.
+
+4. **Resultado:** na próxima rodada o Claude verá `[x]` no ROADMAP e avançará para Fase 0.2 (Referral).
+
+**Consequência de não agir:** o loop continua (3 PRs novos/dia) e o projeto não sai do lugar.
+
+---
+
 ## Como usar
 
 Quando o Claude travar em algo que só você pode decidir (orçamento, preços, escolhas de produto/negócio, aprovação de gasto, chaves/contas externas, direção estratégica, qualquer coisa irreversível ou com custo), ele registra aqui e segue para outra tarefa.
