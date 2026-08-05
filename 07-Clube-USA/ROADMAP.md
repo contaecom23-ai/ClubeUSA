@@ -65,4 +65,12 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+---
+
+## Status atual (2026-08-05)
+
+**BLOQUEIO:** 44 PRs abertos, nenhum mergeado. Fase 0.1 tem implementação completa no PR #44 mas não está na main. Ver DECISOES.md para o plano de desbloqueio.
+
+- **PR #44** → https://github.com/contaecom23-ai/ClubeUSA/pull/44 → MERGEAR ESTE para avançar
+
+*Atualizado em: 2026-08-05*
