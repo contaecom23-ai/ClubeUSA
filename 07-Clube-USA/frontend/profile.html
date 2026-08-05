@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    header {
+      max-width: 600px;
+      margin: 0 auto 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo { font-size: 22px; font-weight: 800; color: #1d4ed8; }
+    .logout { background: none; border: 1.5px solid #d1d5db; border-radius: 8px; padding: 6px 14px; cursor: pointer; color: #374151; font-size: 14px; }
+    .logout:hover { background: #f3f4f6; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 36px;
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+    .banner { background: #fef9c3; color: #854d0e; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 14px; display: none; }
+    h2 { font-size: 20px; font-weight: 700; margin-bottom: 20px; color: #111827; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .4px; }
+    input, textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: border-color .2s;
+      outline: none;
+    }
+    input:focus, textarea:focus { border-color: #1d4ed8; }
+    textarea { resize: vertical; min-height: 90px; }
+    .email-row { display: flex; align-items: center; gap: 10px; }
+    .badge { font-size: 12px; padding: 2px 10px; border-radius: 999px; font-weight: 700; }
+    .badge.ok  { background: #dcfce7; color: #166534; }
+    .badge.pending { background: #fef9c3; color: #854d0e; }
+    .actions { display: flex; gap: 12px; margin-top: 24px; }
+    .btn {
+      flex: 1;
+      padding: 11px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary { background: #1d4ed8; color: #fff; }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-primary:disabled { background: #93c5fd; cursor: default; }
+    .btn-secondary { background: #f3f4f6; color: #374151; border: 1.5px solid #d1d5db; }
+    .msg { margin-top: 16px; padding: 12px 16px; border-radius: 8px; font-size: 14px; display: none; }
+    .msg.success { background: #dcfce7; color: #166534; display: block; }
+    .msg.error   { background: #fee2e2; color: #991b1b; display: block; }
+  </style>
+</head>
+<body>
+<header>
+  <span class="logo">Clube USA</span>
+  <button class="logout" id="logout">Sair</button>
+</header>
+
+<div class="card">
+  <div class="banner" id="unconfirmed-banner">
+    Seu email ainda não foi confirmado. Verifique sua caixa de entrada.
+    <a href="#" id="resend" style="color:#854d0e;font-weight:700"> Reenviar link</a>
+  </div>
+
+  <h2>Meu Perfil</h2>
+
+  <form id="form">
+    <div class="field">
+      <label>Email</label>
+      <div class="email-row">
+        <input id="email" type="email" disabled>
+        <span class="badge" id="email-badge">…</span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="full_name">Nome completo</label>
+      <input id="full_name" type="text" placeholder="Seu nome">
+    </div>
+    <div class="field">
+      <label for="zip_code">ZIP Code</label>
+      <input id="zip_code" type="text" placeholder="12345" maxlength="10">
+    </div>
+    <div class="field">
+      <label for="phone">Telefone (opcional)</label>
+      <input id="phone" type="tel" placeholder="+1 (555) 000-0000">
+    </div>
+    <div class="field">
+      <label for="bio">Bio (opcional)</label>
+      <textarea id="bio" placeholder="Conte um pouco sobre você…" maxlength="500"></textarea>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn btn-secondary" id="cancel">Cancelar</button>
+      <button type="submit" class="btn btn-primary" id="save" disabled>Salvar</button>
+    </div>
+  </form>
+
+  <div class="msg" id="msg"></div>
+</div>
+
+<script>
+  const API_BASE = "http://localhost:8000"; // TODO: change in production
+
+  const token = localStorage.getItem("access_token");
+  if (!token) window.location.href = "login.html";
+
+  let original = {};
+
+  async function loadProfile() {
+    try {
+      const res = await fetch(`${API_BASE}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) { localStorage.clear(); window.location.href = "login.html"; return; }
+      const data = await res.json();
+      original = data;
+      fillForm(data);
+    } catch {
+      showMsg("error", "Erro ao carregar perfil.");
+    }
+  }
+
+  function fillForm(data) {
+    document.getElementById("email").value = data.email || "";
+    document.getElementById("full_name").value = data.full_name || "";
+    document.getElementById("zip_code").value = data.zip_code || "";
+    document.getElementById("phone").value = data.phone || "";
+    document.getElementById("bio").value = data.bio || "";
+
+    const badge = document.getElementById("email-badge");
+    if (data.email_confirmed) {
+      badge.textContent = "Confirmado";
+      badge.className = "badge ok";
+    } else {
+      badge.textContent = "Pendente";
+      badge.className = "badge pending";
+      document.getElementById("unconfirmed-banner").style.display = "block";
+    }
+
+    document.getElementById("save").disabled = false;
+  }
+
+  document.getElementById("form").addEventListener("input", () => {
+    document.getElementById("save").disabled = false;
+  });
+
+  document.getElementById("cancel").addEventListener("click", () => fillForm(original));
+
+  document.getElementById("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const save = document.getElementById("save");
+    save.disabled = true;
+    save.textContent = "Salvando…";
+
+    const payload = {
+      full_name: document.getElementById("full_name").value.trim() || null,
+      zip_code:  document.getElementById("zip_code").value.trim() || null,
+      phone:     document.getElementById("phone").value.trim() || null,
+      bio:       document.getElementById("bio").value.trim() || null,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/users/me`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        original = data;
+        fillForm(data);
+        showMsg("success", "Perfil atualizado com sucesso!");
+      } else {
+        const detail = Array.isArray(data.detail)
+          ? data.detail.map(d => d.msg).join("; ")
+          : (data.detail || "Erro inesperado");
+        showMsg("error", detail);
+      }
+    } catch {
+      showMsg("error", "Erro de conexão. Tente novamente.");
+    } finally {
+      save.disabled = false;
+      save.textContent = "Salvar";
+    }
+  });
+
+  document.getElementById("logout").addEventListener("click", () => {
+    localStorage.clear();
+    window.location.href = "login.html";
+  });
+
+  document.getElementById("resend").addEventListener("click", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("email").value;
+    try {
+      await fetch(`${API_BASE}/auth/resend-confirmation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      showMsg("success", "Novo link de confirmação enviado para " + email);
+    } catch {
+      showMsg("error", "Erro ao reenviar. Tente novamente.");
+    }
+  });
+
+  function showMsg(type, text) {
+    const el = document.getElementById("msg");
+    el.className = "msg " + type;
+    el.textContent = text;
+    setTimeout(() => { el.className = "msg"; }, 5000);
+  }
+
+  loadProfile();
+</script>
+</body>
+</html>

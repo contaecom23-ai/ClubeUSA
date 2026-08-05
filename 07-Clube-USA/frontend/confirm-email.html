@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmar Email — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      text-align: center;
+    }
+    .icon { font-size: 56px; margin-bottom: 16px; }
+    h1 { font-size: 22px; font-weight: 700; color: #111827; margin-bottom: 10px; }
+    p { color: #6b7280; font-size: 15px; line-height: 1.6; }
+    .btn {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 12px 28px;
+      background: #1d4ed8;
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .btn:hover { background: #1e40af; }
+    #loading { color: #6b7280; }
+  </style>
+</head>
+<body>
+<div class="card" id="state-loading">
+  <div class="icon">⏳</div>
+  <h1>Confirmando email…</h1>
+  <p>Aguarde um momento.</p>
+</div>
+
+<div class="card" id="state-success" style="display:none">
+  <div class="icon">✅</div>
+  <h1>Email confirmado!</h1>
+  <p>Sua conta está ativa. Bem-vindo ao Clube USA!</p>
+  <a class="btn" href="login.html">Fazer login</a>
+</div>
+
+<div class="card" id="state-error" style="display:none">
+  <div class="icon">❌</div>
+  <h1>Link inválido ou expirado</h1>
+  <p id="error-detail">O link de confirmação é inválido ou já expirou.</p>
+  <a class="btn" href="login.html" style="background:#6b7280">Ir para o login</a>
+</div>
+
+<script>
+  const API_BASE = "http://localhost:8000"; // TODO: change in production
+
+  (async () => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+
+    function show(id) {
+      ["state-loading", "state-success", "state-error"].forEach(s => {
+        document.getElementById(s).style.display = s === id ? "block" : "none";
+      });
+    }
+
+    if (!token) {
+      document.getElementById("error-detail").textContent = "Nenhum token encontrado na URL.";
+      show("state-error");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/confirm-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        show("state-success");
+      } else {
+        document.getElementById("error-detail").textContent =
+          data.detail || "Token inválido ou expirado.";
+        show("state-error");
+      }
+    } catch {
+      document.getElementById("error-detail").textContent =
+        "Erro de conexão. Tente novamente mais tarde.";
+      show("state-error");
+    }
+  })();
+</script>
+</body>
+</html>
