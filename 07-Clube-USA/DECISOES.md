@@ -27,6 +27,42 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
+### [2026-08-06] 🚨 AÇÃO URGENTE — 46 PRs abertos, projeto parado em loop
+
+**Contexto:**
+O builder autônomo roda 3x/dia mas lê o ROADMAP.md da `main`. Como nenhum PR foi mergeado, a `main` continua com todas as tarefas desmarcadas `[ ]`. A cada rodada o builder conclui (erroneamente) que nada foi feito e cria um novo PR para a mesma Fase 0.1 — resultando em 46 PRs duplicados acumulados.
+
+O **PR #46** (`feature/fase-0.1-cadastro-auth`) contém a implementação completa e verificada de Fase 0.1:
+- Backend FastAPI: registro, login, `/me`, atualização de perfil, logout
+- Rate limiting (5/min registro, 10/min login), JWT via Supabase, CORS restrito
+- Frontend HTML: register.html, login.html, dashboard.html, confirm.html
+- Schema SQL com RLS: `schema/001_users_profile.sql`
+- 24 testes automatizados: **todos passando** (verificado em 2026-08-06)
+- CI pipeline: `.github/workflows/test-backend.yml` (adicionado em 2026-08-06)
+
+**Pergunta:**
+Pode mergear o PR #46 e fechar os PRs #21–45 (duplicados)?
+
+**Ação necessária (3 passos, ~5 minutos):**
+1. Acesse https://github.com/contaecom23-ai/ClubeUSA/pull/46
+2. Revise e faça merge do PR #46
+3. Feche os PRs duplicados #21 a #45 (pode usar "Close pull request" em cada um, ou pedir ao Claude para fazer em lote após o merge)
+
+**Por que o PR #46 e não outro:**
+- É o mais recente e mais completo
+- Tem CI adicionado (test-backend.yml) — pipelines rodando automaticamente nos próximos PRs
+- Os outros PRs (22–45) têm o mesmo código com pequenas variações; nenhuma vale um merge separado
+
+**O que acontece se nada for feito:**
+- O builder continuará criando PR #47, #48, #49… a cada rodada
+- Nenhum progresso real será feito no produto
+
+**Recomendação:** Mergear PR #46 agora. Depois o builder avança para Fase 0.2 (Referral).
+
+**Status:** PENDENTE — requer ação do dono do produto
+
+---
+
 ### [2026-08-05] Credenciais Supabase — projeto de produção
 
 **Contexto:**
