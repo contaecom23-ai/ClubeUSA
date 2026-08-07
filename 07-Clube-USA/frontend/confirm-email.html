@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmação de E-mail — Clube USA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html" class="nav-brand">🇧🇷 Clube USA</a>
+  </nav>
+  <main>
+    <div class="card text-center">
+      <div id="loading">
+        <p style="font-size:2rem">⏳</p>
+        <h1>Confirmando…</h1>
+        <p class="subtitle">Aguarde um momento.</p>
+      </div>
+      <div id="success" style="display:none">
+        <p style="font-size:2.5rem">✅</p>
+        <h1>E-mail confirmado!</h1>
+        <p class="subtitle">Sua conta está ativa. Bem-vindo ao Clube USA!</p>
+        <a href="login.html?confirmed=1" class="btn btn-primary mt-2" style="display:inline-flex;width:auto;padding:.75rem 2rem">
+          Fazer login
+        </a>
+      </div>
+      <div id="error" style="display:none">
+        <p style="font-size:2.5rem">❌</p>
+        <h1>Link inválido</h1>
+        <p class="subtitle" id="errorMsg">Este link expirou ou já foi utilizado.</p>
+        <a href="login.html" class="btn btn-primary mt-2" style="display:inline-flex;width:auto;padding:.75rem 2rem">
+          Ir para login
+        </a>
+      </div>
+    </div>
+  </main>
+  <footer>&copy; 2026 Clube USA</footer>
+  <script src="js/api.js"></script>
+  <script>
+    (async () => {
+      const token = new URLSearchParams(location.search).get("token");
+
+      if (!token) {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("error").style.display = "block";
+        document.getElementById("errorMsg").textContent = "Token não encontrado na URL.";
+        return;
+      }
+
+      try {
+        await api.request(`/auth/confirm-email?token=${encodeURIComponent(token)}`);
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("success").style.display = "block";
+      } catch (err) {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("error").style.display = "block";
+        document.getElementById("errorMsg").textContent = err.message;
+      }
+    })();
+  </script>
+</body>
+</html>

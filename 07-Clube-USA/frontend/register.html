@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro — Clube USA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html" class="nav-brand">🇧🇷 Clube USA</a>
+    <div class="nav-links"><a href="login.html">Já tenho conta</a></div>
+  </nav>
+  <main>
+    <div class="card">
+      <h1>Criar conta</h1>
+      <p class="subtitle">Grátis. Sempre.</p>
+
+      <div class="alert alert-error" id="alertError"></div>
+      <div class="alert alert-success" id="alertSuccess"></div>
+
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="fullName">Nome completo</label>
+          <input type="text" id="fullName" placeholder="João Silva" required minlength="2" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label for="email">E-mail</label>
+          <input type="email" id="email" placeholder="joao@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Senha <span style="color:var(--muted);font-size:.8rem">(mín. 8 caracteres)</span></label>
+          <input type="password" id="password" placeholder="••••••••" required minlength="8" maxlength="128">
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Criar conta</button>
+      </form>
+
+      <p class="text-center mt-2" style="font-size:.85rem;color:var(--muted)">
+        Ao criar uma conta, você concorda com nossos termos de uso.
+      </p>
+    </div>
+  </main>
+  <footer>&copy; 2026 Clube USA</footer>
+  <script src="js/api.js"></script>
+  <script>
+    if (api.isLoggedIn()) api.redirectToProfile();
+
+    const form = document.getElementById("registerForm");
+    const errEl = document.getElementById("alertError");
+    const okEl = document.getElementById("alertSuccess");
+    const btn = document.getElementById("submitBtn");
+
+    function showError(msg) {
+      errEl.textContent = msg;
+      errEl.classList.add("show");
+      okEl.classList.remove("show");
+    }
+    function showSuccess(msg) {
+      okEl.textContent = msg;
+      okEl.classList.add("show");
+      errEl.classList.remove("show");
+      form.reset();
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errEl.classList.remove("show");
+      btn.disabled = true;
+      btn.textContent = "Criando conta…";
+
+      try {
+        const data = await api.request("/auth/register", {
+          method: "POST",
+          body: {
+            email: document.getElementById("email").value.trim(),
+            password: document.getElementById("password").value,
+            full_name: document.getElementById("fullName").value.trim(),
+          },
+        });
+        showSuccess(data.message || "Conta criada! Confirme seu e-mail.");
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Criar conta";
+      }
+    });
+  </script>
+</body>
+</html>

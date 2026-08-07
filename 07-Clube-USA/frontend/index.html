@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Para brasileiros nos EUA</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    main { flex-direction: column; text-align: center; padding: 4rem 1rem; }
+    .hero-title { font-size: 2.5rem; font-weight: 800; color: var(--brand); margin-bottom: 1rem; }
+    .hero-sub { font-size: 1.1rem; color: var(--muted); max-width: 520px; margin: 0 auto 2rem; }
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn { width: auto; padding: 0.75rem 2rem; font-size: 1rem; }
+    .btn-outline { background: transparent; border: 2px solid var(--brand); color: var(--brand); }
+    .btn-outline:hover { background: #eff6ff; }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="nav-brand">🇧🇷 Clube USA</span>
+    <div class="nav-links" id="navLinks"></div>
+  </nav>
+  <main>
+    <p style="font-size:2.5rem">🇧🇷 🇺🇸</p>
+    <h1 class="hero-title">Clube USA</h1>
+    <p class="hero-sub">
+      A plataforma do imigrante brasileiro nos EUA.<br>
+      Promoções, empregos, moradia e comunidade — tudo em um só lugar.
+    </p>
+    <div class="hero-actions">
+      <a href="register.html" class="btn btn-primary">Criar conta grátis</a>
+      <a href="login.html" class="btn btn-outline">Entrar</a>
+    </div>
+  </main>
+  <footer>&copy; 2026 Clube USA</footer>
+  <script src="js/api.js"></script>
+  <script>
+    const links = document.getElementById("navLinks");
+    if (api.isLoggedIn()) {
+      links.innerHTML = '<a href="profile.html">Meu Perfil</a> <a href="#" id="logout">Sair</a>';
+      document.getElementById("logout").addEventListener("click", (e) => {
+        e.preventDefault();
+        api.clearToken();
+        location.reload();
+      });
+    } else {
+      links.innerHTML = '<a href="login.html">Entrar</a> <a href="register.html">Cadastrar</a>';
+    }
+  </script>
+</body>
+</html>

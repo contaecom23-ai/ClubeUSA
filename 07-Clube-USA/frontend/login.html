@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html" class="nav-brand">🇧🇷 Clube USA</a>
+    <div class="nav-links"><a href="register.html">Criar conta</a></div>
+  </nav>
+  <main>
+    <div class="card">
+      <h1>Entrar</h1>
+      <p class="subtitle">Bem-vindo de volta!</p>
+
+      <div class="alert alert-error" id="alertError"></div>
+      <div class="alert alert-info" id="alertInfo"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">E-mail</label>
+          <input type="email" id="email" placeholder="joao@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Entrar</button>
+      </form>
+
+      <p class="text-center mt-2" style="font-size:.875rem">
+        Não tem conta? <a href="register.html">Cadastre-se grátis</a>
+      </p>
+    </div>
+  </main>
+  <footer>&copy; 2026 Clube USA</footer>
+  <script src="js/api.js"></script>
+  <script>
+    if (api.isLoggedIn()) api.redirectToProfile();
+
+    const params = new URLSearchParams(location.search);
+    if (params.get("confirmed") === "1") {
+      const info = document.getElementById("alertInfo");
+      info.textContent = "E-mail confirmado! Agora é só entrar.";
+      info.classList.add("show");
+    }
+
+    const form = document.getElementById("loginForm");
+    const errEl = document.getElementById("alertError");
+    const btn = document.getElementById("submitBtn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errEl.classList.remove("show");
+      btn.disabled = true;
+      btn.textContent = "Entrando…";
+
+      try {
+        const data = await api.request("/auth/login", {
+          method: "POST",
+          body: {
+            email: document.getElementById("email").value.trim(),
+            password: document.getElementById("password").value,
+          },
+        });
+        api.setToken(data.access_token);
+        api.redirectToProfile();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.add("show");
+        btn.disabled = false;
+        btn.textContent = "Entrar";
+      }
+    });
+  </script>
+</body>
+</html>

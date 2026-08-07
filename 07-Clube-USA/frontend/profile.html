@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html" class="nav-brand">🇧🇷 Clube USA</a>
+    <div class="nav-links">
+      <a href="#" id="logoutBtn">Sair</a>
+    </div>
+  </nav>
+  <main style="align-items:flex-start;justify-content:center;padding:2rem 1rem">
+    <div class="card" style="max-width:560px">
+      <!-- Email not confirmed banner -->
+      <div class="alert alert-info" id="confirmBanner" style="display:none">
+        ✉️ Confirme seu e-mail para desbloquear todos os recursos.
+      </div>
+
+      <div class="alert alert-error" id="alertError"></div>
+      <div class="alert alert-success" id="alertSuccess"></div>
+
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--brand);
+                    display:flex;align-items:center;justify-content:center;
+                    color:#fff;font-size:1.5rem;font-weight:700" id="avatar">?</div>
+        <div>
+          <h1 style="font-size:1.25rem;margin-bottom:.2rem" id="displayName">Carregando…</h1>
+          <span class="badge" id="confirmedBadge"></span>
+        </div>
+      </div>
+
+      <form id="profileForm">
+        <div class="profile-grid">
+          <div class="form-group">
+            <label for="fullName">Nome completo</label>
+            <input type="text" id="fullName" minlength="2" maxlength="100">
+          </div>
+          <div class="form-group">
+            <label for="phone">Telefone</label>
+            <input type="tel" id="phone" placeholder="(11) 99999-0000" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label for="zipCode">ZIP Code</label>
+            <input type="text" id="zipCode" placeholder="10001" maxlength="10">
+          </div>
+          <div class="form-group">
+            <label for="state">Estado (sigla)</label>
+            <input type="text" id="state" placeholder="NY" maxlength="2" style="text-transform:uppercase">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label for="city">Cidade</label>
+            <input type="text" id="city" placeholder="New York" maxlength="100">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label for="bio">Bio <span style="color:var(--muted);font-size:.8rem">(max. 300 caracteres)</span></label>
+            <textarea id="bio" maxlength="300" placeholder="Conte um pouco sobre você…"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="saveBtn">Salvar alterações</button>
+      </form>
+
+      <hr style="margin:1.5rem 0;border:none;border-top:1px solid var(--border)">
+      <p style="font-size:.8rem;color:var(--muted)">
+        E-mail: <strong id="emailDisplay">—</strong> &nbsp;·&nbsp; Membro desde <strong id="memberSince">—</strong>
+      </p>
+    </div>
+  </main>
+  <footer>&copy; 2026 Clube USA</footer>
+  <script src="js/api.js"></script>
+  <script>
+    if (!api.isLoggedIn()) api.redirectToLogin();
+
+    const errEl = document.getElementById("alertError");
+    const okEl = document.getElementById("alertSuccess");
+    const saveBtn = document.getElementById("saveBtn");
+
+    function showError(msg) { errEl.textContent = msg; errEl.classList.add("show"); okEl.classList.remove("show"); }
+    function showSuccess(msg) { okEl.textContent = msg; okEl.classList.add("show"); errEl.classList.remove("show"); }
+
+    function fillForm(user) {
+      document.getElementById("avatar").textContent = (user.full_name || "?")[0].toUpperCase();
+      document.getElementById("displayName").textContent = user.full_name || user.email;
+      document.getElementById("emailDisplay").textContent = user.email;
+      document.getElementById("memberSince").textContent = new Date(user.created_at).toLocaleDateString("pt-BR");
+
+      const badge = document.getElementById("confirmedBadge");
+      if (user.email_confirmed) {
+        badge.textContent = "✓ E-mail confirmado";
+        badge.className = "badge badge-green";
+      } else {
+        badge.textContent = "E-mail não confirmado";
+        badge.className = "badge badge-yellow";
+        document.getElementById("confirmBanner").style.display = "block";
+      }
+
+      document.getElementById("fullName").value = user.full_name || "";
+      document.getElementById("phone").value = user.phone || "";
+      document.getElementById("zipCode").value = user.zip_code || "";
+      document.getElementById("state").value = user.state || "";
+      document.getElementById("city").value = user.city || "";
+      document.getElementById("bio").value = user.bio || "";
+    }
+
+    (async () => {
+      try {
+        const user = await api.request("/me", { auth: true });
+        fillForm(user);
+      } catch {
+        api.clearToken();
+        api.redirectToLogin();
+      }
+    })();
+
+    document.getElementById("profileForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errEl.classList.remove("show");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Salvando…";
+
+      const payload = {};
+      const fields = { fullName: "full_name", phone: "phone", zipCode: "zip_code",
+                       state: "state", city: "city", bio: "bio" };
+      for (const [id, key] of Object.entries(fields)) {
+        const val = document.getElementById(id).value.trim() || null;
+        payload[key] = val;
+      }
+
+      try {
+        const user = await api.request("/me", { method: "PATCH", body: payload, auth: true });
+        fillForm(user);
+        showSuccess("Perfil atualizado!");
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Salvar alterações";
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      api.clearToken();
+      window.location.href = "index.html";
+    });
+  </script>
+</body>
+</html>
