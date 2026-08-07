@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmar email — Clube USA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="card" style="text-align:center">
+  <div class="logo">🇺🇸 Clube USA</div>
+  <h1 id="title">Verificando...</h1>
+  <p id="msg" class="subtitle"></p>
+  <div id="actions" style="margin-top:1.5rem;display:none">
+    <a href="perfil.html" class="btn" style="display:inline-block;text-decoration:none;width:auto;padding:.65rem 1.5rem">
+      Ver meu perfil
+    </a>
+  </div>
+</div>
+
+<script>
+  const API = (window.CLUBE_API_URL || 'http://localhost:8000');
+
+  async function confirm() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    if (!token) {
+      document.getElementById('title').textContent = 'Link inválido';
+      document.getElementById('msg').textContent = 'Token não encontrado na URL.';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/auth/confirm-email?token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+
+      if (res.ok) {
+        document.getElementById('title').textContent = '✓ Email confirmado!';
+        document.getElementById('msg').textContent = data.message || 'Seu email foi confirmado com sucesso.';
+        document.getElementById('actions').style.display = 'block';
+      } else {
+        document.getElementById('title').textContent = 'Erro';
+        document.getElementById('msg').textContent = data.detail || 'Token inválido ou expirado.';
+      }
+    } catch (err) {
+      document.getElementById('title').textContent = 'Erro de conexão';
+      document.getElementById('msg').textContent = 'Não foi possível confirmar o email. Tente novamente.';
+    }
+  }
+
+  confirm();
+</script>
+</body>
+</html>

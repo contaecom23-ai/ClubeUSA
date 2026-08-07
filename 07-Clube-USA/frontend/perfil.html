@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu perfil — Clube USA</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .email-badge {
+      display: inline-block; padding: .2rem .55rem; border-radius: 20px;
+      font-size: .75rem; font-weight: 600; margin-left: .4rem;
+    }
+    .badge-ok { background: #e8f8ef; color: var(--success); }
+    .badge-pending { background: #fff3cd; color: #856404; }
+    .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .logout-link { font-size: .8rem; color: var(--muted); cursor: pointer; text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="card" style="max-width:520px">
+  <div class="header-row">
+    <div class="logo" style="margin:0">🇺🇸 Clube USA</div>
+    <span class="logout-link" onclick="logout()">Sair</span>
+  </div>
+
+  <h1>Meu perfil</h1>
+  <p class="subtitle" id="email-line">Carregando...</p>
+
+  <div class="alert error" id="err"></div>
+  <div class="alert success" id="ok"></div>
+
+  <form id="form">
+    <div class="form-group">
+      <label for="full_name">Nome completo</label>
+      <input type="text" id="full_name" maxlength="120">
+    </div>
+    <div class="form-group">
+      <label for="city">Cidade</label>
+      <input type="text" id="city" placeholder="Orlando">
+    </div>
+    <div class="form-group">
+      <label for="state">Estado</label>
+      <input type="text" id="state" placeholder="FL" maxlength="2">
+    </div>
+    <div class="form-group">
+      <label for="zip_code">ZIP Code</label>
+      <input type="text" id="zip_code" placeholder="32801" maxlength="10">
+    </div>
+    <div class="form-group">
+      <label for="phone">Telefone (opcional)</label>
+      <input type="tel" id="phone" placeholder="+1 (407) 000-0000">
+    </div>
+    <div class="form-group">
+      <label for="bio">Bio <small style="color:var(--muted)">(máx 500 chars)</small></label>
+      <textarea id="bio" maxlength="500" placeholder="Conte um pouco sobre você..."></textarea>
+    </div>
+    <button class="btn" type="submit" id="btn">Salvar alterações</button>
+  </form>
+</div>
+
+<script>
+  const API = (window.CLUBE_API_URL || 'http://localhost:8000');
+
+  function getToken() {
+    const t = sessionStorage.getItem('token');
+    if (!t) { window.location.href = 'login.html'; return null; }
+    return t;
+  }
+
+  function show(id, msg) {
+    document.querySelectorAll('.alert').forEach(el => el.classList.remove('show'));
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  function logout() {
+    sessionStorage.removeItem('token');
+    window.location.href = 'login.html';
+  }
+
+  async function loadProfile() {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API}/profile/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) { logout(); return; }
+      const p = await res.json();
+
+      const badge = p.is_email_confirmed
+        ? '<span class="email-badge badge-ok">✓ Confirmado</span>'
+        : '<span class="email-badge badge-pending">Aguardando confirmação</span>';
+      document.getElementById('email-line').innerHTML = p.email + badge;
+
+      ['full_name','city','state','zip_code','phone','bio'].forEach(f => {
+        const el = document.getElementById(f);
+        if (el && p[f]) el.value = p[f];
+      });
+    } catch (err) {
+      show('err', 'Erro ao carregar perfil.');
+    }
+  }
+
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) return;
+
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+    btn.innerHTML = 'Salvando <span class="spinner"></span>';
+
+    const body = {};
+    ['full_name','city','state','zip_code','phone','bio'].forEach(f => {
+      const v = document.getElementById(f).value.trim();
+      if (v) body[f] = v;
+    });
+
+    try {
+      const res = await fetch(`${API}/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (!res.ok) { show('err', data.detail || 'Erro ao salvar'); return; }
+      show('ok', 'Perfil atualizado com sucesso!');
+    } catch (err) {
+      show('err', 'Erro de conexão.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar alterações';
+    }
+  });
+
+  loadProfile();
+</script>
+</body>
+</html>

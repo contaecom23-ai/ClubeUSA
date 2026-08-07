@@ -1,0 +1,141 @@
+/* ============================================================
+   Clube USA — Estilos globais (Fase 0.1, mobile-first)
+   ============================================================ */
+
+:root {
+  --brand: #1e6fa8;
+  --brand-dark: #155a8a;
+  --success: #27ae60;
+  --error: #e74c3c;
+  --bg: #f4f6f9;
+  --card: #ffffff;
+  --text: #2c3e50;
+  --muted: #7f8c8d;
+  --border: #dce1e7;
+  --radius: 8px;
+  --shadow: 0 2px 12px rgba(0,0,0,.08);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+/* ---------- Card central ---------- */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 2rem 2.5rem;
+  width: 100%;
+  max-width: 420px;
+}
+
+.card h1 {
+  font-size: 1.5rem;
+  margin-bottom: .25rem;
+  color: var(--brand);
+}
+
+.card .subtitle {
+  font-size: .875rem;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+/* ---------- Form ---------- */
+.form-group { margin-bottom: 1.1rem; }
+
+label {
+  display: block;
+  font-size: .8rem;
+  font-weight: 600;
+  margin-bottom: .35rem;
+  color: var(--text);
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: .65rem .85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: .95rem;
+  color: var(--text);
+  background: #fff;
+  transition: border-color .15s;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+textarea { resize: vertical; min-height: 80px; }
+
+/* ---------- Button ---------- */
+.btn {
+  display: block;
+  width: 100%;
+  padding: .75rem;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  margin-top: .5rem;
+}
+
+.btn:hover { background: var(--brand-dark); }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+
+/* ---------- Alerts ---------- */
+.alert {
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
+  font-size: .875rem;
+  margin-bottom: 1rem;
+  display: none;
+}
+
+.alert.error  { background: #fde8e8; color: var(--error); border-left: 3px solid var(--error); }
+.alert.success { background: #e8f8ef; color: var(--success); border-left: 3px solid var(--success); }
+.alert.show { display: block; }
+
+/* ---------- Links ---------- */
+.link-row {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: .875rem;
+  color: var(--muted);
+}
+
+.link-row a { color: var(--brand); text-decoration: none; font-weight: 500; }
+.link-row a:hover { text-decoration: underline; }
+
+/* ---------- Logo ---------- */
+.logo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--brand);
+  text-align: center;
+  margin-bottom: 1.5rem;
+  letter-spacing: -.3px;
+}
+
+/* ---------- Spinner ---------- */
+.spinner { display: inline-block; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+  border-radius: 50%; animation: spin .6s linear infinite; margin-left: 6px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }

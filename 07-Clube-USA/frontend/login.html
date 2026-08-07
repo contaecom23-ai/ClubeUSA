@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="card">
+  <div class="logo">🇺🇸 Clube USA</div>
+  <h1>Entrar</h1>
+  <p class="subtitle">Acesse sua conta</p>
+
+  <div class="alert error" id="err"></div>
+
+  <form id="form">
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="joao@email.com" required>
+    </div>
+    <div class="form-group">
+      <label for="password">Senha</label>
+      <input type="password" id="password" placeholder="••••••••" required>
+    </div>
+    <button class="btn" type="submit" id="btn">Entrar</button>
+  </form>
+
+  <div class="link-row">
+    Não tem conta? <a href="registro.html">Criar conta</a>
+  </div>
+</div>
+
+<script>
+  const API = (window.CLUBE_API_URL || 'http://localhost:8000');
+
+  function show(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+    btn.innerHTML = 'Entrando <span class="spinner"></span>';
+
+    const body = {
+      email: document.getElementById('email').value.trim(),
+      password: document.getElementById('password').value,
+    };
+
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        show('err', data.detail || 'Email ou senha incorretos');
+        return;
+      }
+
+      sessionStorage.setItem('token', data.access_token);
+      window.location.href = 'perfil.html';
+    } catch (err) {
+      show('err', 'Erro de conexão. Tente novamente.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    }
+  });
+</script>
+</body>
+</html>
