@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/" class="logo">Clube USA</a>
+    <div><a href="register.html">Criar conta</a></div>
+  </nav>
+  <main>
+    <div class="card">
+      <h1>Entrar</h1>
+      <p class="subtitle">Bem-vindo de volta à comunidade.</p>
+
+      <div id="alert" class="alert alert-error"></div>
+
+      <form id="form" autocomplete="on">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="voce@email.com" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="password">Senha</label>
+          <input type="password" id="password" placeholder="Sua senha" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary" id="submit-btn" data-label="Entrar">Entrar</button>
+      </form>
+
+      <p class="link-row">Não tem conta? <a href="register.html">Criar gratuitamente</a></p>
+    </div>
+  </main>
+
+  <script src="assets/main.js"></script>
+  <script>
+    redirectIfAuth();
+
+    const form = document.getElementById("form");
+    const alertEl = document.getElementById("alert");
+    const btn = document.getElementById("submit-btn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideAlert(alertEl);
+      setLoading(btn, true);
+
+      try {
+        const data = await apiCall("POST", "/auth/login", {
+          email: document.getElementById("email").value.trim(),
+          password: document.getElementById("password").value,
+        });
+        Auth.setToken(data.access_token);
+        window.location.href = "profile.html";
+      } catch (err) {
+        if (err.status === 403 && err.detail?.includes("confirmado")) {
+          showAlert(alertEl, "Confirme seu email antes de entrar. Verifique sua caixa de entrada.");
+        } else {
+          showAlert(alertEl, err.detail || "Email ou senha incorretos.");
+        }
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+  </script>
+</body>
+</html>

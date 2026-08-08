@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar conta — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/" class="logo">Clube USA</a>
+    <div><a href="login.html">Já tenho conta</a></div>
+  </nav>
+  <main>
+    <div class="card">
+      <h1>Criar conta</h1>
+      <p class="subtitle">É grátis e leva menos de 1 minuto.</p>
+
+      <div id="alert" class="alert alert-error"></div>
+      <div id="success-box" style="display:none">
+        <div class="alert alert-success show">
+          Conta criada! Verifique seu email para confirmar o cadastro.
+        </div>
+        <p class="link-row"><a href="login.html">Ir para o login</a></p>
+      </div>
+
+      <form id="form" autocomplete="off">
+        <div class="field">
+          <label for="name">Nome completo</label>
+          <input type="text" id="name" placeholder="Seu nome" required autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="voce@email.com" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="password">Senha <span style="font-weight:400;color:#6b7280">(mín. 8 caracteres)</span></label>
+          <input type="password" id="password" placeholder="Crie uma senha forte" required autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary" id="submit-btn" data-label="Criar conta">Criar conta</button>
+      </form>
+
+      <p class="link-row">Já tem conta? <a href="login.html">Entrar</a></p>
+    </div>
+  </main>
+
+  <script src="assets/main.js"></script>
+  <script>
+    redirectIfAuth();
+
+    const form = document.getElementById("form");
+    const alert = document.getElementById("alert");
+    const btn = document.getElementById("submit-btn");
+    const successBox = document.getElementById("success-box");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideAlert(alert);
+      setLoading(btn, true);
+
+      try {
+        await apiCall("POST", "/auth/register", {
+          full_name: document.getElementById("name").value.trim(),
+          email: document.getElementById("email").value.trim(),
+          password: document.getElementById("password").value,
+        });
+        form.style.display = "none";
+        successBox.style.display = "block";
+      } catch (err) {
+        showAlert(alert, err.detail || "Erro ao criar conta. Tente novamente.");
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+  </script>
+</body>
+</html>

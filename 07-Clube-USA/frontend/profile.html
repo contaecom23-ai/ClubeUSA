@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/" class="logo">Clube USA</a>
+    <div>
+      <a href="#" id="logout-btn">Sair</a>
+    </div>
+  </nav>
+  <main>
+    <div class="card">
+      <div id="loading" style="text-align:center;color:#6b7280;padding:24px 0">Carregando...</div>
+      <div id="content" style="display:none">
+        <div class="profile-header">
+          <div class="avatar" id="avatar-initials">?</div>
+          <div>
+            <h1 id="profile-name" style="font-size:1.2rem"></h1>
+            <span id="email-badge" class="badge"></span>
+          </div>
+        </div>
+
+        <div id="alert" class="alert alert-error"></div>
+        <div id="success-msg" class="alert alert-success"></div>
+
+        <form id="form">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="email-display" disabled style="background:#f3f4f6;color:#6b7280">
+          </div>
+          <div class="field">
+            <label for="full_name">Nome completo</label>
+            <input type="text" id="full_name" placeholder="Seu nome completo">
+          </div>
+          <div class="field">
+            <label for="city">Cidade</label>
+            <input type="text" id="city" placeholder="Ex: Miami, Orlando...">
+          </div>
+          <div class="field">
+            <label for="state_abbr">Estado</label>
+            <select id="state_abbr">
+              <option value="">Selecione...</option>
+              <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+              <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+              <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+              <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+              <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+              <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+              <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+              <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+              <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+              <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+              <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+              <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+              <option>WI</option><option>WY</option><option>DC</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" id="save-btn" data-label="Salvar alterações">Salvar alterações</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/main.js"></script>
+  <script>
+    requireAuth();
+
+    const alertEl = document.getElementById("alert");
+    const successEl = document.getElementById("success-msg");
+
+    async function loadProfile() {
+      try {
+        const user = await apiCall("GET", "/users/me");
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("content").style.display = "block";
+
+        const initials = (user.full_name || user.email).charAt(0).toUpperCase();
+        document.getElementById("avatar-initials").textContent = initials;
+        document.getElementById("profile-name").textContent = user.full_name || "(sem nome)";
+        document.getElementById("email-display").value = user.email;
+        document.getElementById("full_name").value = user.full_name || "";
+        document.getElementById("city").value = user.city || "";
+        document.getElementById("state_abbr").value = user.state_abbr || "";
+
+        const badge = document.getElementById("email-badge");
+        if (user.email_confirmed) {
+          badge.textContent = "Email confirmado";
+          badge.className = "badge badge-confirmed";
+        } else {
+          badge.textContent = "Email não confirmado";
+          badge.className = "badge badge-pending";
+        }
+      } catch (err) {
+        if (err.status === 401) {
+          Auth.clear();
+          window.location.href = "login.html";
+        }
+      }
+    }
+
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideAlert(alertEl);
+      hideAlert(successEl);
+      const btn = document.getElementById("save-btn");
+      setLoading(btn, true);
+
+      const payload = {};
+      const name = document.getElementById("full_name").value.trim();
+      const city = document.getElementById("city").value.trim();
+      const state = document.getElementById("state_abbr").value;
+      if (name) payload.full_name = name;
+      if (city) payload.city = city;
+      if (state) payload.state_abbr = state;
+
+      try {
+        await apiCall("PUT", "/users/me", payload);
+        showAlert(successEl, "Perfil atualizado com sucesso!", "success");
+        await loadProfile();
+      } catch (err) {
+        showAlert(alertEl, err.detail || "Erro ao salvar.");
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", (e) => {
+      e.preventDefault();
+      Auth.clear();
+      window.location.href = "login.html";
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>
