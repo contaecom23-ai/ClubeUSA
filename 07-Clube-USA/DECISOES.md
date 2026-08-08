@@ -25,6 +25,39 @@ Formato de cada entrada:
 
 ---
 
+## ⚠️ BLOQUEIO CRÍTICO — AÇÃO NECESSÁRIA AGORA
+
+### [2026-08-08] LOOP DE PRs — O projeto está parado há semanas
+
+**Contexto:** O builder automático roda 3×/dia. Ele verifica ROADMAP.md na `main`.
+Como nenhum PR foi mergeado, a `main` sempre mostra Fase 0.1 como pendente.
+A cada execução, o builder cria um novo PR. Hoje há **47 PRs abertos** para
+o mesmo item. O projeto está em loop infinito e não pode avançar.
+
+**Causa raiz:** O builder pode apenas criar PRs (conforme as regras de segurança).
+Somente você (o dono) pode fazer merge na `main`. Sem esse passo, o loop é eterno.
+
+**O que você precisa fazer (em ordem):**
+
+1. **Mergear o PR #38** — `feat(fase-0.1): cadastro + perfil mínimo + email confirmado`
+   - Branch: `claude/fase-0.1-cadastro-email`
+   - Código com 26 testes passando, estrutura limpa, segurança aplicada
+   - URL: https://github.com/contaecom23-ai/ClubeUSA/pull/38
+
+2. **Fechar os outros 46 PRs duplicados** — todos para Fase 0.1, todos obsoletos:
+   - PRs #18, #19, #20, #21, #22, #23, #24, #25, #26, #27, #28, #29, #30, #31, #32, #33, #34, #35, #36, #37, #39, #40, #41, #42, #43, #44, #45, #46, #47
+   - Motivo de fechamento sugerido: "Duplicado — PR #38 é o canônico"
+
+3. **Após o merge:** O próximo ciclo do builder verá Fase 0.1 como concluída e
+   avançará para a Fase 0.2 (Sistema de REFERRAL). O loop para automaticamente.
+
+**Ação mínima aceitável:** Fazer só o merge do PR #38 já desbloqueio o projeto.
+Fechar os duplicados é limpeza útil mas não é bloqueador.
+
+**Status:** PENDENTE — sem esta ação, o builder continua em loop.
+
+---
+
 ## Decisões Pendentes
 
 ---
