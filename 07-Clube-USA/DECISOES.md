@@ -14,30 +14,34 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## 🚨 AÇÃO URGENTE — Leia primeiro
 
-### [2026-08-09] LOOP CRÍTICO — 47 PRs abertos, projeto parado há semanas
+### [2026-08-10] LOOP CRÍTICO — 48 PRs abertos, projeto parado há semanas
 
 **Contexto:**  
-O builder autônomo roda 3×/dia mas lê o ROADMAP.md da `main`. Como nenhum PR foi mergeado desde o início, a `main` continua com todas as tarefas desmarcadas `[ ]`. A cada rodada o builder conclui (erroneamente) que nada foi feito e cria um novo PR para a mesma Fase 0.1 — acumulando 47 PRs duplicados.
+O builder autônomo roda 3×/dia mas lê o ROADMAP.md da `main`. Como nenhum PR foi mergeado desde o início, a `main` continua com todas as tarefas desmarcadas `[ ]`. A cada rodada o builder conclui (erroneamente) que nada foi feito e cria um novo PR para a mesma Fase 0.1 — acumulando 48 PRs duplicados.
+
+**Confirmado em 2026-08-10:** Situação idêntica. Nenhuma ação do dono desde a última verificação (2026-08-09). O builder não criou novo PR neste run — reconheceu o loop e apenas atualiza este documento.
 
 **Estado atual:**
 - `main`: apenas ROADMAP.md + DECISOES.md (sem código)
 - **PR #46** (`feature/fase-0.1-cadastro-auth`): implementação **completa e verificada** da Fase 0.1
-  - CI: passando (24 testes)
-  - mergeable_state: `clean` (sem conflitos)
-  - Não é draft
-  - Contém: backend FastAPI, frontend HTML, schema SQL com RLS
+  - Não é draft (único PR aberto que não é draft)
+  - Contém: backend FastAPI, frontend HTML, schema SQL com RLS, 24 testes
+  - Link: https://github.com/contaecom23-ai/ClubeUSA/pull/46
 
-**Ação necessária (em ordem):**
+**Ação necessária (em ordem — 3 cliques no GitHub):**
 
-1. **Mergear o PR #46** — https://github.com/contaecom23-ai/ClubeUSA/pull/46
-2. **Fechar os PRs #18 a #45 e #47** como duplicados (o PR #46 os substitui)
-3. Depois do merge, o próximo run do builder avançará para Fase 0.2 (Referral)
+1. **Mergear o PR #46** → https://github.com/contaecom23-ai/ClubeUSA/pull/46
+2. **Fechar os PRs #1–#45 e #47–#48** como duplicados (PR #46 os substitui todos)
+3. Depois do merge, o próximo run avançará automaticamente para Fase 0.2 (Referral)
 
 **Por que o Claude não faz o merge?**  
-Merge em main é irreversível e exige aprovação do dono. Regras do projeto proíbem isso.
+Merge em main é irreversível e exige aprovação do dono (regra do projeto).
 
 **Por que o Claude não fecha os PRs duplicados?**  
-Fechar 46 PRs é ação destrutiva em escala — registrado aqui para o dono executar.
+Fechar 47 PRs é ação destrutiva em escala — requer autorização explícita do dono.
+
+**Por que o Claude não para de rodar?**  
+O schedule continua rodando. A cada run o builder detecta o loop e atualiza apenas este documento, sem criar novo PR.
 
 **Status:** PENDENTE — AÇÃO NECESSÁRIA DO DONO
 
@@ -78,4 +82,4 @@ Fechar 46 PRs é ação destrutiva em escala — registrado aqui para o dono exe
 
 ---
 
-*Atualizado em: 2026-08-09*
+*Atualizado em: 2026-08-10*
