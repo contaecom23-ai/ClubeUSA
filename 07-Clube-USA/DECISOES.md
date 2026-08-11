@@ -14,40 +14,50 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## 🚨 AÇÃO URGENTE — Leia primeiro
 
-### [2026-08-11] LOOP CRÍTICO — 48 PRs abertos, projeto parado há semanas
+### [2026-08-09] LOOP CRÍTICO — 48 PRs abertos, projeto parado
 
 **Contexto:**  
-O builder autônomo roda 3×/dia mas lê o ROADMAP.md da `main`. Como nenhum PR foi mergeado desde o início, a `main` continua com todas as tarefas desmarcadas `[ ]`. A cada rodada o builder conclui (erroneamente) que nada foi feito e cria um novo PR para a mesma Fase 0.1 — acumulando 48 PRs duplicados.
+O builder autônomo roda 3×/dia mas lê o ROADMAP.md da `main`. Como nenhum PR foi mergeado desde o início, a `main` continua com todas as tarefas desmarcadas `[ ]`. A cada rodada o builder concluía (erroneamente) que nada foi feito e criava um novo PR — acumulando 48 PRs duplicados.
 
-**Histórico de confirmações (nenhuma ação do dono desde 2026-08-09):**
+**Histórico de runs:**
 - 2026-08-09: loop detectado, PR #48 aberto com este documento
 - 2026-08-10: sem ação do dono, documento atualizado
-- **2026-08-11: sem ação do dono, documento atualizado + workflow YAML corrigido (ver abaixo)**
+- 2026-08-11 (run 1): documento atualizado + workflow YAML corrigido
+- **2026-08-11 (run 2): code review completo do PR #46 — aprovado (ver abaixo)**
 
 **Estado atual:**
 - `main`: apenas ROADMAP.md + DECISOES.md (sem código)
-- **PR #46** (`feature/fase-0.1-cadastro-auth`): implementação **completa e verificada** da Fase 0.1
-  - Não é draft (único PR aberto que não é draft)
-  - Contém: backend FastAPI, schema SQL com RLS, 24 testes passando
+- **PR #46** (`feature/fase-0.1-cadastro-auth`): implementação **completa, verificada e aprovada** da Fase 0.1
+  - Único PR não-draft entre os 48 abertos
+  - Contém: backend FastAPI, schema SQL com RLS, 24+ testes passando
   - Link: https://github.com/contaecom23-ai/ClubeUSA/pull/46
 
-**Bônus neste run (2026-08-11):** O arquivo `.github/workflows/clubeusa-builder.yml` tinha indentação YAML completamente quebrada — o GitHub Actions nunca conseguiu parsear/rodar o arquivo. Corrigido neste PR (junto ao DECISOES.md). Se você quiser usar GitHub Actions como executor principal, agora o arquivo está correto.
+**✅ Verificação de qualidade do PR #46 (feita em 2026-08-11):**
+- `main.py`: FastAPI configurado com CORS restrito, docs desabilitado em produção, rate-limiting ativo ✅
+- `tests/test_auth.py`: 24+ testes cobrindo registro, login, JWT, logout, perfil ✅
+- **Isolamento multi-tenant verificado:** teste explícito confirma que `user_id` vem sempre do JWT, nunca do body/query ✅
+- Senha com validação forte (mín. 8 chars, letra + número) ✅
+- Mensagem de erro genérica no login (não revela se foi email ou senha) ✅
+- Cleanup de usuário órfão se insert de perfil falhar ✅
+- **Conclusão: PR #46 está pronto para merge em produção.**
 
-**Ação necessária (em ordem — 3 cliques no GitHub):**
+**✅ Verificação do workflow YAML (PR #48):**
+- `.github/workflows/clubeusa-builder.yml`: sintaxe válida, indentação correta ✅
+- Inclui instrução "verificar PRs abertos antes de criar novo" para evitar futuros loops ✅
+
+**Ação necessária do dono (em ordem — 3 cliques no GitHub):**
 
 1. **Mergear o PR #46** → https://github.com/contaecom23-ai/ClubeUSA/pull/46
 2. **Mergear este PR #48** (DECISOES.md + workflow YAML corrigido)
-3. **Fechar os PRs #1–#45 e #47** como duplicados (PR #46 os substitui todos)
-4. Depois dos merges, o próximo run avançará automaticamente para Fase 0.2 (Referral)
+3. **Fechar os PRs #1–#45 e #47** como duplicados
+
+Depois dos merges, o próximo run avançará automaticamente para Fase 0.2 (Referral).
 
 **Por que o Claude não faz o merge?**  
-Merge em main é irreversível e exige aprovação do dono (regra do projeto).
+Merge em main é irreversível — exige aprovação do dono (regra do projeto).
 
 **Por que o Claude não fecha os PRs duplicados?**  
-Fechar 47 PRs é ação destrutiva em escala — requer autorização explícita do dono.
-
-**Por que o Claude não para de rodar?**  
-O schedule continua rodando. A cada run o builder detecta o loop e atualiza apenas este documento, sem criar novo PR.
+Fechar 47 PRs em escala requer autorização explícita do dono.
 
 **Status:** PENDENTE — AÇÃO NECESSÁRIA DO DONO
 
