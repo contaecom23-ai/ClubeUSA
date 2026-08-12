@@ -1,146 +1,205 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meu perfil — Clube USA</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Meu Perfil</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-           background: #f8fafc; color: #1e293b; }
-    nav { background: #1d4ed8; padding: 14px 24px; display: flex; align-items: center;
-          justify-content: space-between; }
-    nav a { color: #fff; text-decoration: none; font-weight: 800; font-size: 1.1rem; }
-    nav button { background: rgba(255,255,255,.15); border: none; color: #fff; padding: 8px 18px;
-                 border-radius: 6px; cursor: pointer; font-size: .9rem; font-weight: 600; }
-    nav button:hover { background: rgba(255,255,255,.25); }
-    main { max-width: 560px; margin: 48px auto; padding: 0 24px; }
-    .loading { text-align: center; color: #64748b; margin-top: 80px; }
-    .card { background: #fff; border-radius: 16px; padding: 36px;
-            box-shadow: 0 4px 24px rgba(0,0,0,.08); }
-    .avatar { width: 72px; height: 72px; border-radius: 50%; background: #1d4ed8;
-              color: #fff; font-size: 2rem; display: flex; align-items: center;
-              justify-content: center; margin: 0 auto 20px; }
-    h1 { font-size: 1.4rem; text-align: center; margin-bottom: 4px; }
-    .email { text-align: center; color: #64748b; font-size: .9rem; margin-bottom: 28px; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: .78rem;
-             font-weight: 700; margin-left: 6px; }
-    .badge.confirmed { background: #dcfce7; color: #166534; }
-    .badge.unconfirmed { background: #fee2e2; color: #991b1b; }
-    h2 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: #475569; }
-    .field { margin-bottom: 16px; }
-    label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: 6px; color: #94a3b8; }
-    input { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px;
-            font-size: 1rem; transition: border-color .15s; outline: none; }
-    input:focus { border-color: #1d4ed8; }
-    .btn { padding: 11px 24px; background: #1d4ed8; color: #fff; border: none;
-           border-radius: 8px; font-size: .95rem; font-weight: 700; cursor: pointer; }
-    .btn:hover { background: #1e40af; }
-    .btn:disabled { background: #93c5fd; cursor: not-allowed; }
-    .msg { display: none; padding: 10px 14px; border-radius: 8px; margin-top: 14px; font-size: .88rem; }
-    .msg.success { background: #dcfce7; color: #166534; display: block; }
-    .msg.error   { background: #fee2e2; color: #991b1b; display: block; }
-    .divider { border: none; border-top: 1px solid #f1f5f9; margin: 28px 0; }
-    .meta { font-size: .8rem; color: #94a3b8; text-align: center; margin-top: 16px; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 2rem;
+      width: 100%;
+      max-width: 440px;
+    }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    h1 { font-size: 1.4rem; color: #1a202c; }
+    .logout-btn {
+      background: none;
+      border: 1px solid #e2e8f0;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #718096;
+      cursor: pointer;
+    }
+    .logout-btn:hover { background: #f7fafc; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: #4a5568; margin-bottom: 0.35rem; }
+    input {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      background: #fff;
+    }
+    input:focus { border-color: #4c51bf; }
+    input[readonly] { background: #f7fafc; color: #718096; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: #4c51bf;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #434190; }
+    .btn:disabled { background: #a0aec0; cursor: not-allowed; }
+    .msg {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .msg.success { background: #c6f6d5; color: #276749; display: block; }
+    .msg.error   { background: #fed7d7; color: #9b2c2c; display: block; }
+    #loading { text-align: center; color: #718096; padding: 2rem 0; }
+    #content { display: none; }
   </style>
 </head>
 <body>
-  <nav>
-    <a href="/">🇧🇷 Clube USA</a>
-    <button id="logout-btn">Sair</button>
-  </nav>
-
-  <main>
-    <div class="loading" id="loading">Carregando perfil...</div>
-    <div class="card" id="card" style="display:none">
-      <div class="avatar" id="avatar"></div>
-      <h1 id="full-name"></h1>
-      <p class="email" id="email-display"></p>
-
-      <hr class="divider" />
-
-      <h2>Editar perfil</h2>
-      <form id="form" novalidate>
-        <div style="display:flex;gap:12px">
-          <div class="field" style="flex:1">
-            <label for="first_name">Nome</label>
-            <input id="first_name" type="text" />
-          </div>
-          <div class="field" style="flex:1">
-            <label for="last_name">Sobrenome</label>
-            <input id="last_name" type="text" />
-          </div>
-        </div>
-        <div class="field">
-          <label for="zip_code">ZIP Code</label>
-          <input id="zip_code" type="text" placeholder="10001" maxlength="10" />
-        </div>
-        <button type="submit" class="btn" id="save-btn">Salvar alterações</button>
-      </form>
-      <div class="msg" id="msg"></div>
-
-      <p class="meta" id="meta"></p>
+  <div class="card">
+    <div class="header">
+      <h1>🇧🇷 Meu Perfil</h1>
+      <button class="logout-btn" onclick="logout()">Sair</button>
     </div>
-  </main>
+
+    <div id="loading">Carregando...</div>
+
+    <div id="content">
+      <form id="form">
+        <div class="form-group">
+          <label>Email</label>
+          <input id="email" type="email" readonly>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="first_name">Nome</label>
+            <input id="first_name" type="text" required>
+          </div>
+          <div class="form-group">
+            <label for="last_name">Sobrenome</label>
+            <input id="last_name" type="text" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="form-group">
+            <label for="zip_code">ZIP Code</label>
+            <input id="zip_code" type="text" required maxlength="10">
+          </div>
+          <div class="form-group">
+            <label for="phone">Telefone</label>
+            <input id="phone" type="tel" placeholder="Opcional">
+          </div>
+        </div>
+
+        <button class="btn" type="submit" id="btn">Salvar alterações</button>
+      </form>
+
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
 
   <script>
-    const loading = document.getElementById('loading');
-    const card    = document.getElementById('card');
+    const API = '';
+
+    function getToken() {
+      return localStorage.getItem('access_token');
+    }
+
+    async function authFetch(url, options = {}) {
+      const token = getToken();
+      if (!token) {
+        window.location.href = 'login.html';
+        return null;
+      }
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+      });
+      if (res.status === 401) {
+        localStorage.clear();
+        window.location.href = 'login.html';
+        return null;
+      }
+      return res;
+    }
 
     async function loadProfile() {
       try {
-        const res  = await fetch('/api/auth/me', { credentials: 'include' });
-        if (res.status === 401) { window.location.href = '/login'; return; }
-        const user = await res.json();
-
-        document.getElementById('avatar').textContent =
-          (user.first_name?.[0] || '?').toUpperCase();
-        document.getElementById('full-name').innerHTML =
-          `${user.first_name} ${user.last_name}`
-          + `<span class="badge ${user.email_confirmed ? 'confirmed' : 'unconfirmed'}">`
-          + (user.email_confirmed ? '✓ Email confirmado' : '✗ Email não confirmado')
-          + '</span>';
-        document.getElementById('email-display').textContent = user.email;
-        document.getElementById('first_name').value = user.first_name || '';
-        document.getElementById('last_name').value  = user.last_name  || '';
-        document.getElementById('zip_code').value   = user.zip_code   || '';
-        document.getElementById('meta').textContent =
-          `Conta criada em: ${new Date(user.created_at).toLocaleDateString('pt-BR')}`;
-
-        loading.style.display = 'none';
-        card.style.display    = 'block';
+        const res = await authFetch(`${API}/users/me`);
+        if (!res) return;
+        if (!res.ok) throw new Error('Erro ao carregar perfil');
+        const data = await res.json();
+        document.getElementById('email').value     = data.email;
+        document.getElementById('first_name').value = data.first_name;
+        document.getElementById('last_name').value  = data.last_name;
+        document.getElementById('zip_code').value   = data.zip_code;
+        document.getElementById('phone').value      = data.phone || '';
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
       } catch {
-        loading.textContent = 'Erro ao carregar perfil.';
+        document.getElementById('loading').textContent = 'Erro ao carregar perfil. Tente novamente.';
       }
     }
 
     document.getElementById('form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const msg    = document.getElementById('msg');
-      const btn    = document.getElementById('save-btn');
+      const btn = document.getElementById('btn');
+      const msg = document.getElementById('msg');
       msg.className = 'msg';
-      btn.disabled  = true;
+      msg.textContent = '';
+      btn.disabled = true;
       btn.textContent = 'Salvando...';
 
-      const body = {};
-      const fn = document.getElementById('first_name').value.trim();
-      const ln = document.getElementById('last_name').value.trim();
-      const zp = document.getElementById('zip_code').value.trim();
-      if (fn) body.first_name = fn;
-      if (ln) body.last_name  = ln;
-      if (zp) body.zip_code   = zp;
+      const body = {
+        first_name: document.getElementById('first_name').value.trim(),
+        last_name:  document.getElementById('last_name').value.trim(),
+        zip_code:   document.getElementById('zip_code').value.trim(),
+        phone:      document.getElementById('phone').value.trim() || null,
+      };
 
       try {
-        const res  = await fetch('/api/auth/profile', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
+        const res = await authFetch(`${API}/users/me`, {
+          method: 'PATCH',
           body: JSON.stringify(body),
         });
-        const data = await res.json();
-        msg.className = res.ok ? 'msg success' : 'msg error';
-        msg.textContent = data.message || data.detail || '';
-        if (res.ok) loadProfile();
+        if (!res) return;
+        if (res.ok) {
+          msg.className = 'msg success';
+          msg.textContent = 'Perfil atualizado com sucesso!';
+        } else {
+          const data = await res.json();
+          msg.className = 'msg error';
+          msg.textContent = data.detail || 'Erro ao salvar. Tente novamente.';
+        }
       } catch {
         msg.className = 'msg error';
         msg.textContent = 'Erro de conexão.';
@@ -150,10 +209,14 @@
       }
     });
 
-    document.getElementById('logout-btn').addEventListener('click', async () => {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-      window.location.href = '/login';
-    });
+    async function logout() {
+      try {
+        await authFetch(`${API}/auth/logout`, { method: 'POST' });
+      } finally {
+        localStorage.clear();
+        window.location.href = 'login.html';
+      }
+    }
 
     loadProfile();
   </script>

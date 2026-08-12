@@ -1,359 +1,164 @@
-"""
-Integration tests for auth API endpoints.
-Supabase is mocked — no real network calls.
-"""
-import uuid
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+from gotrue.errors import AuthApiError
 
-# conftest.py sets env vars; import app after env is ready
-from main import app
-from security import create_access_token, generate_confirmation_token, hash_password
-
-
-@pytest.fixture
-def client():
-    """Fresh TestClient per test — no cookie bleed between tests."""
-    with TestClient(app, raise_server_exceptions=True) as c:
-        yield c
+from app import dependencies
+from app.main import app
+from tests.conftest import _make_mock_supabase, make_token
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+VALID_REGISTER = {
+    "email": "novousuario@example.com",
+    "password": "senhaSegura123",
+    "first_name": "Ana",
+    "last_name": "Costa",
+    "zip_code": "90210",
+}
 
 
-def _make_user(
-    *,
-    email="user@example.com",
-    confirmed=True,
-    password="password123",
-    first_name="Ana",
-    last_name="Silva",
-    zip_code="10001",
-):
-    uid = str(uuid.uuid4())
-    token = generate_confirmation_token()
-    expires = (datetime.now(timezone.utc) + timedelta(hours=23)).isoformat()
-    return {
-        "id": uid,
-        "email": email,
-        "password_hash": hash_password(password),
-        "first_name": first_name,
-        "last_name": last_name,
-        "zip_code": zip_code,
-        "email_confirmed": confirmed,
-        "confirmation_token": None if confirmed else token,
-        "confirmation_expires_at": None if confirmed else expires,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
+def _client(mock: MagicMock) -> TestClient:
+    original = dependencies._supabase_client
+    dependencies._supabase_client = mock
+    c = TestClient(app, raise_server_exceptions=False)
+    yield c
+    dependencies._supabase_client = original
 
 
-def _mock_db():
-    """Return a MagicMock that mimics the Supabase chained query API."""
-    mock = MagicMock()
-    mock.table.return_value = mock
-    mock.select.return_value = mock
-    mock.insert.return_value = mock
-    mock.update.return_value = mock
-    mock.eq.return_value = mock
-    mock.execute.return_value = MagicMock(data=[])
-    return mock
+# ── register ─────────────────────────────────────────────────────────────────
 
 
-# ---------------------------------------------------------------------------
-# POST /api/auth/register
-# ---------------------------------------------------------------------------
-
-
-def test_register_success(client):
-    user = _make_user(confirmed=False)
-    mock = _mock_db()
-    mock.execute.side_effect = [
-        MagicMock(data=[]),    # no existing user
-        MagicMock(data=[user]),  # insert result
-    ]
-
-    with patch("auth.get_db", return_value=mock), \
-         patch("auth.send_confirmation_email") as mock_email:
-        resp = client.post("/api/auth/register", json={
-            "email": "new@example.com",
-            "password": "secret123",
-            "first_name": "Ana",
-            "last_name": "Silva",
-            "zip_code": "10001",
-        })
-
+def test_register_success(client: TestClient) -> None:
+    resp = client.post("/auth/register", json=VALID_REGISTER)
     assert resp.status_code == 201
     assert "email" in resp.json()["message"].lower()
-    mock_email.assert_called_once()
 
 
-def test_register_duplicate_email(client):
-    existing_user = _make_user()
-    mock = _mock_db()
-    mock.execute.return_value = MagicMock(data=[{"id": existing_user["id"]}])
-
-    with patch("auth.get_db", return_value=mock):
-        resp = client.post("/api/auth/register", json={
-            "email": "user@example.com",
-            "password": "secret123",
-            "first_name": "Ana",
-            "last_name": "Silva",
-        })
-
-    assert resp.status_code == 409
-
-
-def test_register_weak_password(client):
-    resp = client.post("/api/auth/register", json={
-        "email": "a@b.com",
-        "password": "short",
-        "first_name": "A",
-        "last_name": "B",
-    })
+def test_register_missing_first_name(client: TestClient) -> None:
+    body = {**VALID_REGISTER, "first_name": ""}
+    resp = client.post("/auth/register", json=body)
     assert resp.status_code == 422
 
 
-def test_register_invalid_zip(client):
-    resp = client.post("/api/auth/register", json={
-        "email": "a@b.com",
-        "password": "goodpassword",
-        "first_name": "A",
-        "last_name": "B",
-        "zip_code": "ABCDE",
-    })
+def test_register_invalid_email(client: TestClient) -> None:
+    body = {**VALID_REGISTER, "email": "not-an-email"}
+    resp = client.post("/auth/register", json=body)
     assert resp.status_code == 422
 
 
-def test_register_email_failure_does_not_break_registration(client):
-    """Registration must succeed even when email sending fails."""
-    user = _make_user(confirmed=False)
-    mock = _mock_db()
-    mock.execute.side_effect = [
-        MagicMock(data=[]),
-        MagicMock(data=[user]),
-    ]
+def test_register_invalid_zip(client: TestClient) -> None:
+    body = {**VALID_REGISTER, "zip_code": "ABCDE"}
+    resp = client.post("/auth/register", json=body)
+    assert resp.status_code == 422
 
-    with patch("auth.get_db", return_value=mock), \
-         patch("auth.send_confirmation_email", side_effect=Exception("SMTP error")):
-        resp = client.post("/api/auth/register", json={
-            "email": "new2@example.com",
-            "password": "secret123",
-            "first_name": "Ana",
-            "last_name": "Silva",
-        })
 
+def test_register_short_password(client: TestClient) -> None:
+    body = {**VALID_REGISTER, "password": "abc"}
+    resp = client.post("/auth/register", json=body)
+    assert resp.status_code == 422
+
+
+def test_register_zip_plus4_valid(client: TestClient) -> None:
+    body = {**VALID_REGISTER, "zip_code": "10001-1234"}
+    resp = client.post("/auth/register", json=body)
     assert resp.status_code == 201
 
 
-# ---------------------------------------------------------------------------
-# GET /api/auth/confirm-email
-# ---------------------------------------------------------------------------
-
-
-def test_confirm_email_success(client):
-    user = _make_user(confirmed=False)
-    mock = _mock_db()
-    mock.execute.side_effect = [
-        MagicMock(data=[{
-            "id": user["id"],
-            "email_confirmed": False,
-            "confirmation_expires_at": user["confirmation_expires_at"],
-        }]),
-        MagicMock(data=[user]),  # update result
-    ]
-
-    with patch("auth.get_db", return_value=mock):
-        resp = client.get(f"/api/auth/confirm-email?token={user['confirmation_token']}")
-
-    assert resp.status_code == 200
-    assert "confirmado" in resp.json()["message"].lower()
-
-
-def test_confirm_email_invalid_token(client):
-    mock = _mock_db()
-    mock.execute.return_value = MagicMock(data=[])
-
-    with patch("auth.get_db", return_value=mock):
-        resp = client.get("/api/auth/confirm-email?token=badtoken")
+def test_register_duplicate_email(client: TestClient) -> None:
+    mock = _make_mock_supabase(
+        register_raises=AuthApiError("User already registered", 400, "")
+    )
+    original = dependencies._supabase_client
+    dependencies._supabase_client = mock
+    resp = client.post("/auth/register", json=VALID_REGISTER)
+    dependencies._supabase_client = original
 
     assert resp.status_code == 400
+    assert "cadastrado" in resp.json()["detail"].lower()
 
 
-def test_confirm_email_expired_token(client):
-    user = _make_user(confirmed=False)
-    user["confirmation_expires_at"] = (
-        datetime.now(timezone.utc) - timedelta(hours=1)
-    ).isoformat()
-    mock = _mock_db()
-    mock.execute.return_value = MagicMock(data=[{
-        "id": user["id"],
-        "email_confirmed": False,
-        "confirmation_expires_at": user["confirmation_expires_at"],
-    }])
-
-    with patch("auth.get_db", return_value=mock):
-        resp = client.get("/api/auth/confirm-email?token=sometoken")
-
-    assert resp.status_code == 400
+# ── login ─────────────────────────────────────────────────────────────────────
 
 
-# ---------------------------------------------------------------------------
-# POST /api/auth/login
-# ---------------------------------------------------------------------------
-
-
-def test_login_success(client):
-    user = _make_user(confirmed=True, password="password123")
-    mock = _mock_db()
-    mock.execute.return_value = MagicMock(data=[user])
-
-    with patch("auth.get_db", return_value=mock):
-        resp = client.post("/api/auth/login", json={
-            "email": "user@example.com",
-            "password": "password123",
-        })
-
+def test_login_success(client: TestClient) -> None:
+    resp = client.post(
+        "/auth/login", json={"email": "test@example.com", "password": "senhaSegura123"}
+    )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["user"]["email"] == "user@example.com"
-    assert "access_token" in resp.cookies
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
 
 
-def test_login_wrong_password(client):
-    user = _make_user(confirmed=True, password="correct")
-    mock = _mock_db()
-    mock.execute.return_value = MagicMock(data=[user])
-
-    with patch("auth.get_db", return_value=mock):
-        resp = client.post("/api/auth/login", json={
-            "email": "user@example.com",
-            "password": "wrong",
-        })
+def test_login_wrong_password(client: TestClient) -> None:
+    mock = _make_mock_supabase(
+        login_raises=AuthApiError("Invalid login credentials", 401, "")
+    )
+    original = dependencies._supabase_client
+    dependencies._supabase_client = mock
+    resp = client.post(
+        "/auth/login", json={"email": "test@example.com", "password": "errada"}
+    )
+    dependencies._supabase_client = original
 
     assert resp.status_code == 401
+    assert "senha" in resp.json()["detail"].lower() or "email" in resp.json()["detail"].lower()
 
 
-def test_login_unconfirmed_email(client):
-    user = _make_user(confirmed=False, password="password123")
-    mock = _mock_db()
-    mock.execute.return_value = MagicMock(data=[user])
-
-    with patch("auth.get_db", return_value=mock):
-        resp = client.post("/api/auth/login", json={
-            "email": "user@example.com",
-            "password": "password123",
-        })
+def test_login_email_not_confirmed(client: TestClient) -> None:
+    mock = _make_mock_supabase(login_session=None)
+    mock.auth.sign_in_with_password.return_value = MagicMock(session=None)
+    original = dependencies._supabase_client
+    dependencies._supabase_client = mock
+    resp = client.post(
+        "/auth/login", json={"email": "test@example.com", "password": "senhaSegura123"}
+    )
+    dependencies._supabase_client = original
 
     assert resp.status_code == 403
 
 
-def test_login_nonexistent_user_is_401_not_404(client):
-    """Must not leak whether the email exists."""
-    mock = _mock_db()
-    mock.execute.return_value = MagicMock(data=[])
-
-    with patch("auth.get_db", return_value=mock):
-        resp = client.post("/api/auth/login", json={
-            "email": "ghost@example.com",
-            "password": "anything",
-        })
-
-    assert resp.status_code == 401
+# ── refresh ───────────────────────────────────────────────────────────────────
 
 
-# ---------------------------------------------------------------------------
-# GET /api/auth/me  (requires auth cookie)
-# ---------------------------------------------------------------------------
-
-
-def test_get_me_authenticated(client):
-    user = _make_user()
-    token = create_access_token(user["id"])
-    mock = _mock_db()
-    mock.execute.return_value = MagicMock(data=[user])
-
-    with patch("auth.get_db", return_value=mock):
-        resp = client.get(
-            "/api/auth/me",
-            cookies={"access_token": token},
-        )
-
+def test_refresh_success(client: TestClient) -> None:
+    resp = client.post("/auth/refresh", json={"refresh_token": "some-refresh-token"})
     assert resp.status_code == 200
-    assert resp.json()["email"] == user["email"]
+    assert "access_token" in resp.json()
 
 
-def test_get_me_unauthenticated(client):
-    resp = client.get("/api/auth/me")
-    assert resp.status_code == 401
+def test_refresh_invalid_token(client: TestClient) -> None:
+    mock = _make_mock_supabase(
+        refresh_raises=AuthApiError("Invalid refresh token", 401, "")
+    )
+    original = dependencies._supabase_client
+    dependencies._supabase_client = mock
+    resp = client.post("/auth/refresh", json={"refresh_token": "invalid"})
+    dependencies._supabase_client = original
+
+    assert resp.status_code in (400, 401)
 
 
-def test_get_me_invalid_token(client):
-    resp = client.get(
-        "/api/auth/me",
-        cookies={"access_token": "invalid.token.here"},
+# ── logout ────────────────────────────────────────────────────────────────────
+
+
+def test_logout_success(client: TestClient, auth_headers: dict) -> None:
+    resp = client.post("/auth/logout", headers=auth_headers)
+    assert resp.status_code == 200
+
+
+def test_logout_without_token(client: TestClient) -> None:
+    resp = client.post("/auth/logout")
+    assert resp.status_code == 403
+
+
+def test_logout_expired_token(client: TestClient) -> None:
+    expired_token = make_token(expired=True)
+    resp = client.post(
+        "/auth/logout", headers={"Authorization": f"Bearer {expired_token}"}
     )
     assert resp.status_code == 401
-
-
-# ---------------------------------------------------------------------------
-# PUT /api/auth/profile  (multi-tenant: user can only update their own row)
-# ---------------------------------------------------------------------------
-
-
-def test_update_profile_success(client):
-    user = _make_user()
-    token = create_access_token(user["id"])
-    updated = {**user, "first_name": "Beatriz"}
-    mock = _mock_db()
-    mock.execute.return_value = MagicMock(data=[updated])
-
-    with patch("auth.get_db", return_value=mock):
-        resp = client.put(
-            "/api/auth/profile",
-            json={"first_name": "Beatriz"},
-            cookies={"access_token": token},
-        )
-
-    assert resp.status_code == 200
-    # Verify .eq("id", user_id) was called — ensures multi-tenant isolation
-    calls = [str(c) for c in mock.eq.call_args_list]
-    assert any("id" in c for c in calls)
-
-
-def test_update_profile_empty_body(client):
-    user = _make_user()
-    token = create_access_token(user["id"])
-
-    resp = client.put(
-        "/api/auth/profile",
-        json={},
-        cookies={"access_token": token},
-    )
-    assert resp.status_code == 400
-
-
-def test_update_profile_unauthenticated(client):
-    resp = client.put("/api/auth/profile", json={"first_name": "X"})
-    assert resp.status_code == 401
-
-
-# ---------------------------------------------------------------------------
-# POST /api/auth/logout
-# ---------------------------------------------------------------------------
-
-
-def test_logout_clears_cookie(client):
-    user = _make_user()
-    token = create_access_token(user["id"])
-
-    resp = client.post("/api/auth/logout", cookies={"access_token": token})
-
-    assert resp.status_code == 200
-    cookie_header = resp.headers.get("set-cookie", "")
-    assert "access_token" in cookie_header

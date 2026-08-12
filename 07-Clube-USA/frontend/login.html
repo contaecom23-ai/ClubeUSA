@@ -1,85 +1,105 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Entrar — Clube USA</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Entrar</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-           background: #f8fafc; color: #1e293b; display: flex; min-height: 100vh;
-           align-items: center; justify-content: center; padding: 24px; }
-    .card { background: #fff; border-radius: 16px; padding: 40px 36px;
-            box-shadow: 0 4px 24px rgba(0,0,0,.08); width: 100%; max-width: 400px; }
-    .logo { text-align: center; margin-bottom: 28px; }
-    .logo a { text-decoration: none; font-size: 1.6rem; font-weight: 800; color: #1d4ed8; }
-    h1 { font-size: 1.5rem; margin-bottom: 24px; text-align: center; }
-    .field { margin-bottom: 16px; }
-    label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; color: #475569; }
-    input { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px;
-            font-size: 1rem; transition: border-color .15s; outline: none; }
-    input:focus { border-color: #1d4ed8; }
-    .btn { width: 100%; padding: 13px; background: #1d4ed8; color: #fff; border: none;
-           border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer;
-           transition: background .15s; margin-top: 8px; }
-    .btn:hover { background: #1e40af; }
-    .btn:disabled { background: #93c5fd; cursor: not-allowed; }
-    .btn-secondary { background: #f1f5f9; color: #475569; margin-top: 8px; }
-    .btn-secondary:hover { background: #e2e8f0; }
-    .msg { display: none; padding: 12px 16px; border-radius: 8px; margin-top: 16px;
-           font-size: .9rem; text-align: center; }
-    .msg.success { background: #dcfce7; color: #166534; display: block; }
-    .msg.error   { background: #fee2e2; color: #991b1b; display: block; }
-    .msg.info    { background: #eff6ff; color: #1e40af; display: block; }
-    .footer-link { text-align: center; margin-top: 20px; font-size: .9rem; color: #64748b; }
-    .footer-link a { color: #1d4ed8; text-decoration: none; font-weight: 600; }
-    #resend-section { display: none; margin-top: 12px; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 2rem;
+      width: 100%;
+      max-width: 380px;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; color: #1a202c; }
+    .subtitle { color: #718096; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: #4a5568; margin-bottom: 0.35rem; }
+    input {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: #4c51bf; }
+    .btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: #4c51bf;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #434190; }
+    .btn:disabled { background: #a0aec0; cursor: not-allowed; }
+    .msg {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .msg.success { background: #c6f6d5; color: #276749; display: block; }
+    .msg.error   { background: #fed7d7; color: #9b2c2c; display: block; }
+    .footer-link { text-align: center; margin-top: 1.25rem; font-size: 0.88rem; color: #718096; }
+    .footer-link a { color: #4c51bf; text-decoration: none; font-weight: 600; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="logo"><a href="/">🇧🇷 Clube USA</a></div>
-    <h1>Entrar na conta</h1>
+    <h1>🇧🇷 Clube USA</h1>
+    <p class="subtitle">Acesse sua conta</p>
 
-    <form id="form" novalidate>
-      <div class="field">
+    <form id="form">
+      <div class="form-group">
         <label for="email">Email</label>
-        <input id="email" name="email" type="email" placeholder="ana@exemplo.com" required autocomplete="email" />
+        <input id="email" type="email" required placeholder="joao@example.com">
       </div>
-
-      <div class="field">
+      <div class="form-group">
         <label for="password">Senha</label>
-        <input id="password" name="password" type="password" required autocomplete="current-password" />
+        <input id="password" type="password" required placeholder="Sua senha">
       </div>
-
-      <button type="submit" class="btn" id="submit-btn">Entrar</button>
+      <button class="btn" type="submit" id="btn">Entrar</button>
     </form>
-
-    <div id="resend-section">
-      <button type="button" class="btn btn-secondary" id="resend-btn">
-        Reenviar email de confirmação
-      </button>
-    </div>
 
     <div class="msg" id="msg"></div>
 
-    <p class="footer-link">Não tem conta? <a href="/register">Criar conta grátis</a></p>
+    <div class="footer-link">
+      Não tem conta? <a href="register.html">Cadastre-se grátis</a>
+    </div>
   </div>
 
   <script>
-    const form        = document.getElementById('form');
-    const msg         = document.getElementById('msg');
-    const submitBtn   = document.getElementById('submit-btn');
-    const resendBtn   = document.getElementById('resend-btn');
-    const resendSec   = document.getElementById('resend-section');
+    const API = '';
 
-    form.addEventListener('submit', async (e) => {
+    document.getElementById('form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = document.getElementById('btn');
+      const msg = document.getElementById('msg');
       msg.className = 'msg';
       msg.textContent = '';
-      resendSec.style.display = 'none';
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Aguarde...';
+      btn.disabled = true;
+      btn.textContent = 'Entrando...';
 
       const body = {
         email:    document.getElementById('email').value.trim(),
@@ -87,63 +107,26 @@
       };
 
       try {
-        const res  = await fetch('/api/auth/login', {
+        const res = await fetch(`${API}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify(body),
         });
         const data = await res.json();
-
         if (res.ok) {
-          msg.className = 'msg success';
-          msg.textContent = 'Login realizado! Redirecionando...';
-          setTimeout(() => { window.location.href = '/profile'; }, 800);
-        } else if (res.status === 403) {
-          msg.className = 'msg info';
-          msg.textContent = data.detail || 'Email não confirmado.';
-          resendSec.style.display = 'block';
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Entrar';
+          localStorage.setItem('access_token', data.access_token);
+          localStorage.setItem('refresh_token', data.refresh_token);
+          window.location.href = 'profile.html';
         } else {
           msg.className = 'msg error';
-          msg.textContent = data.detail || 'Email ou senha incorretos.';
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Entrar';
+          msg.textContent = data.detail || 'Erro ao entrar. Verifique suas credenciais.';
         }
       } catch {
         msg.className = 'msg error';
-        msg.textContent = 'Erro de conexão. Tente novamente.';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Entrar';
-      }
-    });
-
-    resendBtn.addEventListener('click', async () => {
-      resendBtn.disabled = true;
-      resendBtn.textContent = 'Enviando...';
-
-      const body = {
-        email:    document.getElementById('email').value.trim(),
-        password: document.getElementById('password').value,
-      };
-
-      try {
-        const res  = await fetch('/api/auth/resend-confirmation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(body),
-        });
-        const data = await res.json();
-        msg.className = res.ok ? 'msg success' : 'msg error';
-        msg.textContent = data.message || data.detail || '';
-      } catch {
-        msg.className = 'msg error';
-        msg.textContent = 'Erro ao reenviar. Tente novamente.';
+        msg.textContent = 'Erro de conexão. Verifique sua internet.';
       } finally {
-        resendBtn.disabled = false;
-        resendBtn.textContent = 'Reenviar email de confirmação';
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
       }
     });
   </script>

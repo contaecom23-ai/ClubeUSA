@@ -18,51 +18,95 @@ ele registra aqui e segue para outra tarefa.
 
 ---
 
+### [2026-08-02] Configuração do Supabase (bloqueador de Fase 0.1)
+
+**Contexto:** O backend FastAPI usa Supabase Auth para cadastro, login e confirmação de email. Sem
+as credenciais de um projeto Supabase real, o código está pronto mas não pode ser testado nem implantado.
+
+**O que precisa ser feito:**
+1. Crie um projeto em [supabase.com](https://supabase.com) (plano gratuito suficiente para Fase 0 com 1k usuários)
+2. Em **Settings → API**, copie:
+   - `SUPABASE_URL` (ex: `https://xyzxyz.supabase.co`)
+   - `service_role key` (NÃO a `anon key` — é a chave secreta de servidor)
+   - `JWT Secret` (em Settings → API → JWT Settings)
+3. Em **Authentication → URL Configuration**, configure:
+   - **Site URL**: a URL onde o frontend estará hospedado (ex: `https://clubeusa.com`)
+   - **Redirect URLs**: mesma URL + `/profile`
+4. Em **Authentication → SMTP Settings**, configure provedor de email (ver decisão abaixo)
+5. Execute a migration em **SQL Editor → New Query**: conteúdo de `07-Clube-USA/migrations/001_initial_schema.sql`
+6. Crie o arquivo `.env` em `07-Clube-USA/backend/` com base no `.env.example`
+
+**Status:** PENDENTE
+
+---
+
 ### [2026-08-12] Provedor de email para confirmação de cadastro
 
 **Contexto:**
-A Fase 0.1 inclui confirmação de email obrigatória antes do primeiro login. O backend já tem o código
-de envio implementado via SMTP genérico (funciona com qualquer provedor SMTP). Em desenvolvimento, o
-link de confirmação é impresso no log (stdout) — nenhum email real é enviado enquanto as env vars
-`EMAIL_SMTP_*` não forem configuradas.
+A Fase 0.1 usa **Supabase Auth** para cadastro/login, e o email de confirmação é enviado pelo próprio
+Supabase (configurado no dashboard em Authentication → SMTP Settings). O backend não envia email diretamente.
 
 **Pergunta:**
-Qual provedor de email usar em produção, e você pode fornecer as credenciais?
+Qual provedor de email configurar no Supabase para enviar o email de confirmação?
 
 **Opções:**
 
 - **Opção A — SendGrid (recomendado para início)**
-  - Prós: free tier generoso (100 emails/dia), API robusta, boa entregabilidade, sem SMTP headache
-  - Contras: mais um serviço externo, requer conta Twilio/SendGrid
-  - Config: converter o código SMTP para SDK SendGrid (30 min de trabalho)
+  - Prós: free tier 100 emails/dia, boa entregabilidade, integração simples no dashboard Supabase
+  - Contras: mais um serviço externo; requer conta Twilio/SendGrid
   - Preço: grátis até 100/dia; ~$15/mês acima disso
 
-- **Opção B — SMTP do Gmail / Workspace**
-  - Prós: você provavelmente já tem a conta, zero custo
-  - Contras: limites baixos (500/dia Gmail, 2.000/dia Workspace); má reputação de IP; menos confiável em produção
-  - Config: `EMAIL_SMTP_HOST=smtp.gmail.com`, porta 587, senha de app do Google
+- **Opção B — SMTP do Gmail / Google Workspace**
+  - Prós: zero custo se já tem a conta
+  - Contras: limite 500/dia (Gmail) / 2000/dia (Workspace); má reputação de IP; menos confiável em produção
 
 - **Opção C — Amazon SES**
-  - Prós: muito barato (~$0.10/1.000 emails), escala para 1M+ sem reprovar
+  - Prós: $0.10/1.000 emails, escala para 1M+ sem problema
   - Contras: conta AWS necessária; setup mais complexo (verificar domínio, sair do sandbox)
-  - Melhor escolha para Fase 2+ quando o volume crescer
+  - Melhor para Fase 2+ quando o volume crescer
 
 - **Opção D — Resend.com**
   - Prós: DX excelente, free tier 3.000/mês, API moderna
-  - Contras: startup menor (risco de longevidade, mas bem financiada)
+  - Contras: startup menor (bem financiada mas menor que Twilio/Amazon)
 
-**Recomendação do Claude:**
-Começar com **SendGrid (A)** para os primeiros 1k usuários — gratuito, confiável, fácil de configurar.
-Migrar para Amazon SES quando o volume justificar (Fase 2+). Evite Gmail SMTP em produção.
+**Recomendação:** Começar com **SendGrid (A)** — gratuito, confiável, se integra diretamente nas
+configurações de SMTP do Supabase. Migrar para Amazon SES quando o volume justificar (Fase 2+).
 
-**Ação necessária:** Crie conta no SendGrid → gere API Key → me passe ou coloque em `.env`:
+**Como configurar no Supabase:**
+Dashboard → Authentication → Settings → SMTP Provider:
 ```
-EMAIL_SMTP_HOST=smtp.sendgrid.net
-EMAIL_SMTP_PORT=587
-EMAIL_SMTP_USER=apikey
-EMAIL_SMTP_PASSWORD=SG.xxxxxxxxxxxxxxxxx
-EMAIL_FROM=noreply@clubeusa.com
+Host: smtp.sendgrid.net
+Port: 587
+User: apikey
+Pass: SG.xxxxxxxxxxxxxxxxx (sua API Key do SendGrid)
+Sender: noreply@clubeusa.com
 ```
+
+**Status:** PENDENTE
+
+---
+
+### [2026-08-02] Hospedagem do backend e frontend
+
+**Contexto:** O backend FastAPI precisa rodar em algum servidor. O frontend são arquivos HTML estáticos.
+
+**Opções:**
+
+- **Opção A — Railway** (recomendado para início)
+  - Prós: deploy automático via GitHub, plano gratuito $5/mês de crédito, zero config de servidor
+  - Contras: pago para produção contínua (~$5–20/mês)
+
+- **Opção B — Render**
+  - Prós: plano gratuito para serviços web, bom para testes
+  - Contras: cold start lento (~30s) no plano gratuito — ruim para UX de usuário real
+  - Pago: $7/mês quando lançar para usuários reais
+
+- **Opção C — Fly.io**
+  - Prós: plano gratuito generoso, rápido, global
+  - Contras: um pouco mais complexo de configurar
+
+**Recomendação:** Render (gratuito, plano free) para testes internos. Migre para Railway ou Render pago
+quando lançar para os primeiros usuários.
 
 **Status:** PENDENTE
 
@@ -71,40 +115,32 @@ EMAIL_FROM=noreply@clubeusa.com
 ### [2026-08-12] Domínio e URL de produção
 
 **Contexto:**
-O link de confirmação de email usa `APP_URL` (ex: `https://clubeusa.com`). O sistema funciona com
-qualquer URL, mas o dono precisa configurar `APP_URL` no `.env` de produção.
+O Supabase Auth usa o Site URL para gerar links de confirmação de email. Essa URL precisa ser
+definida antes do lançamento.
 
 **Pergunta:**
 Qual será o domínio final da plataforma? Você já tem o domínio registrado?
 
 **Opções:**
-- `clubeusa.com` (ideal — direto, memorável)
-- `clube.usa.com` (não existe, só exemplo)
-- Subdomínio temporário (ex: `app.clubeusa.com.br`) enquanto o .com não está disponível
+- `clubeusa.com` (ideal — direto, memorável, disponível para registro)
+- `clubeusa.com.br` (alternativa BR)
+- Subdomínio temporário enquanto o .com não está pronto
 
-**Recomendação:** Registre `clubeusa.com` agora se disponível (~$12/ano no Namecheap/Cloudflare).
-O nome é o ativo mais barato e mais irreversível do produto.
+**Recomendação:** Registre `clubeusa.com` agora se disponível (~$12/ano no Namecheap ou Cloudflare).
+É o ativo mais barato e mais irreversível — configure no Supabase assim que tiver.
 
 **Status:** PENDENTE
 
 ---
 
-### [2026-08-12] Credenciais do Supabase
+### [2026-08-02] Alerta: workflow do GitHub Actions com YAML malformado
 
-**Contexto:**
-O backend precisa de `SUPABASE_URL` e `SUPABASE_SERVICE_KEY` (service_role). O projeto Supabase
-precisa ser criado, e a migration SQL em `07-Clube-USA/migrations/001_initial_schema.sql` precisa
-ser executada no SQL Editor do Supabase.
+**Contexto:** O arquivo `.github/workflows/clubeusa-builder.yml` tem indentação incorreta no YAML,
+o que provavelmente impede que o workflow rode como esperado no GitHub Actions.
 
-**Ação necessária:**
-1. Crie um projeto no Supabase (free tier suficiente para Fase 0)
-2. Vá em Project Settings → API → copie `URL` e `service_role key`
-3. Execute `migrations/001_initial_schema.sql` no SQL Editor
-4. Adicione ao `.env` de produção:
-   ```
-   SUPABASE_URL=https://xxxx.supabase.co
-   SUPABASE_SERVICE_KEY=eyJhbGc...
-   ```
+**Pergunta:** Quer que o Claude corrija o YAML para que o workflow automatizado funcione?
+
+**Recomendação:** Sim — é um fix simples e sem risco. Pode resolver no próximo ciclo se aprovar.
 
 **Status:** PENDENTE
 
