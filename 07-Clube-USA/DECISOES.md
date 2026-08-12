@@ -18,6 +18,43 @@ ele registra aqui e segue para outra tarefa.
 
 ---
 
+### 🚨 [2026-08-12] BLOQUEIO CRÍTICO — 49 PRs abertos, loop parado
+
+**Contexto:**
+O builder automatizado rodou ~49 vezes e criou **49 PRs abertos** para a mesma feature (Fase 0.1),
+porque nenhum PR foi mergeado na `main`. A cada execução, o builder lê o ROADMAP.md da `main`,
+vê o item 0.1 como `[ ]` (não concluído), e cria um novo PR. O projeto está preso em loop.
+
+**A causa raiz:** Você nunca revisou/mergeou nenhum PR. Os PRs se acumularam na lista.
+
+**O que PRECISA ser feito (SEM ISSO O LOOP NÃO PARA):**
+
+**Ação obrigatória — escolha UMA das opções:**
+
+**Opção A (recomendado) — Mergear o PR canônico:**
+1. Abra o PR `#42` (branch `claude/fase-0.1-cadastro-perfil`) — tem o código mais completo
+2. Revise: backend FastAPI + Supabase Auth + migration SQL + frontend HTML + testes
+3. Configure as credenciais no `.env` (Supabase URL + service_role key + email SMTP)
+4. Clique em "Merge pull request"
+5. Feche os outros 48 PRs como "outdated/duplicate"
+
+**Opção B — Fechar todos e recomeçar do zero:**
+- Feche todos os 49 PRs com a mensagem "Fechando duplicatas — loop corrigido"
+- O builder criará um PR limpo na próxima execução
+
+**Opção C — Pausar o builder:**
+- Desative o workflow em `.github/workflows/clubeusa-builder.yml` até você ter tempo de revisar
+
+**Nota técnica:** O workflow YAML também está malformado (indentação incorreta), o que pode
+impedir que o builder do GitHub Actions funcione corretamente. O PR #48 corrige isso.
+
+**Recomendação do Claude:** Mergear o **PR #42** + fechar os outros 48 + configurar Supabase.
+É o mais recente e mais completo. Depois mergear o PR #48 (fix do workflow YAML).
+
+**Status:** BLOQUEANTE — O projeto não avança até esta decisão ser tomada.
+
+---
+
 ### [2026-08-02] Configuração do Supabase (bloqueador de Fase 0.1)
 
 **Contexto:** O backend FastAPI usa Supabase Auth para cadastro, login e confirmação de email. Sem
