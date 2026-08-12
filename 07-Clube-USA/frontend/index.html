@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA</title>
+  <link rel="stylesheet" href="css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div class="card text-center">
+    <div class="logo">
+      <h1>Clube USA</h1>
+      <p>A comunidade do brasileiro nos EUA</p>
+    </div>
+    <p style="color:var(--color-text-muted);margin-bottom:1.5rem">Carregando…</p>
+  </div>
+
+  <script>
+    window.__SUPABASE_URL__     = "SUBSTITUIR_PELA_URL_DO_PROJETO";
+    window.__SUPABASE_ANON_KEY__ = "SUBSTITUIR_PELA_ANON_KEY";
+  </script>
+  <script src="js/auth.js"></script>
+  <script>
+    (async () => {
+      const session = await getSession();
+      window.location.href = session ? "/profile.html" : "/register.html";
+    })();
+  </script>
+</body>
+</html>

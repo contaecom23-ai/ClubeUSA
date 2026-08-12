@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Clube USA</title>
+  <link rel="stylesheet" href="css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>Clube USA</h1>
+      <p>A comunidade do brasileiro nos EUA</p>
+    </div>
+
+    <h2>Entrar na sua conta</h2>
+
+    <div id="alert" class="alert"></div>
+
+    <form id="login-form" novalidate>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="seu@email.com" autocomplete="email" required>
+        <div id="err-email" class="field-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input id="password" type="password" placeholder="Sua senha" autocomplete="current-password" required>
+        <div id="err-password" class="field-error"></div>
+      </div>
+
+      <button type="submit" class="btn" id="submit-btn">Entrar</button>
+    </form>
+
+    <div class="divider"><span>ou</span></div>
+
+    <p class="text-center">
+      Não tem conta? <a class="link" href="register.html">Criar conta grátis</a>
+    </p>
+  </div>
+
+  <script>
+    window.__SUPABASE_URL__     = "SUBSTITUIR_PELA_URL_DO_PROJETO";
+    window.__SUPABASE_ANON_KEY__ = "SUBSTITUIR_PELA_ANON_KEY";
+    window.__API_BASE__          = "http://localhost:8000";
+  </script>
+  <script src="js/auth.js"></script>
+  <script>
+    (async () => {
+      await redirectIfAuthenticated("/profile.html");
+    })();
+
+    const form    = document.getElementById("login-form");
+    const btn     = document.getElementById("submit-btn");
+    const alertEl = document.getElementById("alert");
+
+    function showAlert(msg, type = "error") {
+      alertEl.textContent = msg;
+      alertEl.className = `alert ${type} visible`;
+    }
+
+    function fieldError(id, msg) {
+      const el = document.getElementById("err-" + id);
+      const input = document.getElementById(id);
+      if (msg) {
+        el.textContent = msg;
+        el.className = "field-error visible";
+        input.classList.add("error");
+      } else {
+        el.className = "field-error";
+        input.classList.remove("error");
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      fieldError("email", "");
+      fieldError("password", "");
+      alertEl.className = "alert";
+
+      const email    = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email) { fieldError("email", "Informe seu email."); return; }
+      if (!password) { fieldError("password", "Informe sua senha."); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Entrando…';
+
+      const { data, error } = await signIn(email, password);
+
+      btn.disabled = false;
+      btn.textContent = "Entrar";
+
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          showAlert("Confirme seu email antes de entrar. Verifique sua caixa de entrada.", "info");
+        } else if (error.message.includes("Invalid login credentials")) {
+          showAlert("Email ou senha incorretos.", "error");
+        } else {
+          showAlert(error.message, "error");
+        }
+        return;
+      }
+
+      window.location.href = "/profile.html";
+    });
+  </script>
+</body>
+</html>

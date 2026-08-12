@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar conta — Clube USA</title>
+  <link rel="stylesheet" href="css/main.css">
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>Clube USA</h1>
+      <p>A comunidade do brasileiro nos EUA</p>
+    </div>
+
+    <h2>Criar sua conta</h2>
+
+    <div id="alert" class="alert"></div>
+
+    <form id="register-form" novalidate>
+      <div class="form-group">
+        <label for="full_name">Nome completo</label>
+        <input id="full_name" type="text" placeholder="Seu nome" autocomplete="name" required>
+        <div id="err-full_name" class="field-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="seu@email.com" autocomplete="email" required>
+        <div id="err-email" class="field-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input id="password" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required minlength="8">
+        <div id="err-password" class="field-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="zip_code">
+          ZIP code <span class="optional">(opcional)</span>
+        </label>
+        <input id="zip_code" type="text" placeholder="Ex: 33101" autocomplete="postal-code" maxlength="10">
+        <div id="err-zip_code" class="field-error"></div>
+      </div>
+
+      <button type="submit" class="btn" id="submit-btn">Criar conta</button>
+    </form>
+
+    <div class="divider"><span>ou</span></div>
+
+    <p class="text-center">
+      Já tem conta? <a class="link" href="login.html">Entrar</a>
+    </p>
+  </div>
+
+  <script>
+    // Configuração — substitua pelos valores do seu projeto Supabase
+    window.__SUPABASE_URL__     = "SUBSTITUIR_PELA_URL_DO_PROJETO";
+    window.__SUPABASE_ANON_KEY__ = "SUBSTITUIR_PELA_ANON_KEY";
+    window.__API_BASE__          = "http://localhost:8000";
+  </script>
+  <script src="js/auth.js"></script>
+  <script>
+    (async () => {
+      // Se já logado, redireciona
+      await redirectIfAuthenticated("/profile.html");
+    })();
+
+    const form = document.getElementById("register-form");
+    const btn  = document.getElementById("submit-btn");
+    const alertEl = document.getElementById("alert");
+
+    function showAlert(msg, type = "error") {
+      alertEl.textContent = msg;
+      alertEl.className = `alert ${type} visible`;
+    }
+
+    function clearAlert() {
+      alertEl.className = "alert";
+    }
+
+    function fieldError(id, msg) {
+      const el = document.getElementById("err-" + id);
+      const input = document.getElementById(id);
+      if (msg) {
+        el.textContent = msg;
+        el.className = "field-error visible";
+        input.classList.add("error");
+      } else {
+        el.className = "field-error";
+        input.classList.remove("error");
+      }
+    }
+
+    function clearErrors() {
+      ["full_name", "email", "password", "zip_code"].forEach(id => fieldError(id, ""));
+      clearAlert();
+    }
+
+    function validateForm(fullName, email, password, zipCode) {
+      let valid = true;
+      if (!fullName || fullName.trim().length < 2) {
+        fieldError("full_name", "Nome deve ter ao menos 2 caracteres.");
+        valid = false;
+      }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        fieldError("email", "Email inválido.");
+        valid = false;
+      }
+      if (!password || password.length < 8) {
+        fieldError("password", "Senha deve ter ao menos 8 caracteres.");
+        valid = false;
+      }
+      if (zipCode && !/^[0-9]{5}(-[0-9]{4})?$/.test(zipCode)) {
+        fieldError("zip_code", "ZIP inválido (ex: 90210 ou 90210-1234).");
+        valid = false;
+      }
+      return valid;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearErrors();
+
+      const fullName = document.getElementById("full_name").value.trim();
+      const email    = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const zipCode  = document.getElementById("zip_code").value.trim();
+
+      if (!validateForm(fullName, email, password, zipCode)) return;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Criando conta…';
+
+      const { data, error } = await signUp(fullName, email, password);
+
+      btn.disabled = false;
+      btn.textContent = "Criar conta";
+
+      if (error) {
+        if (error.message.includes("already registered")) {
+          showAlert("Este email já está cadastrado. Faça login ou redefina sua senha.", "error");
+        } else {
+          showAlert(error.message, "error");
+        }
+        return;
+      }
+
+      // Salva zip_code temporariamente para o backend após confirmação
+      if (zipCode) sessionStorage.setItem("pending_zip", zipCode);
+
+      showAlert(
+        "Conta criada! Verifique seu email e clique no link de confirmação para ativar sua conta.",
+        "success"
+      );
+      form.reset();
+    });
+  </script>
+</body>
+</html>

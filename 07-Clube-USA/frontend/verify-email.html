@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email confirmado — Clube USA</title>
+  <link rel="stylesheet" href="css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div class="card text-center">
+    <div class="success-icon">✅</div>
+    <div class="logo">
+      <h1>Clube USA</h1>
+    </div>
+
+    <h2>Email confirmado!</h2>
+    <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">
+      Sua conta foi ativada com sucesso. Bem-vindo ao Clube USA!
+    </p>
+
+    <div id="status" class="alert info visible">
+      Carregando seu perfil…
+    </div>
+
+    <a class="btn" id="cta" href="profile.html" style="display:none">
+      Completar meu perfil →
+    </a>
+    <a class="btn btn-secondary mt-2" id="login-link" href="login.html" style="display:none">
+      Ir para o login
+    </a>
+  </div>
+
+  <script>
+    window.__SUPABASE_URL__     = "SUBSTITUIR_PELA_URL_DO_PROJETO";
+    window.__SUPABASE_ANON_KEY__ = "SUBSTITUIR_PELA_ANON_KEY";
+    window.__API_BASE__          = "http://localhost:8000";
+  </script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    (async () => {
+      const statusEl   = document.getElementById("status");
+      const ctaEl      = document.getElementById("cta");
+      const loginLinkEl = document.getElementById("login-link");
+
+      // Supabase processa o token da URL automaticamente ao carregar o cliente
+      // Aguarda um momento para o SDK processar o hash da URL
+      await new Promise(r => setTimeout(r, 800));
+
+      const session = await getSession();
+
+      if (!session) {
+        statusEl.className = "alert error visible";
+        statusEl.textContent = "Link inválido ou expirado. Tente fazer login ou cadastre-se novamente.";
+        loginLinkEl.style.display = "block";
+        return;
+      }
+
+      statusEl.className = "alert success visible";
+      statusEl.textContent = "Tudo certo! Agora complete seu perfil.";
+
+      // Se o usuário preencheu ZIP no cadastro, salva agora que está autenticado
+      const pendingZip = sessionStorage.getItem("pending_zip");
+      if (pendingZip) {
+        try {
+          await updateProfile({ zip_code: pendingZip });
+          sessionStorage.removeItem("pending_zip");
+        } catch (_) {
+          // Falha silenciosa — usuário pode preencher no perfil depois
+        }
+      }
+
+      ctaEl.style.display = "block";
+    })();
+  </script>
+</body>
+</html>
