@@ -1,0 +1,7 @@
+07-Clube-USA/backend/__pycache__
+07-Clube-USA/backend/tests/__pycache__
+__pycache__/
+*.pyc
+*.pyo
+.env
+.pytest_cache/

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+           background: #f8fafc; color: #1e293b; display: flex; min-height: 100vh;
+           align-items: center; justify-content: center; padding: 24px; }
+    .card { background: #fff; border-radius: 16px; padding: 40px 36px;
+            box-shadow: 0 4px 24px rgba(0,0,0,.08); width: 100%; max-width: 400px; }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo a { text-decoration: none; font-size: 1.6rem; font-weight: 800; color: #1d4ed8; }
+    h1 { font-size: 1.5rem; margin-bottom: 24px; text-align: center; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; color: #475569; }
+    input { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+            font-size: 1rem; transition: border-color .15s; outline: none; }
+    input:focus { border-color: #1d4ed8; }
+    .btn { width: 100%; padding: 13px; background: #1d4ed8; color: #fff; border: none;
+           border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer;
+           transition: background .15s; margin-top: 8px; }
+    .btn:hover { background: #1e40af; }
+    .btn:disabled { background: #93c5fd; cursor: not-allowed; }
+    .btn-secondary { background: #f1f5f9; color: #475569; margin-top: 8px; }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .msg { display: none; padding: 12px 16px; border-radius: 8px; margin-top: 16px;
+           font-size: .9rem; text-align: center; }
+    .msg.success { background: #dcfce7; color: #166534; display: block; }
+    .msg.error   { background: #fee2e2; color: #991b1b; display: block; }
+    .msg.info    { background: #eff6ff; color: #1e40af; display: block; }
+    .footer-link { text-align: center; margin-top: 20px; font-size: .9rem; color: #64748b; }
+    .footer-link a { color: #1d4ed8; text-decoration: none; font-weight: 600; }
+    #resend-section { display: none; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo"><a href="/">🇧🇷 Clube USA</a></div>
+    <h1>Entrar na conta</h1>
+
+    <form id="form" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" placeholder="ana@exemplo.com" required autocomplete="email" />
+      </div>
+
+      <div class="field">
+        <label for="password">Senha</label>
+        <input id="password" name="password" type="password" required autocomplete="current-password" />
+      </div>
+
+      <button type="submit" class="btn" id="submit-btn">Entrar</button>
+    </form>
+
+    <div id="resend-section">
+      <button type="button" class="btn btn-secondary" id="resend-btn">
+        Reenviar email de confirmação
+      </button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+
+    <p class="footer-link">Não tem conta? <a href="/register">Criar conta grátis</a></p>
+  </div>
+
+  <script>
+    const form        = document.getElementById('form');
+    const msg         = document.getElementById('msg');
+    const submitBtn   = document.getElementById('submit-btn');
+    const resendBtn   = document.getElementById('resend-btn');
+    const resendSec   = document.getElementById('resend-section');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.className = 'msg';
+      msg.textContent = '';
+      resendSec.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Aguarde...';
+
+      const body = {
+        email:    document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value,
+      };
+
+      try {
+        const res  = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          msg.className = 'msg success';
+          msg.textContent = 'Login realizado! Redirecionando...';
+          setTimeout(() => { window.location.href = '/profile'; }, 800);
+        } else if (res.status === 403) {
+          msg.className = 'msg info';
+          msg.textContent = data.detail || 'Email não confirmado.';
+          resendSec.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Entrar';
+        } else {
+          msg.className = 'msg error';
+          msg.textContent = data.detail || 'Email ou senha incorretos.';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Entrar';
+        }
+      } catch {
+        msg.className = 'msg error';
+        msg.textContent = 'Erro de conexão. Tente novamente.';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Entrar';
+      }
+    });
+
+    resendBtn.addEventListener('click', async () => {
+      resendBtn.disabled = true;
+      resendBtn.textContent = 'Enviando...';
+
+      const body = {
+        email:    document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value,
+      };
+
+      try {
+        const res  = await fetch('/api/auth/resend-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        msg.className = res.ok ? 'msg success' : 'msg error';
+        msg.textContent = data.message || data.detail || '';
+      } catch {
+        msg.className = 'msg error';
+        msg.textContent = 'Erro ao reenviar. Tente novamente.';
+      } finally {
+        resendBtn.disabled = false;
+        resendBtn.textContent = 'Reenviar email de confirmação';
+      }
+    });
+  </script>
+</body>
+</html>
