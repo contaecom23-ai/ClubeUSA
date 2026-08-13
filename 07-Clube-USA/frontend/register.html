@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Cadastro</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f9fafb; color: #111827;
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 2rem 1rem;
+    }
+    .card {
+      background: #fff; border-radius: 12px; box-shadow: 0 1px 8px rgba(0,0,0,0.1);
+      padding: 2.5rem 2rem; width: 100%; max-width: 440px;
+    }
+    .logo { text-align: center; margin-bottom: 1.5rem; }
+    .logo a { text-decoration: none; color: #1d4ed8; font-size: 1.3rem; font-weight: 700; }
+    h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .sub { color: #6b7280; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.3rem; }
+    input, select {
+      width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #d1d5db;
+      border-radius: 6px; font-size: 0.95rem; margin-bottom: 1rem;
+      outline: none; transition: border-color 0.15s;
+    }
+    input:focus, select:focus { border-color: #1d4ed8; }
+    .btn {
+      width: 100%; padding: 0.75rem; background: #1d4ed8; color: #fff;
+      border: none; border-radius: 8px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn:hover:not(:disabled) { opacity: 0.87; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg {
+      margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 6px;
+      font-size: 0.9rem; display: none;
+    }
+    .msg.success { background: #d1fae5; color: #065f46; }
+    .msg.error   { background: #fee2e2; color: #991b1b; }
+    .login-link { text-align: center; margin-top: 1.25rem; font-size: 0.875rem; color: #6b7280; }
+    .login-link a { color: #1d4ed8; text-decoration: none; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo"><a href="/">🇧🇷 Clube USA</a></div>
+    <h2>Crie sua conta</h2>
+    <p class="sub">Grátis. Feito para brasileiros nos EUA.</p>
+
+    <form id="registerForm" novalidate>
+      <label for="full_name">Nome completo *</label>
+      <input type="text" id="full_name" name="full_name" required autocomplete="name" placeholder="João da Silva">
+
+      <label for="email">Email *</label>
+      <input type="email" id="email" name="email" required autocomplete="email" placeholder="joao@email.com">
+
+      <label for="password">Senha * <small style="color:#6b7280">(mínimo 8 caracteres)</small></label>
+      <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="••••••••">
+
+      <label for="us_state">Estado (EUA)</label>
+      <select id="us_state" name="us_state">
+        <option value="">— selecionar —</option>
+        <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+        <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+        <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+        <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+        <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+        <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+        <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+        <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+        <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+        <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+        <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+        <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+        <option>WI</option><option>WY</option><option>DC</option>
+      </select>
+
+      <label for="city">Cidade</label>
+      <input type="text" id="city" name="city" placeholder="Miami" autocomplete="address-level2">
+
+      <button type="submit" class="btn" id="submitBtn">Criar conta</button>
+    </form>
+
+    <div class="msg" id="msg"></div>
+    <div class="login-link">Já tem conta? <a href="/login.html">Entrar</a></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('registerForm');
+    const msg = document.getElementById('msg');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function showMsg(text, type) {
+      msg.textContent = text; // textContent — sem risco XSS
+      msg.className = 'msg ' + type;
+      msg.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Criando conta…';
+
+      const body = {
+        email: document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value,
+        full_name: document.getElementById('full_name').value.trim(),
+        us_state: document.getElementById('us_state').value || null,
+        city: document.getElementById('city').value.trim() || null,
+      };
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          showMsg(data.message || 'Verifique seu email para confirmar a conta.', 'success');
+          form.reset();
+        } else {
+          const detail = data.detail || 'Erro ao criar conta. Tente novamente.';
+          showMsg(typeof detail === 'string' ? detail : JSON.stringify(detail), 'error');
+        }
+      } catch (_) {
+        showMsg('Erro de conexão. Verifique sua internet e tente novamente.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Criar conta';
+      }
+    });
+  </script>
+</body>
+</html>

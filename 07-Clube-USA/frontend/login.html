@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Entrar</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f9fafb; color: #111827;
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 2rem 1rem;
+    }
+    .card {
+      background: #fff; border-radius: 12px; box-shadow: 0 1px 8px rgba(0,0,0,0.1);
+      padding: 2.5rem 2rem; width: 100%; max-width: 400px;
+    }
+    .logo { text-align: center; margin-bottom: 1.5rem; }
+    .logo a { text-decoration: none; color: #1d4ed8; font-size: 1.3rem; font-weight: 700; }
+    h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .sub { color: #6b7280; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.3rem; }
+    input {
+      width: 100%; padding: 0.6rem 0.75rem; border: 1px solid #d1d5db;
+      border-radius: 6px; font-size: 0.95rem; margin-bottom: 1rem;
+      outline: none; transition: border-color 0.15s;
+    }
+    input:focus { border-color: #1d4ed8; }
+    .btn {
+      width: 100%; padding: 0.75rem; background: #1d4ed8; color: #fff;
+      border: none; border-radius: 8px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn:hover:not(:disabled) { opacity: 0.87; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg {
+      margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 6px;
+      font-size: 0.9rem; display: none;
+    }
+    .msg.warning { background: #fef9c3; color: #713f12; }
+    .msg.error   { background: #fee2e2; color: #991b1b; }
+    .register-link { text-align: center; margin-top: 1.25rem; font-size: 0.875rem; color: #6b7280; }
+    .register-link a { color: #1d4ed8; text-decoration: none; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo"><a href="/">🇧🇷 Clube USA</a></div>
+    <h2>Entrar</h2>
+    <p class="sub">Acesse sua conta.</p>
+
+    <form id="loginForm" novalidate>
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required autocomplete="email" placeholder="joao@email.com">
+
+      <label for="password">Senha</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+
+      <button type="submit" class="btn" id="submitBtn">Entrar</button>
+    </form>
+
+    <div class="msg" id="msg"></div>
+    <div class="register-link">Não tem conta? <a href="/register.html">Cadastrar grátis</a></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const msg = document.getElementById('msg');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function showMsg(text, type) {
+      msg.textContent = text;
+      msg.className = 'msg ' + type;
+      msg.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Entrando…';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin', // envia e recebe cookies
+          body: JSON.stringify({
+            email: document.getElementById('email').value.trim(),
+            password: document.getElementById('password').value,
+          }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          if (!data.email_confirmed) {
+            showMsg('Conta não confirmada. Verifique seu email e clique no link de confirmação.', 'warning');
+          } else {
+            window.location.href = '/dashboard.html';
+          }
+        } else {
+          const detail = data.detail || 'Email ou senha incorretos.';
+          showMsg(typeof detail === 'string' ? detail : 'Erro ao entrar. Tente novamente.', 'error');
+        }
+      } catch (_) {
+        showMsg('Erro de conexão. Verifique sua internet e tente novamente.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Entrar';
+      }
+    });
+  </script>
+</body>
+</html>
