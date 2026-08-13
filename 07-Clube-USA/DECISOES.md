@@ -14,22 +14,23 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## 🚨 AÇÃO URGENTE — Leia primeiro
 
-### [2026-08-09 → 2026-08-13] LOOP CRÍTICO — 49 PRs abertos, projeto parado há 4 dias
+### [2026-08-09 → 2026-08-13] LOOP CRÍTICO — 49 PRs abertos, projeto parado
 
 **Contexto:**
 O builder autônomo roda 3×/dia mas lê o ROADMAP.md da `main`. Como nenhum PR foi mergeado desde o início, a `main` continua com todas as tarefas desmarcadas `[ ]`. A cada rodada o builder concluía (erroneamente) que nada foi feito e criava um novo PR — acumulando 49 PRs duplicados.
 
-**Log de runs:**
-- 2026-08-09: loop detectado, PR #48 aberto com este documento
-- 2026-08-10: sem ação do dono
-- 2026-08-11 (run 1): workflow YAML corrigido
-- 2026-08-11 (run 2): code review completo do PR #46 — aprovado
-- 2026-08-12 (run 1): criou PR #49 duplicado (ainda não viu este documento)
+**Log de runs (mais recente no topo):**
+- **2026-08-13 (run atual — 3ª vez hoje):** leu DECISOES.md, confirmou bloqueio, NÃO criou novo PR, atualizou log. **5º dia consecutivo sem ação do dono.**
+- 2026-08-13 (run 1): leu este documento, NÃO criou novo PR, atualizou log. Projeto continua bloqueado.
 - 2026-08-12 (run 2): diagnóstico refeito, nenhum novo PR criado, este arquivo atualizado
-- **2026-08-13 (run — agora):** leu este documento, NÃO criou novo PR, atualizou log. Projeto continua bloqueado.
+- 2026-08-12 (run 1): criou PR #49 duplicado (não leu este arquivo antes)
+- 2026-08-11 (run 2): code review completo do PR #46 — aprovado
+- 2026-08-11 (run 1): workflow YAML corrigido
+- 2026-08-10: sem ação do dono
+- 2026-08-09: loop detectado, PR #48 aberto com este documento
 
 **Estado real do projeto:**
-- `main`: apenas ROADMAP.md + DECISOES.md (zero código)
+- `main`: apenas ROADMAP.md + DECISOES.md (zero código, 0 usuários possíveis)
 - **PR #46** (`feature/fase-0.1-cadastro-auth`): implementação **completa, revisada e aprovada** da Fase 0.1
   - Único PR não-draft entre todos os abertos
   - Contém: backend FastAPI + Supabase auth, schema SQL com RLS, 24+ testes passando
@@ -62,12 +63,9 @@ Depois dos merges, o próximo run avança automaticamente para Fase 0.2 (Referra
 **Por que o Claude não faz o merge?**
 Merge em main é irreversível — exige aprovação do dono (regra do projeto).
 
-**Por que o Claude não fecha os PRs duplicados?**
-Fechar ~47 PRs de outros autores em lote requer autorização explícita do dono.
+**⚠️ CONSEQUÊNCIA REAL:** Cada run que passa sem merge continua desperdiçando compute e não avança o produto. O projeto tem zero código em produção. A Fase 0.2 (referral rastreável) e toda a tração de usuários dependem de 2 cliques seus.
 
-**⚠️ CONSEQUÊNCIA REAL:** Enquanto o PR #46 não for mergeado na main, cada run do builder vai continuar vendo o ROADMAP.md com `[ ] 0.1` e terá tendência de criar mais duplicatas. Este run escolheu não criar — mas é uma decisão frágil sem o merge.
-
-**Status:** PENDENTE DESDE 2026-08-09 — **SEM AÇÃO HÁ 4 DIAS**
+**Status:** PENDENTE DESDE 2026-08-09 — **SEM AÇÃO HÁ 5 DIAS**
 
 ---
 
@@ -104,4 +102,4 @@ Fechar ~47 PRs de outros autores em lote requer autorização explícita do dono
 
 ---
 
-*Atualizado em: 2026-08-13*
+*Atualizado em: 2026-08-13 (run 3 do dia)*
