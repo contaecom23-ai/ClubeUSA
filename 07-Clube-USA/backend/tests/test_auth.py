@@ -250,3 +250,28 @@ def test_logout_unauthenticated(client):
     c, _ = client
     r = c.post("/api/v1/auth/logout")
     assert r.status_code == 403
+
+
+# ─── Security headers ─────────────────────────────────────────────────────────
+
+
+def test_security_headers_present_on_every_response(client):
+    c, _ = client
+    r = c.get("/health")
+    assert r.headers.get("X-Content-Type-Options") == "nosniff"
+    assert r.headers.get("X-Frame-Options") == "DENY"
+    assert r.headers.get("X-XSS-Protection") == "1; mode=block"
+    assert r.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+    assert r.headers.get("Permissions-Policy") == "geolocation=(), microphone=()"
+
+
+def test_hsts_absent_outside_production(client):
+    c, _ = client
+    r = c.get("/health")
+    assert "Strict-Transport-Security" not in r.headers
+
+
+def test_docs_accessible_in_development(client):
+    c, _ = client
+    r = c.get("/api/docs")
+    assert r.status_code == 200

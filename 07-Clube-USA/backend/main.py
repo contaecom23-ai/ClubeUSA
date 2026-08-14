@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -13,11 +13,12 @@ logging.basicConfig(level=logging.INFO)
 
 settings = get_settings()
 
+_is_production = settings.APP_ENV == "production"
+
 app = FastAPI(
     title="Clube USA API",
     version="0.1.0",
-    # Documentação disponível apenas fora de produção
-    docs_url="/api/docs" if settings.APP_ENV != "production" else None,
+    docs_url="/api/docs" if not _is_production else None,
     redoc_url=None,
 )
 
@@ -35,6 +36,21 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining"],
 )
+
+
+# ─── Security headers ─────────────────────────────────────────────────────────
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=()"
+    if _is_production:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
 
 # ─── Routers ──────────────────────────────────────────────────────────────────
 app.include_router(auth.router, prefix="/api/v1")
