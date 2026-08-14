@@ -12,40 +12,70 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
+## 🚨 SITUAÇÃO ATUAL DO PROJETO (2026-08-14)
+
+### Estado do repositório
+
+A `main` contém apenas ROADMAP.md, DECISOES.md e o workflow YAML. **Nenhum código foi mergeado ainda.**
+
+### O que foi feito pelos runs anteriores
+
+O builder criou ~60 PRs ao longo de junho–agosto por duas razões:
+1. O YAML do workflow estava quebrado (indentação inválida → 0 jobs → builder rodava via sessions externas sem restrição)
+2. Como a `main` nunca tinha código, cada rodada via o ROADMAP todo desmarcado e criava um novo PR para Fase 0.1
+
+### Limpeza realizada
+
+Em 2026-08-14, o builder fechou todos os PRs duplicados.
+
+**PRs restantes abertos (11 no total):**
+
+| PR | Descrição | Ação recomendada |
+|----|-----------|------------------|
+| **#51** | fix YAML do workflow + DECISOES.md atualizado | **Mergear PRIMEIRO** |
+| **#46** | Fase 0.1 — Cadastro + perfil mínimo + email confirmado | **Mergear SEGUNDO** |
+| #9 | fix(security): senha forte + security headers | Revisar após #46 |
+| #3 | Fase 0.2 — Referral rastreável | Rebase após #46 |
+| #4 | Fase 0.3 — Analytics básico | Rebase após #46 |
+| #5 | Fase 0.4 — Cadastro válido + anti-fraude | Rebase após #46 |
+| #12 | Fase 1.1 — Promoções/Achados | Rebase após #46 |
+| #14 | Fase 1.2 — Busca por ZIP + raio | Rebase após #46 |
+| #16 | Fase 1.3 — Influenciadores pago por resultado | Rebase após #46 |
+| #19 | Fase 1.4 — Empregos (seed manual) | Rebase após #46 |
+| #20 | Fase 1.5 — Moradia (quartos/roommates) | Rebase após #46 |
+
+**Nota sobre PRs #3–5 e #12–20:** foram criados antes de #46 ser mergeado (violando a ordem das fases). O código existe e pode ser aproveitado, mas precisarão de rebase em cima do código de 0.1 quando #46 entrar na main. O builder NÃO criará novos PRs para essas fases enquanto os existentes estiverem abertos.
+
+---
+
 ## Decisões Pendentes
 
-### [2026-08-14] 🚨 AÇÃO NECESSÁRIA — Mergear PR #46 para desbloquear o projeto
+### [2026-08-14] 🔴 BLOQUEANTE — Mergear PR #51 e PR #46 para desbloquear o projeto
 
 **Contexto:**
-O builder autônomo roda 3x/dia lendo o ROADMAP.md da `main`. Como nenhum PR foi mergeado até hoje, a `main` continua sem código. A cada rodada o builder via todas as tarefas desmarcadas e criava um novo PR para Fase 0.1. Resultado: 50 PRs duplicados acumulados entre junho e agosto de 2026.
+O builder está travado. A cada rodada, lê o ROADMAP.md da `main`, vê tudo desmarcado, e sem código para avançar. O único caminho é mergear o trabalho já feito.
 
-**Ação tomada em 2026-08-14:**
-- Todos os 49 PRs duplicados (#21–45, #47–50) foram fechados pelo builder
-- Restou apenas o **PR #46** (`feature/fase-0.1-cadastro-auth`), que contém a implementação completa
+**Ordem obrigatória de merge:**
+1. **PR #51** — corrige o YAML quebrado do workflow (após merge, o GitHub Actions passa a rodar corretamente) + atualiza DECISOES.md na main
+2. **PR #46** — Fase 0.1 completa (FastAPI, Supabase auth, 24 testes, frontend HTML)
 
-**O que o PR #46 entrega:**
-- Backend FastAPI: `/register` (rate-limit 5/min), `/login` (rate-limit 10/min), `/me`, `PUT /me`, `/logout`
-- Segurança: JWT via Supabase, user_id sempre do token, CORS restrito, sem hardcode de secrets
-- Schema SQL (`schema/001_users_profile.sql`): tabela `users_profile`, trigger `updated_at`, RLS habilitado
-- 24 testes automatizados (passando)
+**Links diretos:**
+- PR #51: https://github.com/contaecom23-ai/ClubeUSA/pull/51
+- PR #46: https://github.com/contaecom23-ai/ClubeUSA/pull/46
+
+**O que o PR #46 entrega (Fase 0.1):**
+- Backend FastAPI com `/register` (rate-limit 5/min), `/login` (rate-limit 10/min), `/me`, `PUT /me`, `/logout`
+- Segurança: JWT via Supabase, user_id sempre do token, CORS restrito, zero secrets hardcoded
+- Schema SQL: tabela `users_profile`, trigger `updated_at`, RLS habilitado
+- 24 testes automatizados
 - Frontend HTML: register.html, login.html, dashboard.html, confirm.html
-- CI pipeline: `.github/workflows/test-backend.yml`
 
-**Pergunta:**
-Pode mergear o PR #46 agora?
-→ https://github.com/contaecom23-ai/ClubeUSA/pull/46
-
-**Pré-requisitos para o merge funcionar em produção:**
-1. Criar projeto no Supabase (gratuito): https://app.supabase.com
+**Pré-requisitos para funcionar em produção (após merge):**
+1. Criar projeto no Supabase: https://app.supabase.com
 2. Configurar env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, `FRONTEND_URL`, `ALLOWED_ORIGINS`
-3. Rodar o SQL de migration (`07-Clube-USA/schema/001_users_profile.sql`) no SQL Editor do Supabase
+3. Rodar migration SQL no SQL Editor do Supabase: `07-Clube-USA/schema/001_users_profile.sql`
 
-**O que acontece após o merge:**
-- O builder marca Fase 0.1 como `[x]` no ROADMAP
-- Próxima rodada avança para **Fase 0.2** (sistema de referral rastreável)
-- O loop de PRs duplicados para definitivamente
-
-**Recomendação:** Mergear PR #46 agora. É a única ação bloqueante.
+**Recomendação:** Mergear agora. É a única ação que desbloqueia o projeto.
 
 **Status:** PENDENTE — requer ação do dono do produto
 
@@ -53,16 +83,12 @@ Pode mergear o PR #46 agora?
 
 ### [2026-08-14] Credenciais Supabase e hospedagem
 
-**Contexto:**
-O backend está implementado e testado com mocks. Para ativar o fluxo real (email de confirmação, JWT real), são necessárias credenciais de produção.
-
-**Pergunta:**
-Você já tem um projeto Supabase criado para o Clube USA?
+**Pergunta:** Você já tem um projeto Supabase criado para o Clube USA?
 
 **Opções:**
-- **A) Já tenho projeto Supabase**: forneça as credenciais via `.env` (sem commitar) — Claude sobe o schema e valida.
-- **B) Criar agora**: acesse app.supabase.com, crie projeto "clube-usa-prod", copie as credenciais (~5 min).
-- **C) Adiar**: seguir para Fase 0.2 (Referral) em modo mock; conectar ao Supabase antes do lançamento.
+- **A) Já tenho projeto Supabase**: forneça as credenciais via `.env` (sem commitar) — Claude sobe o schema e valida
+- **B) Criar agora**: acesse app.supabase.com, crie projeto "clube-usa-prod", copie as credenciais (~5 min, grátis)
+- **C) Adiar**: seguir para Fase 0.2 em modo mock; conectar ao Supabase antes do lançamento
 
 **Recomendação:** Opção A ou B — o fluxo de email de confirmação só pode ser validado com Supabase real.
 
@@ -72,11 +98,11 @@ Você já tem um projeto Supabase criado para o Clube USA?
 
 ### [2026-08-14] Domínio e hospedagem
 
-**Pergunta:** Qual é o domínio e onde quer hospedar o frontend e o backend?
+**Pergunta:** Qual é o domínio e onde hospedar frontend e backend?
 
 **Opções:**
-- **Frontend**: Vercel/Netlify (gratuito, CDN global, deploy em 2 min) — recomendado
-- **Backend**: Railway/Render (free tier) ou VPS DigitalOcean (~$5/mês)
+- **Frontend**: Vercel ou Netlify (gratuito, CDN global, deploy em 2 min) — recomendado
+- **Backend**: Railway ou Render (free tier suficiente para 1k usuários) ou VPS DigitalOcean (~$5/mês)
 
 **Recomendação:** Vercel para frontend + Railway para backend. Custo zero inicial para 1k usuários.
 
@@ -84,4 +110,4 @@ Você já tem um projeto Supabase criado para o Clube USA?
 
 ---
 
-*Atualizado em: 2026-08-14*
+*Atualizado em: 2026-08-14 (run 2 do dia — limpeza de 11 PRs duplicados adicionais)*
