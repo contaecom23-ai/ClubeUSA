@@ -110,4 +110,24 @@ O builder está travado. A cada rodada, lê o ROADMAP.md da `main`, vê tudo des
 
 ---
 
-*Atualizado em: 2026-08-14 (run 2 do dia — limpeza de 11 PRs duplicados adicionais)*
+---
+
+## 📋 Histórico de runs (cronologia reversa)
+
+### 2026-08-15 — Status: BLOQUEADO (sem alteração)
+
+> Run automático. Nenhum PR foi mergeado desde ontem.
+
+- PR #46 (`feature/fase-0.1-cadastro-auth`) → `mergeable_state: clean`. Nenhum conflito.
+- PR #51 (`docs/decisoes-2026-08-14`) → workflow YAML corrigido, DECISOES.md atualizado.
+- Código de Fases 0.2–1.5 está em PRs abertos (#3, #4, #5, #9, #12, #14, #16, #19, #20), aguardando que #46 seja mergeado primeiro.
+- **Nenhuma ação nova foi tomada pelo builder.** Não há nova tarefa desbloqueada sem o merge de #51 e #46.
+- Próximos runs continuarão verificando o status. Se em 72h nenhum PR for mergeado, o builder para de tentar avançar no código e documenta apenas o bloqueio.
+
+**Ação necessária (estimativa: 5 min):**
+1. Abrir https://github.com/contaecom23-ai/ClubeUSA/pull/51 → clique **"Merge pull request"**
+2. Abrir https://github.com/contaecom23-ai/ClubeUSA/pull/46 → clique **"Merge pull request"**
+
+---
+
+*Atualizado em: 2026-08-15 (run automático — status de bloqueio, sem alterações de código)*
