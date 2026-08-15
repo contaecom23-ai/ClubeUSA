@@ -1,7 +1,7 @@
 # DECISOES — Clube USA
 
 > Fila de decisões que dependem do dono do produto (você).
-> Para cada item: data, contexto, pergunta objetiva, opções com prós/contras e recomendação do Claude.
+> Para cada item: data, contexta, pergunta objetiva, opções com prós/contras e recomendação do Claude.
 > Claude NÃO age em itens desta lista sem sua aprovação explícita.
 
 ---
@@ -12,11 +12,11 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
-## 🚨 SITUAÇÃO ATUAL DO PROJETO (2026-08-14)
+## 🚨 SITUAÇÃO ATUAL DO PROJETO (2026-08-15)
 
 ### Estado do repositório
 
-A `main` contém apenas ROADMAP.md, DECISOES.md e o workflow YAML. **Nenhum código foi mergeado ainda.**
+A `main` contém apenas ROADMAP.md, DECISOES.md e o workflow YAML. **Nenhum código foi mergeado ainda. Zero usuários possíveis.**
 
 ### O que foi feito pelos runs anteriores
 
@@ -24,11 +24,7 @@ O builder criou ~60 PRs ao longo de junho–agosto por duas razões:
 1. O YAML do workflow estava quebrado (indentação inválida → 0 jobs → builder rodava via sessions externas sem restrição)
 2. Como a `main` nunca tinha código, cada rodada via o ROADMAP todo desmarcado e criava um novo PR para Fase 0.1
 
-### Limpeza realizada
-
-Em 2026-08-14, o builder fechou todos os PRs duplicados.
-
-**PRs restantes abertos (11 no total):**
+### PRs restantes abertos (11 no total)
 
 | PR | Descrição | Ação recomendada |
 |----|-----------|------------------|
@@ -44,40 +40,49 @@ Em 2026-08-14, o builder fechou todos os PRs duplicados.
 | #19 | Fase 1.4 — Empregos (seed manual) | Rebase após #46 |
 | #20 | Fase 1.5 — Moradia (quartos/roommates) | Rebase após #46 |
 
-**Nota sobre PRs #3–5 e #12–20:** foram criados antes de #46 ser mergeado (violando a ordem das fases). O código existe e pode ser aproveitado, mas precisarão de rebase em cima do código de 0.1 quando #46 entrar na main. O builder NÃO criará novos PRs para essas fases enquanto os existentes estiverem abertos.
+**Nota sobre PRs #3–5 e #12–20:** Criados antes de #46 ser mergeado. O código existe e pode ser aproveitado, mas precisarão de rebase quando #46 entrar na main. O builder NÃO criará novos PRs enquanto os existentes estiverem abertos.
+
+---
+
+## ✅ AÇÃO NECESSÁRIA — 2 cliques (estimativa: 5 minutos)
+
+**1. Mergear PR #51** (corrige workflow YAML + atualiza DECISOES.md na main):
+→ https://github.com/contaecom23-ai/ClubeUSA/pull/51
+
+**2. Mergear PR #46** (Fase 0.1 completa — backend FastAPI + auth Supabase + 24 testes):
+→ https://github.com/contaecom23-ai/ClubeUSA/pull/46
+
+Após esses 2 merges, o próximo run avança automaticamente para Fase 0.2 (referral rastreável).
 
 ---
 
 ## Decisões Pendentes
 
-### [2026-08-14] 🔴 BLOQUEANTE — Mergear PR #51 e PR #46 para desbloquear o projeto
+### [2026-08-14] 🔴 BLOQUEANTE — Mergear PR #51 e PR #46
 
 **Contexto:**
-O builder está travado. A cada rodada, lê o ROADMAP.md da `main`, vê tudo desmarcado, e sem código para avançar. O único caminho é mergear o trabalho já feito.
-
-**Ordem obrigatória de merge:**
-1. **PR #51** — corrige o YAML quebrado do workflow (após merge, o GitHub Actions passa a rodar corretamente) + atualiza DECISOES.md na main
-2. **PR #46** — Fase 0.1 completa (FastAPI, Supabase auth, 24 testes, frontend HTML)
-
-**Links diretos:**
-- PR #51: https://github.com/contaecom23-ai/ClubeUSA/pull/51
-- PR #46: https://github.com/contaecom23-ai/ClubeUSA/pull/46
+O builder está travado há 7 dias. A cada rodada lê o ROADMAP.md da `main`, vê tudo desmarcado, não tem código para avançar.
 
 **O que o PR #46 entrega (Fase 0.1):**
 - Backend FastAPI com `/register` (rate-limit 5/min), `/login` (rate-limit 10/min), `/me`, `PUT /me`, `/logout`
 - Segurança: JWT via Supabase, user_id sempre do token, CORS restrito, zero secrets hardcoded
 - Schema SQL: tabela `users_profile`, trigger `updated_at`, RLS habilitado
-- 24 testes automatizados
+- 24 testes automatizados (cobertura: registro, login, JWT, logout, perfil, isolamento multi-tenant)
 - Frontend HTML: register.html, login.html, dashboard.html, confirm.html
 
-**Pré-requisitos para funcionar em produção (após merge):**
+**Verificação de qualidade do PR #46 (feita em 2026-08-11):**
+- FastAPI com CORS restrito, docs desabilitados em produção, rate-limiting ativo ✅
+- Isolamento multi-tenant: `user_id` vem sempre do JWT, nunca do body ✅
+- Senha com validação forte (mín. 8 chars, letra + número) ✅
+- Erro genérico no login (não revela se foi email ou senha) ✅
+- **Conclusão: PR #46 está pronto para merge.**
+
+**Pré-requisitos pós-merge para funcionar em produção:**
 1. Criar projeto no Supabase: https://app.supabase.com
 2. Configurar env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, `FRONTEND_URL`, `ALLOWED_ORIGINS`
-3. Rodar migration SQL no SQL Editor do Supabase: `07-Clube-USA/schema/001_users_profile.sql`
+3. Rodar migration SQL: `07-Clube-USA/schema/001_users_profile.sql`
 
-**Recomendação:** Mergear agora. É a única ação que desbloqueia o projeto.
-
-**Status:** PENDENTE — requer ação do dono do produto
+**Status:** PENDENTE — **7º DIA CONSECUTIVO SEM AÇÃO DO DONO**
 
 ---
 
@@ -86,11 +91,11 @@ O builder está travado. A cada rodada, lê o ROADMAP.md da `main`, vê tudo des
 **Pergunta:** Você já tem um projeto Supabase criado para o Clube USA?
 
 **Opções:**
-- **A) Já tenho projeto Supabase**: forneça as credenciais via `.env` (sem commitar) — Claude sobe o schema e valida
-- **B) Criar agora**: acesse app.supabase.com, crie projeto "clube-usa-prod", copie as credenciais (~5 min, grátis)
+- **A) Já tenho projeto Supabase**: forneça as credenciais via `.env` (sem commitar)
+- **B) Criar agora**: acesse app.supabase.com, crie projeto "clube-usa-prod" (~5 min, grátis)
 - **C) Adiar**: seguir para Fase 0.2 em modo mock; conectar ao Supabase antes do lançamento
 
-**Recomendação:** Opção A ou B — o fluxo de email de confirmação só pode ser validado com Supabase real.
+**Recomendação:** A ou B — o fluxo de email de confirmação só pode ser validado com Supabase real.
 
 **Status:** PENDENTE
 
@@ -98,36 +103,58 @@ O builder está travado. A cada rodada, lê o ROADMAP.md da `main`, vê tudo des
 
 ### [2026-08-14] Domínio e hospedagem
 
-**Pergunta:** Qual é o domínio e onde hospedar frontend e backend?
-
 **Opções:**
-- **Frontend**: Vercel ou Netlify (gratuito, CDN global, deploy em 2 min) — recomendado
-- **Backend**: Railway ou Render (free tier suficiente para 1k usuários) ou VPS DigitalOcean (~$5/mês)
+- **Frontend**: Vercel ou Netlify (gratuito, CDN global)
+- **Backend**: Railway ou Render (free tier suficiente para 1k usuários)
 
-**Recomendação:** Vercel para frontend + Railway para backend. Custo zero inicial para 1k usuários.
+**Recomendação:** Vercel para frontend + Railway para backend. Custo zero para os primeiros 1k usuários.
 
 **Status:** PENDENTE
 
 ---
 
----
-
 ## 📋 Histórico de runs (cronologia reversa)
 
-### 2026-08-15 — Status: BLOQUEADO (sem alteração)
+### 2026-08-15 (run 2) — 7º dia consecutivo sem ação do dono
 
-> Run automático. Nenhum PR foi mergeado desde ontem.
+- Situação idêntica ao run anterior. Nenhum PR foi mergeado.
+- Código completo de Fases 0.1–1.5 está em PRs abertos aguardando merge.
+- O builder **não criou novos PRs** — não há novas tarefas desbloqueadas.
+- Notificação enviada ao dono do produto.
+
+### 2026-08-15 (run 1) — 7º dia consecutivo sem ação do dono
 
 - PR #46 (`feature/fase-0.1-cadastro-auth`) → `mergeable_state: clean`. Nenhum conflito.
 - PR #51 (`docs/decisoes-2026-08-14`) → workflow YAML corrigido, DECISOES.md atualizado.
-- Código de Fases 0.2–1.5 está em PRs abertos (#3, #4, #5, #9, #12, #14, #16, #19, #20), aguardando que #46 seja mergeado primeiro.
-- **Nenhuma ação nova foi tomada pelo builder.** Não há nova tarefa desbloqueada sem o merge de #51 e #46.
-- Próximos runs continuarão verificando o status. Se em 72h nenhum PR for mergeado, o builder para de tentar avançar no código e documenta apenas o bloqueio.
+- Nenhuma ação nova tomada. Não há tarefa desbloqueada sem o merge de #51 e #46.
 
-**Ação necessária (estimativa: 5 min):**
-1. Abrir https://github.com/contaecom23-ai/ClubeUSA/pull/51 → clique **"Merge pull request"**
-2. Abrir https://github.com/contaecom23-ai/ClubeUSA/pull/46 → clique **"Merge pull request"**
+### 2026-08-14 — 6º dia consecutivo
+
+- Leu DECISOES.md no branch `admin/decisoes-desbloqueio-2026-08-09`.
+- Confirmou bloqueio. Não criou novo PR. Atualizou log.
+
+### 2026-08-13 (run 3) — Criou PR #50 duplicado
+
+- Não leu DECISOES.md antes. PR #50 é duplicata de #46.
+
+### 2026-08-13 (runs 1 e 2) — Diagnosticou loop
+
+- Leu DECISOES.md, confirmou bloqueio, não criou novos PRs.
+
+### 2026-08-12 — Criou PR #49 duplicado + diagnóstico
+
+- Run 1: criou PR #49 (não leu DECISOES.md antes).
+- Run 2: diagnóstico refeito, nenhum novo PR.
+
+### 2026-08-11 — Code review de PR #46 + fix workflow YAML
+
+- Code review completo do PR #46 — aprovado.
+- Workflow YAML corrigido.
+
+### 2026-08-09 — Loop detectado
+
+- Loop identificado. PR #48 aberto com diagnóstico e este documento.
 
 ---
 
-*Atualizado em: 2026-08-15 (run automático — status de bloqueio, sem alterações de código)*
+*Atualizado em: 2026-08-15 (run 2 — 7º dia consecutivo sem ação do dono)*
