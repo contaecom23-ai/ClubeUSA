@@ -4,12 +4,13 @@
 -- ============================================================
 
 -- Tabela de perfil mínimo vinculada ao auth.users do Supabase.
--- user_id referencia auth.users(id) — nunca exposto ao cliente.
+-- user_id FK -> auth.users(id) ON DELETE CASCADE: garante que perfis
+-- não ficam órfãos se o usuário for removido do Auth (LGPD, ban, etc.).
 -- email cached aqui para evitar chamada admin a cada /me; atualizar
 --   se o usuário mudar email (feature futura — Fase 3+).
 CREATE TABLE IF NOT EXISTS public.users_profile (
     id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id    UUID        NOT NULL UNIQUE,
+    user_id    UUID        NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name  TEXT        NOT NULL CHECK (length(trim(full_name)) >= 2 AND length(full_name) <= 100),
     email      TEXT        NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -55,5 +56,5 @@ CREATE POLICY "Usuário atualiza próprio perfil"
 
 -- ── Comentários ────────────────────────────────────────────────────────────
 COMMENT ON TABLE  public.users_profile           IS 'Perfil mínimo de usuário — Fase 0.1';
-COMMENT ON COLUMN public.users_profile.user_id   IS 'FK para auth.users(id) — vem sempre do JWT validado';
+COMMENT ON COLUMN public.users_profile.user_id   IS 'FK para auth.users(id) ON DELETE CASCADE — vem sempre do JWT validado';
 COMMENT ON COLUMN public.users_profile.email     IS 'Cache do email; sincronizar se usuário trocar email (Fase 3+)';
