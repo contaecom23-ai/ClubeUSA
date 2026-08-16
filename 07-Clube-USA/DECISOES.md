@@ -30,17 +30,15 @@ O builder criou ~60 PRs ao longo de junho–agosto por duas razões:
 |----|-----------|------------------|
 | **#51** | fix YAML do workflow + DECISOES.md atualizado | **Mergear PRIMEIRO** |
 | **#46** | Fase 0.1 — Cadastro + perfil mínimo + email confirmado | **Mergear SEGUNDO** |
-| #9 | fix(security): senha forte + security headers | Revisar após #46 |
-| #3 | Fase 0.2 — Referral rastreável | Rebase após #46 |
-| #4 | Fase 0.3 — Analytics básico | Rebase após #46 |
-| #5 | Fase 0.4 — Cadastro válido + anti-fraude | Rebase após #46 |
-| #12 | Fase 1.1 — Promoções/Achados | Rebase após #46 |
-| #14 | Fase 1.2 — Busca por ZIP + raio | Rebase após #46 |
-| #16 | Fase 1.3 — Influenciadores pago por resultado | Rebase após #46 |
-| #19 | Fase 1.4 — Empregos (seed manual) | Rebase após #46 |
-| #20 | Fase 1.5 — Moradia (quartos/roommates) | Rebase após #46 |
-
-**Nota sobre PRs #3–5 e #12–20:** Criados antes de #46 ser mergeado. O código existe e pode ser aproveitado, mas precisarão de rebase quando #46 entrar na main. O builder NÃO criará novos PRs enquanto os existentes estiverem abertos.
+| #9 | fix(security): senha forte + security headers | Fechar — já incluído em #46 |
+| #3 | Fase 0.2 — Referral rastreável | ⚠️ Fechar e reconstruir (ver abaixo) |
+| #4 | Fase 0.3 — Analytics básico | ⚠️ Fechar e reconstruir (ver abaixo) |
+| #5 | Fase 0.4 — Cadastro válido + anti-fraude | ⚠️ Fechar e reconstruir (ver abaixo) |
+| #12 | Fase 1.1 — Promoções/Achados | ⚠️ Fechar e reconstruir (ver abaixo) |
+| #14 | Fase 1.2 — Busca por ZIP + raio | ⚠️ Fechar e reconstruir (ver abaixo) |
+| #16 | Fase 1.3 — Influenciadores pago por resultado | ⚠️ Fechar e reconstruir (ver abaixo) |
+| #19 | Fase 1.4 — Empregos (seed manual) | ⚠️ Fechar e reconstruir (ver abaixo) |
+| #20 | Fase 1.5 — Moradia (quartos/roommates) | ⚠️ Fechar e reconstruir (ver abaixo) |
 
 ---
 
@@ -52,13 +50,13 @@ O builder criou ~60 PRs ao longo de junho–agosto por duas razões:
 **2. Mergear PR #46** (Fase 0.1 completa — backend FastAPI + auth Supabase + 24 testes):
 → https://github.com/contaecom23-ai/ClubeUSA/pull/46
 
-Após esses 2 merges, o próximo run avança automaticamente para Fase 0.2 (referral rastreável).
+Após esses 2 merges, o próximo run fecha os PRs #3–20 e reconstrói Fase 0.2 corretamente sobre a base da 0.1.
 
 ---
 
 ## Decisões Pendentes
 
-### [2026-08-14] 🔴 BLOQUEANTE — Mergear PR #51 e PR #46
+### [2026-08-16] 🔴 BLOQUEANTE — Mergear PR #51 e PR #46
 
 **Contexto:**
 O builder está travado há 9 dias. A cada rodada lê o ROADMAP.md da `main`, vê tudo desmarcado, não tem código para avançar.
@@ -75,17 +73,54 @@ O builder está travado há 9 dias. A cada rodada lê o ROADMAP.md da `main`, v�
 - Isolamento multi-tenant: `user_id` vem sempre do JWT, nunca do body ✅
 - Senha com validação forte (mín. 8 chars, letra + número) ✅
 - Erro genérico no login (não revela se foi email ou senha) ✅
-- FK `user_id → auth.users(id) ON DELETE CASCADE`: **corrigido em 2026-08-16** — evita perfis órfãos ✅
-- Schema SQL válido: RLS habilitado, políticas corretas (SELECT/UPDATE próprio perfil; INSERT só via service_role) ✅
+- FK `user_id → auth.users(id) ON DELETE CASCADE`: corrigido em 2026-08-16 ✅
+- Schema SQL válido: RLS habilitado, políticas corretas ✅
 - Testes mockam Supabase corretamente, nenhuma chamada real ocorre em CI ✅
-- **Conclusão: PR #46 está pronto para merge (+ melhoria de FK aplicada hoje).**
-
-**Pré-requisitos pós-merge para funcionar em produção:**
-1. Criar projeto no Supabase: https://app.supabase.com
-2. Configurar env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, `FRONTEND_URL`, `ALLOWED_ORIGINS`
-3. Rodar migration SQL: `07-Clube-USA/schema/001_users_profile.sql`
+- **Conclusão: PR #46 está pronto para merge.**
 
 **Status:** PENDENTE — **9º DIA CONSECUTIVO SEM AÇÃO DO DONO**
+
+---
+
+### [2026-08-16] ⚠️ NOVO — Conflito arquitetural entre Fase 0.1 (PR #46) e Fases 0.2–1.5 (PRs #3–20)
+
+**Contexto:** Auditado em run 2 de 2026-08-16.
+
+As Fases 0.2–1.5 (PRs #3–20) foram construídas sobre a `main` vazia, **sem a base da Fase 0.1**. Resultado: arquiteturas incompatíveis.
+
+**Fase 0.1 (PR #46) usa:**
+```
+backend/
+  core/config.py      ← get_settings() via Pydantic Settings
+  core/security.py    ← decode_jwt, get_current_user_id
+  core/limiter.py
+  core/supabase_client.py
+  routers/auth.py
+  models/user.py
+```
+
+**Fase 0.2 (PR #3) usa:**
+```
+backend/
+  config.py           ← settings (raiz, estrutura diferente)
+  auth/router.py      ← re-implementa autenticação
+  users/router.py
+  referrals/router.py
+  db/                 ← módulo de banco separado
+  core/limiter.py
+```
+
+**Problema real:** A Fase 0.2 re-implementou auth porque foi construída do zero sem a 0.1. Imports, organização de pastas e padrão de config são incompatíveis. Um rebase simples não resolve — seria necessário refatorar para usar `core/config.py`, `core/security.py`, `routers/` da Fase 0.1.
+
+**Pergunta:** O que fazer com os PRs #3–20 após mergear #46?
+
+**Opções:**
+- **A) Fechar PRs #3–20 + reconstruir do zero** (recomendado): O próximo run após merge de #46 cria Fase 0.2 corretamente sobre a base estabelecida. Trabalho limpo, sem dívida técnica. Prazo: 1–2 runs para Fase 0.2 pronta. As *lógicas de negócio* dos PRs antigos (referral tracking, analytics, etc.) servem de referência, o código estrutural é descartado.
+- **B) Refatorar PRs existentes**: Rebase + ajuste de imports em 9 PRs. Trabalhoso, arriscado de introduzir regressões, e a lógica de negócio precisaria mesmo assim ser auditada contra a nova base. Não recomendado.
+
+**Recomendação do Claude:** Opção A. Os PRs #3–20 contêm lógica de negócio valiosa (como o algoritmo de tracking de referral, o schema de empregos, etc.) que será aproveitada, mas a estrutura de código será reconstruída limpa. Isso é mais rápido e mais seguro do que refatorar 9 PRs com conflitos.
+
+**Status:** PENDENTE (depende do merge de #46 primeiro)
 
 ---
 
@@ -118,35 +153,25 @@ O builder está travado há 9 dias. A cada rodada lê o ROADMAP.md da `main`, v�
 
 ## 📋 Histórico de runs (cronologia reversa)
 
-### 2026-08-16 — 9º dia consecutivo sem ação do dono
+### 2026-08-16 (run 2) — 9º dia consecutivo sem ação do dono
 
-**Run atual (auditoria completa PR #46):**
+**Novas descobertas:**
+- **Conflito arquitetural confirmado:** Auditado Phase 0.2 (PR #3, branch `claude/fase-0.2-referral`). A Fase 0.2 tem estrutura de pastas completamente diferente da Fase 0.1 — re-implementa auth, usa `config.py` na raiz em vez de `core/config.py`, usa `auth/router.py` em vez de `routers/auth.py`. Os PRs #3–20 **não podem ser simplesmente rebased** após merge de #46; precisam ser reconstruídos sobre a arquitetura correta.
+- **YAML do workflow em PR #51 verificado:** YAML corrigido é válido — `workflow_dispatch`, `permissions` e `jobs` estão no nível correto. Prompt atualizado para checar PRs antes de criar novos.
+- **Recomendação adicionada:** Após mergear #46, fechar PRs #3–20 e reconstruir Fase 0.2 do zero sobre a base da 0.1. A lógica de negócio dos PRs antigos será aproveitada como referência.
+- Nenhum código novo criado (sem tarefa desbloqueada sem os merges).
+
+### 2026-08-16 (run 1) — 9º dia consecutivo sem ação do dono
+
+**Run 1 (auditoria completa PR #46):**
 - Leu e auditou todo o código do PR #46 ponta a ponta: main.py, routers/auth.py, core/security.py, core/config.py, core/supabase_client.py, models/user.py, tests/conftest.py, tests/test_auth.py, schema/001_users_profile.sql.
-- **Bug encontrado e corrigido:** `user_id UUID NOT NULL UNIQUE` sem FK para `auth.users(id)`. Sem essa constraint, perfis ficam órfãos se o usuário for deletado do Supabase Auth (remoção LGPD, banimento, cleanup de teste). **Fix pushado diretamente no branch `feature/fase-0.1-cadastro-auth`** — mudança aditiva, não-destrutiva, segura de fazer autônomo.
+- **Bug encontrado e corrigido:** `user_id UUID NOT NULL UNIQUE` sem FK para `auth.users(id)`. Fix pushado diretamente no branch `feature/fase-0.1-cadastro-auth`.
 - **Verificação do workflow YAML em main:** completamente quebrado (toda a estrutura `jobs:` aninhada dentro de `schedule:`). PR #51 tem o YAML corrigido e válido.
-- **Situação geral:** Nenhum PR foi mergeado. O código está pronto. Só falta a ação do dono.
-- Notificação enviada.
 
-**Runs anteriores (2026-08-16, run 1):**
-- Situação idêntica aos runs anteriores. Nenhum PR foi mergeado.
-- **Diagnóstico honesto:** O workflow YAML no branch `main` está completamente quebrado (indentação inválida — tudo aninhado dentro do item `schedule:`, tornando `jobs:` invisível para o GitHub Actions). Isso significa que este run foi provavelmente disparado manualmente via Claude.ai, não via GitHub Actions.
-- O PR #51 corrige o workflow YAML. O PR #46 tem o código completo da Fase 0.1.
-- O builder **não criou novos PRs** — não há tarefas desbloqueadas sem os merges.
-- **Avaliação do código em PRs:** PR #46 está limpo, testado, sem conflitos com a main. PR #51 está clean. Ambos prontos para merge imediato.
-- Notificação enviada ao dono do produto.
-
-### 2026-08-15 (run 2) — 7º dia consecutivo sem ação do dono
+### 2026-08-15 (runs 1 e 2) — 7º dia consecutivo sem ação do dono
 
 - Situação idêntica ao run anterior. Nenhum PR foi mergeado.
 - Código completo de Fases 0.1–1.5 está em PRs abertos aguardando merge.
-- O builder **não criou novos PRs** — não há novas tarefas desbloqueadas.
-- Notificação enviada ao dono do produto.
-
-### 2026-08-15 (run 1) — 7º dia consecutivo sem ação do dono
-
-- PR #46 (`feature/fase-0.1-cadastro-auth`) → `mergeable_state: clean`. Nenhum conflito.
-- PR #51 (`docs/decisoes-2026-08-14`) → workflow YAML corrigido, DECISOES.md atualizado.
-- Nenhuma ação nova tomada. Não há tarefa desbloqueada sem o merge de #51 e #46.
 
 ### 2026-08-14 — 6º dia consecutivo
 
@@ -177,4 +202,4 @@ O builder está travado há 9 dias. A cada rodada lê o ROADMAP.md da `main`, v�
 
 ---
 
-*Atualizado em: 2026-08-16 (9º dia consecutivo sem ação do dono)*
+*Atualizado em: 2026-08-16 (run 2 — 9º dia consecutivo sem ação do dono)*
