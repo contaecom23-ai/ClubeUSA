@@ -61,28 +61,31 @@ Após esses 2 merges, o próximo run avança automaticamente para Fase 0.2 (refe
 ### [2026-08-14] 🔴 BLOQUEANTE — Mergear PR #51 e PR #46
 
 **Contexto:**
-O builder está travado há 8 dias. A cada rodada lê o ROADMAP.md da `main`, vê tudo desmarcado, não tem código para avançar.
+O builder está travado há 9 dias. A cada rodada lê o ROADMAP.md da `main`, vê tudo desmarcado, não tem código para avançar.
 
 **O que o PR #46 entrega (Fase 0.1):**
 - Backend FastAPI com `/register` (rate-limit 5/min), `/login` (rate-limit 10/min), `/me`, `PUT /me`, `/logout`
 - Segurança: JWT via Supabase, user_id sempre do token, CORS restrito, zero secrets hardcoded
-- Schema SQL: tabela `users_profile`, trigger `updated_at`, RLS habilitado
+- Schema SQL: tabela `users_profile`, FK `user_id → auth.users(id) ON DELETE CASCADE`, trigger `updated_at`, RLS habilitado
 - 24 testes automatizados (cobertura: registro, login, JWT, logout, perfil, isolamento multi-tenant)
 - Frontend HTML: register.html, login.html, dashboard.html, confirm.html
 
-**Verificação de qualidade do PR #46 (feita em 2026-08-11):**
+**Verificação de qualidade do PR #46 (auditoria completa em 2026-08-16):**
 - FastAPI com CORS restrito, docs desabilitados em produção, rate-limiting ativo ✅
 - Isolamento multi-tenant: `user_id` vem sempre do JWT, nunca do body ✅
 - Senha com validação forte (mín. 8 chars, letra + número) ✅
 - Erro genérico no login (não revela se foi email ou senha) ✅
-- **Conclusão: PR #46 está pronto para merge.**
+- FK `user_id → auth.users(id) ON DELETE CASCADE`: **corrigido em 2026-08-16** — evita perfis órfãos ✅
+- Schema SQL válido: RLS habilitado, políticas corretas (SELECT/UPDATE próprio perfil; INSERT só via service_role) ✅
+- Testes mockam Supabase corretamente, nenhuma chamada real ocorre em CI ✅
+- **Conclusão: PR #46 está pronto para merge (+ melhoria de FK aplicada hoje).**
 
 **Pré-requisitos pós-merge para funcionar em produção:**
 1. Criar projeto no Supabase: https://app.supabase.com
 2. Configurar env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, `FRONTEND_URL`, `ALLOWED_ORIGINS`
 3. Rodar migration SQL: `07-Clube-USA/schema/001_users_profile.sql`
 
-**Status:** PENDENTE — **8º DIA CONSECUTIVO SEM AÇÃO DO DONO**
+**Status:** PENDENTE — **9º DIA CONSECUTIVO SEM AÇÃO DO DONO**
 
 ---
 
@@ -115,8 +118,16 @@ O builder está travado há 8 dias. A cada rodada lê o ROADMAP.md da `main`, v�
 
 ## 📋 Histórico de runs (cronologia reversa)
 
-### 2026-08-16 — 8º dia consecutivo sem ação do dono
+### 2026-08-16 — 9º dia consecutivo sem ação do dono
 
+**Run atual (auditoria completa PR #46):**
+- Leu e auditou todo o código do PR #46 ponta a ponta: main.py, routers/auth.py, core/security.py, core/config.py, core/supabase_client.py, models/user.py, tests/conftest.py, tests/test_auth.py, schema/001_users_profile.sql.
+- **Bug encontrado e corrigido:** `user_id UUID NOT NULL UNIQUE` sem FK para `auth.users(id)`. Sem essa constraint, perfis ficam órfãos se o usuário for deletado do Supabase Auth (remoção LGPD, banimento, cleanup de teste). **Fix pushado diretamente no branch `feature/fase-0.1-cadastro-auth`** — mudança aditiva, não-destrutiva, segura de fazer autônomo.
+- **Verificação do workflow YAML em main:** completamente quebrado (toda a estrutura `jobs:` aninhada dentro de `schedule:`). PR #51 tem o YAML corrigido e válido.
+- **Situação geral:** Nenhum PR foi mergeado. O código está pronto. Só falta a ação do dono.
+- Notificação enviada.
+
+**Runs anteriores (2026-08-16, run 1):**
 - Situação idêntica aos runs anteriores. Nenhum PR foi mergeado.
 - **Diagnóstico honesto:** O workflow YAML no branch `main` está completamente quebrado (indentação inválida — tudo aninhado dentro do item `schedule:`, tornando `jobs:` invisível para o GitHub Actions). Isso significa que este run foi provavelmente disparado manualmente via Claude.ai, não via GitHub Actions.
 - O PR #51 corrige o workflow YAML. O PR #46 tem o código completo da Fase 0.1.
@@ -166,4 +177,4 @@ O builder está travado há 8 dias. A cada rodada lê o ROADMAP.md da `main`, v�
 
 ---
 
-*Atualizado em: 2026-08-16 (8º dia consecutivo sem ação do dono)*
+*Atualizado em: 2026-08-16 (9º dia consecutivo sem ação do dono)*
