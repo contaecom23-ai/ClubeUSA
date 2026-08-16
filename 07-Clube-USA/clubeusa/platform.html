@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="pt-BR" id="html-root">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clube USA — Save More. Every Day.</title>
+<meta name="description" content="O maior clube de ofertas americanas para latinos. Deals reais, preços verificados, direto no seu WhatsApp.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RESET + TOKENS
+============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0D1B3E;--navy2:#152347;--navy3:#1E2F5C;
+  --gold:#C9961A;--gold-l:#F0BC3A;--gold-ll:#FFD966;
+  --green:#25D366;--green-d:#1da855;
+  --red:#dc2626;--orange:#d97706;
+  --white:#fff;--off:#F3F0E8;--off2:#EAE6DA;
+  --text:#111827;--text2:#374151;--muted:#6B7280;
+  --border:#D1CBC0;--radius:14px;--radius-sm:8px;
+  --shadow:0 4px 24px rgba(0,0,0,.12);
+  --api-url:; /* set via JS */
+}
+html{scroll-behavior:smooth}
+body{font-family:'Barlow',sans-serif;background:var(--off);color:var(--text);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* ============================================================
+   CONFIG — ALTERE AQUI
+============================================================ */
+/* Configurado via script abaixo */
+
+/* ============================================================
+   NAV
+============================================================ */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(13,27,62,.97);backdrop-filter:blur(16px);border-bottom:3px solid var(--gold);height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 5%}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-icon{width:42px;height:42px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--navy);font-weight:900;border:2px solid var(--gold-ll)}
+.nav-logo-name{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--white);letter-spacing:2px;line-height:1}
+.nav-logo-name span{color:var(--gold-l)}
+.nav-logo-tag{font-size:9px;color:var(--gold-ll);letter-spacing:2px;opacity:.8}
+.nav-right{display:flex;align-items:center;gap:12px}
+.nav-link{font-size:13px;font-weight:600;color:rgba(255,255,255,.85);text-decoration:none;transition:color .15s}
+.nav-link:hover{color:var(--gold-l)}
+.nav-cta{background:var(--gold);color:var(--navy);padding:9px 22px;border-radius:100px;font-size:13px;font-weight:800;border:none;cursor:pointer;font-family:'Barlow',sans-serif;transition:all .2s;letter-spacing:.2px}
+.nav-cta:hover{background:var(--gold-ll);transform:translateY(-1px)}
+.nav-user{display:none;align-items:center;gap:8px;color:rgba(255,255,255,.9);font-size:13px;font-weight:600}
+.nav-user-dot{width:8px;height:8px;background:#25D366;border-radius:50%}
+
+/* ============================================================
+   HERO
+============================================================ */
+.hero{min-height:100vh;background:linear-gradient(155deg,var(--navy) 0%,var(--navy2) 55%,#091422 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 5% 80px;position:relative;overflow:hidden;text-align:center}
+.hero::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 20% 30%,rgba(201,150,26,.08) 0%,transparent 50%),radial-gradient(ellipse at 80% 70%,rgba(37,211,102,.05) 0%,transparent 50%)}
+.hero::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:80px;background:var(--off);clip-path:polygon(0 100%,100% 0,100% 100%)}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);border-radius:100px;padding:6px 16px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#4ade80;margin-bottom:24px}
+.hero-badge-dot{width:6px;height:6px;background:#4ade80;border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(52px,8vw,100px);line-height:.9;letter-spacing:1px;color:var(--white);margin-bottom:18px}
+.hero h1 .accent{color:var(--gold-l);display:block}
+.hero-sub{font-size:18px;color:rgba(255,255,255,.85);line-height:1.6;max-width:560px;margin:0 auto 36px;font-weight:400}
+.hero-sub strong{color:var(--white);font-weight:800}
+
+/* stats strip */
+.hero-stats{display:flex;gap:0;margin-bottom:40px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius);overflow:hidden;width:fit-content;margin-left:auto;margin-right:auto}
+.hero-stat{padding:14px 28px;text-align:center;position:relative}
+.hero-stat+.hero-stat::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:1px;background:rgba(255,255,255,.12)}
+.hero-stat-n{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--gold-l);line-height:1}
+.hero-stat-l{font-size:10px;color:rgba(255,255,255,.7);margin-top:2px;letter-spacing:.3px;font-weight:600}
+
+/* WhatsApp groups */
+.groups-section{margin-bottom:32px;position:relative;z-index:2}
+.groups-title{font-size:14px;color:rgba(255,255,255,.6);font-weight:600;letter-spacing:.5px;margin-bottom:16px;text-transform:uppercase}
+.groups-grid{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.group-btn{display:flex;align-items:center;gap:12px;background:var(--green);color:var(--white);padding:14px 24px;border-radius:var(--radius);border:none;cursor:pointer;font-family:'Barlow',sans-serif;font-size:14px;font-weight:800;transition:all .2s;text-decoration:none;min-width:220px}
+.group-btn:hover{background:var(--green-d);transform:translateY(-2px);box-shadow:0 8px 24px rgba(37,211,102,.3)}
+.group-btn .wa-icon{width:28px;height:28px;flex-shrink:0}
+.group-btn-info{text-align:left}
+.group-btn-name{font-size:13px;opacity:.9;font-weight:600}
+.group-btn-slots{font-size:11px;opacity:.75;margin-top:1px}
+.groups-loading{color:rgba(255,255,255,.4);font-size:13px;padding:20px}
+.join-alt{font-size:13px;color:rgba(255,255,255,.5);margin-top:14px}
+.join-alt a{color:var(--gold-ll);cursor:pointer;text-decoration:underline}
+
+/* ============================================================
+   HOW IT WORKS
+============================================================ */
+.section{padding:80px 5%}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,5vw,56px);color:var(--navy);letter-spacing:1px;text-align:center;margin-bottom:10px}
+.section-sub{font-size:16px;color:var(--muted);text-align:center;max-width:520px;margin:0 auto 52px;line-height:1.6}
+
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px;max-width:1000px;margin:0 auto}
+.step-card{text-align:center;padding:32px 24px;background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);position:relative}
+.step-num{width:52px;height:52px;background:var(--navy);color:var(--gold-l);font-family:'Bebas Neue',sans-serif;font-size:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+.step-card h3{font-size:18px;font-weight:800;color:var(--navy);margin-bottom:10px}
+.step-card p{font-size:14px;color:var(--muted);line-height:1.6}
+.step-arrow{display:none}
+
+/* ============================================================
+   DEAL SAMPLE
+============================================================ */
+.deals-section{background:var(--navy);padding:80px 5%}
+.deals-section .section-title{color:var(--white)}
+.deals-section .section-sub{color:rgba(255,255,255,.6)}
+
+.deal-sample{max-width:420px;margin:0 auto;background:#1e2a4a;border:1px solid rgba(255,255,255,.1);border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.deal-sample-header{background:rgba(255,255,255,.05);padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.deal-store{background:#FF9900;color:#000;font-size:10px;font-weight:800;padding:3px 10px;border-radius:100px}
+.deal-score{background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.3);font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px}
+.deal-body{padding:20px}
+.deal-badges{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.badge-atl{background:#dc2626;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px}
+.badge-90{background:#d97706;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px}
+.deal-title{font-size:14px;font-weight:700;color:#f1f5f9;line-height:1.4;margin-bottom:14px}
+.deal-price-row{display:flex;align-items:flex-end;gap:10px;margin-bottom:14px}
+.deal-price-now{font-size:30px;font-weight:900;color:#4ade80;font-family:'Barlow Condensed',sans-serif}
+.deal-price-was{font-size:16px;color:#4b5563;text-decoration:line-through}
+.deal-discount{background:#dc2626;color:#fff;font-size:12px;font-weight:800;padding:4px 10px;border-radius:6px;margin-left:auto}
+.deal-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.deal-stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 10px}
+.deal-stat-label{font-size:9px;color:#4b5563;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.deal-stat-val{font-size:13px;font-weight:700;color:#f1f5f9}
+.deal-stat-val.green{color:#4ade80}
+.deal-stat-val.orange{color:#fb923c}
+.deal-extras{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.deal-extra{display:flex;align-items:center;gap:7px;font-size:11px;color:#64748b;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px}
+.deal-extra .e-icon{font-size:12px}
+.deal-extra strong{color:#94a3b8}
+.deal-cta{width:100%;background:var(--green);color:var(--white);border:none;padding:13px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;transition:background .2s}
+.deal-cta:hover{background:var(--green-d)}
+
+/* ============================================================
+   FEATURES
+============================================================ */
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;max-width:1100px;margin:0 auto}
+.feature-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow)}
+.feature-icon{width:48px;height:48px;border-radius:12px;background:rgba(13,27,62,.08);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+.feature-card h3{font-size:17px;font-weight:800;color:var(--navy);margin-bottom:8px}
+.feature-card p{font-size:14px;color:var(--muted);line-height:1.6}
+
+/* ============================================================
+   SOCIAL PROOF
+============================================================ */
+.proof-section{background:var(--navy2);padding:60px 5%}
+.proof-strip{display:flex;gap:0;max-width:700px;margin:0 auto;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);overflow:hidden}
+.proof-item{flex:1;padding:24px;text-align:center;position:relative}
+.proof-item+.proof-item::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:1px;background:rgba(255,255,255,.1)}
+.proof-n{font-family:'Bebas Neue',sans-serif;font-size:38px;color:var(--gold-l);line-height:1}
+.proof-l{font-size:12px;color:rgba(255,255,255,.6);margin-top:3px;font-weight:600}
+
+/* ============================================================
+   FOOTER CTA
+============================================================ */
+.footer-cta{background:var(--gold);padding:60px 5%;text-align:center}
+.footer-cta h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,5vw,60px);color:var(--navy);margin-bottom:12px;letter-spacing:1px}
+.footer-cta p{font-size:16px;color:rgba(13,27,62,.75);margin-bottom:28px}
+.footer-cta .group-btn{background:var(--navy);color:var(--white);margin:0 auto}
+.footer-cta .group-btn:hover{background:var(--navy3);box-shadow:0 8px 24px rgba(13,27,62,.4)}
+
+footer{background:var(--navy);padding:32px 5%;text-align:center;color:rgba(255,255,255,.4);font-size:13px}
+footer a{color:rgba(255,255,255,.5);text-decoration:none;margin:0 10px}
+footer a:hover{color:var(--gold-l)}
+
+/* ============================================================
+   AUTH MODAL
+============================================================ */
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(9,20,34,.92);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--off);border-radius:20px;padding:44px 36px;max-width:420px;width:100%;border-top:4px solid var(--gold);box-shadow:0 40px 80px rgba(0,0,0,.6);animation:popIn .35s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+.modal-logo{width:64px;height:64px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;border:3px solid var(--gold)}
+.modal-logo-text{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold-l);letter-spacing:1px}
+.modal h2{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--navy);text-align:center;letter-spacing:1px;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:28px;line-height:1.5}
+.modal-step{display:none}
+.modal-step.active{display:block}
+.input-group{margin-bottom:16px}
+.input-label{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.3px;text-transform:uppercase;margin-bottom:6px;display:block}
+.input-field{width:100%;padding:13px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:16px;font-family:'Barlow',sans-serif;color:var(--text);background:var(--white);transition:border-color .2s;outline:none}
+.input-field:focus{border-color:var(--navy)}
+.input-field.error{border-color:#dc2626}
+.input-hint{font-size:11px;color:var(--muted);margin-top:6px}
+.modal-btn{width:100%;background:var(--navy);color:var(--white);border:none;padding:14px;border-radius:var(--radius-sm);font-size:15px;font-weight:800;font-family:'Barlow',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:.2px;margin-top:4px}
+.modal-btn:hover{background:var(--navy3);transform:translateY(-1px)}
+.modal-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.modal-btn.wa-btn{background:var(--green)}
+.modal-btn.wa-btn:hover{background:var(--green-d)}
+.modal-err{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;display:none}
+.modal-err.show{display:block}
+.modal-success{text-align:center;padding:20px 0}
+.modal-success-icon{font-size:52px;margin-bottom:12px}
+.modal-success-title{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--navy);letter-spacing:1px;margin-bottom:8px}
+.modal-success-sub{font-size:14px;color:var(--muted);line-height:1.6}
+.otp-input{letter-spacing:8px;font-size:22px;text-align:center;font-weight:700}
+.resend-link{font-size:12px;color:var(--muted);text-align:center;margin-top:10px}
+.resend-link span{color:var(--navy);cursor:pointer;font-weight:700;text-decoration:underline}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1}
+.modal-wrap{position:relative}
+.name-field{display:none}
+
+/* ============================================================
+   DASHBOARD (painel do membro logado)
+============================================================ */
+#dashboard{display:none;padding-top:70px;min-height:100vh;background:var(--off)}
+.dash-layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 70px)}
+.dash-sidebar{background:var(--navy);padding:28px 16px;position:sticky;top:70px;height:calc(100vh - 70px);overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.dash-sidebar-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.3);padding:8px 12px;margin-bottom:4px}
+.dash-nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600;color:rgba(255,255,255,.65);cursor:pointer;transition:all .15s;border:none;background:none;width:100%;font-family:'Barlow',sans-serif}
+.dash-nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.9)}
+.dash-nav-item.active{background:rgba(201,150,26,.15);color:var(--gold-l);border-left:3px solid var(--gold-l)}
+.dash-nav-icon{font-size:16px;width:20px;text-align:center}
+.dash-main{padding:32px 36px;overflow-y:auto}
+.dash-greeting{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--navy);letter-spacing:1px;margin-bottom:4px}
+.dash-greeting-sub{font-size:14px;color:var(--muted);margin-bottom:28px}
+
+/* Deals grid */
+.deals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+.dash-deal-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:transform .2s}
+.dash-deal-card:hover{transform:translateY(-3px)}
+.dash-deal-header{background:var(--navy);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.dash-deal-store{font-size:10px;font-weight:800;padding:2px 8px;border-radius:100px}
+.amazon-badge{background:#FF9900;color:#000}
+.walmart-badge{background:#0071DC;color:#fff}
+.bestbuy-badge{background:#003087;color:#fff}
+.target-badge{background:#CC0000;color:#fff}
+.ebay-badge{background:#86B817;color:#fff}
+.dash-deal-score{font-size:10px;font-weight:700;color:rgba(255,255,255,.6)}
+.dash-deal-body{padding:14px}
+.dash-deal-badges{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap}
+.dash-badge-atl{background:#fee2e2;color:#dc2626;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px}
+.dash-badge-90{background:#fef3c7;color:#d97706;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px}
+.dash-deal-title{font-size:13px;font-weight:700;color:var(--navy);line-height:1.4;margin-bottom:10px}
+.dash-deal-price-row{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.dash-price-now{font-size:22px;font-weight:900;color:#16a34a;font-family:'Barlow Condensed',sans-serif}
+.dash-price-was{font-size:14px;color:var(--muted);text-decoration:line-through}
+.dash-discount{background:#dc2626;color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:5px;margin-left:auto}
+.dash-deal-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.dash-ds{background:var(--off);border-radius:6px;padding:6px 8px}
+.dash-ds-l{font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.dash-ds-v{font-size:12px;font-weight:700;color:var(--text)}
+.dash-ds-v.green{color:#16a34a}
+.dash-ds-v.orange{color:#d97706}
+.dash-deal-extras{font-size:11px;color:var(--muted);margin-bottom:10px;display:flex;flex-direction:column;gap:3px}
+.dash-deal-extra{display:flex;align-items:center;gap:5px}
+.dash-deal-cta{width:100%;background:var(--navy);color:var(--white);border:none;padding:10px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;transition:background .2s}
+.dash-deal-cta:hover{background:var(--navy3)}
+
+/* Referral tab */
+.ref-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);margin-bottom:20px}
+.ref-card h3{font-size:18px;font-weight:800;color:var(--navy);margin-bottom:6px}
+.ref-card p{font-size:14px;color:var(--muted);margin-bottom:18px;line-height:1.6}
+.ref-link-box{display:flex;gap:10px;align-items:center;background:var(--off);border:2px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:14px}
+.ref-link-text{flex:1;font-size:14px;color:var(--navy);font-weight:600;word-break:break-all}
+.ref-copy-btn{background:var(--navy);color:var(--white);border:none;padding:8px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Barlow',sans-serif;flex-shrink:0}
+.ref-wa-btn{width:100%;background:var(--green);color:var(--white);border:none;padding:12px;border-radius:var(--radius-sm);font-size:14px;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;margin-bottom:10px}
+.ref-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.ref-stat{background:var(--off);border-radius:var(--radius-sm);padding:16px;text-align:center}
+.ref-stat-n{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--navy)}
+.ref-stat-l{font-size:11px;color:var(--muted);font-weight:600}
+.vip-promo{background:linear-gradient(135deg,var(--navy),var(--navy3));border-radius:var(--radius);padding:24px;color:var(--white);margin-bottom:20px}
+.vip-promo h3{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold-l);letter-spacing:1px;margin-bottom:8px}
+.vip-promo p{font-size:13px;color:rgba(255,255,255,.75);line-height:1.6}
+.vip-progress{background:rgba(255,255,255,.1);border-radius:100px;height:8px;margin:12px 0}
+.vip-bar{background:var(--gold-l);border-radius:100px;height:8px;transition:width .5s}
+.vip-promo-sub{font-size:12px;color:var(--gold-ll);font-weight:600}
+
+/* Leaderboard */
+.leaderboard-list{display:flex;flex-direction:column;gap:10px}
+.lb-item{display:flex;align-items:center;gap:14px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 18px;box-shadow:var(--shadow)}
+.lb-rank{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--muted);width:32px;text-align:center}
+.lb-rank.gold{color:#F0BC3A}
+.lb-rank.silver{color:#94a3b8}
+.lb-rank.bronze{color:#d97706}
+.lb-info{flex:1}
+.lb-name{font-size:14px;font-weight:700;color:var(--navy)}
+.lb-sub{font-size:12px;color:var(--muted)}
+.lb-points{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--navy)}
+
+/* Spinner */
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Niches / Categories */
+.niche-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:18px}
+.niche-chip{display:flex;align-items:center;gap:8px;background:var(--off);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s}
+.niche-chip:hover{border-color:var(--navy)}
+.niche-chip.checked{background:rgba(13,27,62,.06);border-color:var(--navy);color:var(--navy)}
+.niche-chip input{accent-color:var(--navy)}
+.niche-save-msg{font-size:12px;font-weight:600;margin-top:8px;min-height:16px}
+.niche-save-msg.ok{color:#16a34a}
+.niche-save-msg.err{color:#dc2626}
+
+/* Product tracker */
+.tracker-form{display:flex;gap:10px;margin-bottom:8px}
+.tracker-form .input-field{flex:1}
+.tracker-btn{background:var(--navy);color:var(--white);border:none;padding:0 22px;border-radius:var(--radius-sm);font-size:14px;font-weight:800;cursor:pointer;font-family:'Barlow',sans-serif;white-space:nowrap}
+.tracker-btn:hover{background:var(--navy3)}
+.tracker-btn:disabled{opacity:.6;cursor:not-allowed}
+.tracker-err{font-size:13px;color:#dc2626;margin-top:8px}
+.offer-result{margin-top:20px;border-top:1px solid var(--border);padding-top:18px}
+.offer-title{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:10px}
+.offer-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.offer-item{display:flex;align-items:center;justify-content:space-between;background:var(--off);border-radius:var(--radius-sm);padding:10px 14px}
+.offer-mkt{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.3px}
+.offer-price{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--navy)}
+.offer-link{font-size:12px;color:var(--gold);font-weight:700;text-decoration:none}
+.offer-link:hover{text-decoration:underline}
+.coupon-box{margin-top:10px}
+.coupon-item{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;flex-wrap:wrap}
+.coupon-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:100px;white-space:nowrap}
+.coupon-badge.verified{background:#dcfce7;color:#16a34a}
+.coupon-badge.unverified{background:#f3f4f6;color:var(--muted)}
+.coupon-code{font-family:monospace;font-weight:700;color:var(--navy);background:var(--off);padding:3px 8px;border-radius:4px;cursor:pointer;border:none}
+.coupon-desc{font-size:12px;color:var(--muted)}
+.coupon-loading{font-size:13px;color:var(--muted);font-style:italic;padding:8px 0}
+
+/* Tracked products */
+.tracked-grid{display:flex;flex-direction:column;gap:12px}
+.tracked-card{display:flex;gap:14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;align-items:center;box-shadow:var(--shadow)}
+.tracked-img{width:64px;height:64px;object-fit:cover;border-radius:8px;background:var(--off2);flex-shrink:0}
+.tracked-body{flex:1;min-width:0}
+.tracked-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tracked-meta{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.tracked-price{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--navy)}
+.tracked-remove{background:transparent;border:1.5px solid #dc2626;color:#dc2626;padding:7px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+.tracked-remove:hover{background:#dc2626;color:#fff}
+
+/* Tab panels */
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* News */
+.news-cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.news-cat-btn{padding:6px 14px;border-radius:100px;border:1.5px solid var(--border);background:transparent;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);transition:all .15s}
+.news-cat-btn.active,.news-cat-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.news-feed{display:flex;flex-direction:column;gap:16px}
+.news-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:18px;display:flex;gap:16px;cursor:pointer;transition:box-shadow .2s;text-decoration:none;color:inherit}
+.news-card:hover{box-shadow:var(--shadow)}
+.news-card-img{width:100px;height:70px;border-radius:8px;object-fit:cover;flex-shrink:0;background:var(--off2)}
+.news-card-body{flex:1;min-width:0}
+.news-card-tag{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.news-card-title{font-size:15px;font-weight:700;color:var(--navy);line-height:1.3;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.news-card-summary{font-size:13px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.news-card-date{font-size:11px;color:var(--muted);margin-top:6px}
+.news-article-title{font-size:22px;font-weight:800;color:var(--navy);line-height:1.3;margin-bottom:12px}
+.news-article-meta{font-size:12px;color:var(--muted);margin-bottom:20px;display:flex;gap:12px;flex-wrap:wrap}
+.news-article-body{font-size:16px;color:var(--text);line-height:1.8;white-space:pre-wrap;margin-bottom:24px}
+.news-article-source{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:8px;border:1.5px solid var(--border);text-decoration:none;color:var(--navy);font-weight:600;font-size:14px;transition:all .15s}
+.news-article-source:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.loading-state,.empty-state{color:var(--muted);padding:40px;text-align:center}
+
+/* Forum */
+.forum-cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.forum-cat-btn{padding:5px 12px;border-radius:100px;border:1.5px solid var(--border);background:transparent;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);transition:all .15s}
+.forum-cat-btn.active,.forum-cat-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.forum-post-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin-bottom:12px;cursor:pointer;transition:box-shadow .2s}
+.forum-post-card:hover{box-shadow:var(--shadow)}
+.forum-post-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px}
+.forum-post-meta{display:flex;gap:12px;font-size:12px;color:var(--muted)}
+.forum-reply{background:var(--off);border-radius:8px;padding:14px;margin-bottom:10px}
+.forum-reply.is-ai{border-left:3px solid var(--gold);background:#FFFBF0}
+.forum-reply-header{font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600}
+.forum-reply-body{font-size:14px;color:var(--text);line-height:1.6;white-space:pre-wrap}
+.btn-back{background:transparent;border:none;color:var(--navy);font-size:14px;font-weight:600;cursor:pointer;padding:0;margin-bottom:20px;display:flex;align-items:center;gap:6px}
+
+/* AI Chat Widget */
+#ai-chat-toggle{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:var(--navy);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:1000;transition:transform .2s;display:flex;align-items:center;justify-content:center}
+#ai-chat-toggle:hover{transform:scale(1.08)}
+#ai-chat-window{position:fixed;bottom:92px;right:24px;width:360px;height:500px;background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:1000;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border)}
+#ai-chat-header{background:var(--navy);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px}
+#ai-chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.ai-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5}
+.ai-msg.user{background:var(--navy);color:#fff;align-self:flex-end;border-radius:12px 12px 2px 12px}
+.ai-msg.assistant{background:var(--off);color:var(--text);align-self:flex-start;border-radius:12px 12px 12px 2px}
+.ai-msg.assistant.loading{color:var(--muted);font-style:italic}
+#ai-chat-input-area{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border)}
+#ai-chat-input{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;outline:none}
+#ai-chat-input:focus{border-color:var(--navy)}
+#ai-chat-input-area button{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:16px;font-weight:700}
+@media(max-width:480px){#ai-chat-window{width:calc(100vw - 32px);right:16px;bottom:84px}}
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+@media(max-width:768px){
+  nav{padding:0 20px}
+  .nav-link{display:none}
+  .dash-layout{grid-template-columns:1fr}
+  .dash-sidebar{display:none}
+  .dash-main{padding:20px}
+  .hero-stats{flex-wrap:wrap}
+  .proof-strip{flex-wrap:wrap}
+  .steps{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     NAV
+============================================================ -->
+<nav id="main-nav">
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-icon">CU</div>
+    <div>
+      <div class="nav-logo-name">CLUBE <span>USA</span></div>
+      <div class="nav-logo-tag">Save More. Every Day.</div>
+    </div>
+  </a>
+  <div class="nav-right">
+    <a href="#como-funciona" class="nav-link">Como funciona</a>
+    <a href="#deals" class="nav-link">Deals</a>
+    <div class="nav-user" id="nav-user-info">
+      <div class="nav-user-dot"></div>
+      <span id="nav-user-name">Carregando...</span>
+    </div>
+    <button class="nav-cta" id="nav-cta-btn" onclick="openModal()">Entrar Grátis</button>
+  </div>
+</nav>
+
+<!-- ============================================================
+     LANDING PAGE
+============================================================ -->
+<div id="landing">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge"><div class="hero-badge-dot"></div> O maior clube de deals para latinos</div>
+    <h1>ECONOMIZE<span class="accent">DE VERDADE</span></h1>
+    <p class="hero-sub">Deals reais verificados, com histórico de preço real. Direto no seu <strong>WhatsApp</strong> — grátis.</p>
+
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-n" id="stat-members">12.4K</div><div class="hero-stat-l">Membros</div></div>
+      <div class="hero-stat"><div class="hero-stat-n" id="stat-deals">320</div><div class="hero-stat-l">Deals este mês</div></div>
+      <div class="hero-stat"><div class="hero-stat-n" id="stat-avg">43%</div><div class="hero-stat-l">Desconto médio</div></div>
+    </div>
+
+    <div class="groups-section">
+      <div class="groups-title">📲 Escolha seu grupo e entre agora</div>
+      <div class="groups-grid" id="groups-container">
+        <div class="groups-loading">Carregando grupos disponíveis...</div>
+      </div>
+      <p class="join-alt">Já é membro? <a onclick="openModal('login')">Entrar no painel</a></p>
+    </div>
+  </section>
+
+  <!-- COMO FUNCIONA -->
+  <section class="section" id="como-funciona">
+    <div class="section-title">Como Funciona</div>
+    <p class="section-sub">Em 3 passos você começa a economizar nas melhores lojas americanas</p>
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h3>Entre no grupo</h3>
+        <p>Clique no link do grupo WhatsApp. Gratuito, sem cartão, sem senha.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>Receba os deals</h3>
+        <p>3x por dia você recebe os melhores deals verificados — preço real, histórico comprovado.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h3>Economize de verdade</h3>
+        <p>Clique no link, compre direto na loja. Você economiza, simples assim.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEAL SAMPLE -->
+  <section class="deals-section" id="deals">
+    <div class="section-title" style="color:var(--white)">Exemplo de Deal Real</div>
+    <p class="section-sub" style="color:rgba(255,255,255,.6)">Veja o nível de informação que você recebe em cada oferta</p>
+
+    <div class="deal-sample">
+      <div class="deal-sample-header">
+        <span class="deal-store">Amazon</span>
+        <span class="deal-score">Score 91 · Excelente</span>
+      </div>
+      <div class="deal-body">
+        <div class="deal-badges">
+          <span class="badge-atl">🏆 MENOR PREÇO DE SEMPRE</span>
+        </div>
+        <div class="deal-title">Sony WH-1000XM5 Wireless Noise Canceling Headphones</div>
+        <div class="deal-price-row">
+          <div class="deal-price-now">$229.00</div>
+          <div class="deal-price-was">$349.99</div>
+          <div class="deal-discount">-34%</div>
+        </div>
+        <div class="deal-stats">
+          <div class="deal-stat"><div class="deal-stat-label">Menor em 90 dias</div><div class="deal-stat-val green">$229 ✓ agora</div></div>
+          <div class="deal-stat"><div class="deal-stat-label">Média 90 dias</div><div class="deal-stat-val">$299.00</div></div>
+          <div class="deal-stat"><div class="deal-stat-label">Você economiza</div><div class="deal-stat-val green">$120.99</div></div>
+          <div class="deal-stat"><div class="deal-stat-label">Nesse preço há</div><div class="deal-stat-val orange">18 horas</div></div>
+        </div>
+        <div class="deal-extras">
+          <div class="deal-extra"><span class="e-icon">📦</span> <strong style="color:#94a3b8">Estoque:</strong> ⚠️ Poucas unidades</div>
+          <div class="deal-extra"><span class="e-icon">🎟️</span> <strong style="color:#94a3b8">Cupom:</strong> +5% OFF na página</div>
+          <div class="deal-extra"><span class="e-icon">📉</span> <strong style="color:#94a3b8">Tendência:</strong> ↓ Caindo há 2 semanas</div>
+          <div class="deal-extra"><span class="e-icon">⭐</span> 4.7 · 28.400 avaliações</div>
+        </div>
+        <button class="deal-cta" onclick="openModal()">📲 Entrar para ver todos os deals →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section">
+    <div class="section-title">Por que o Clube USA?</div>
+    <p class="section-sub">Não somos um grupo de spam. Somos uma curadoria séria.</p>
+    <div class="features-grid">
+      <div class="feature-card"><div class="feature-icon">📊</div><h3>Histórico de preço real</h3><p>Cada deal tem o histórico dos últimos 90 dias. Você vê se o desconto é real ou inflado.</p></div>
+      <div class="feature-card"><div class="feature-icon">✅</div><h3>Curadoria humana</h3><p>Todo deal é revisado antes de ser enviado. Só enviamos o que vale a pena de verdade.</p></div>
+      <div class="feature-card"><div class="feature-icon">🔒</div><h3>Privacidade total</h3><p>Você nunca vê o número de outros membros. Grupo 100% seguro e privado.</p></div>
+      <div class="feature-card"><div class="feature-icon">🏪</div><h3>5 marketplaces</h3><p>Amazon, Walmart, eBay, BestBuy e Target. O melhor preço independente da loja.</p></div>
+      <div class="feature-card"><div class="feature-icon">🎁</div><h3>Indique e ganhe</h3><p>Cada amigo que você traz vale +200 pontos. Junte 3 indicações e ganhe VIP grátis por 30 dias.</p></div>
+      <div class="feature-card"><div class="feature-icon">🔔</div><h3>Alertas de preço (VIP)</h3><p>Defina o preço que quer pagar e receba aviso automático quando a Amazon atingir.</p></div>
+    </div>
+  </section>
+
+  <!-- SOCIAL PROOF -->
+  <section class="proof-section">
+    <div class="proof-strip">
+      <div class="proof-item"><div class="proof-n" id="proof-members">12.4K</div><div class="proof-l">Membros ativos</div></div>
+      <div class="proof-item"><div class="proof-n">R$847</div><div class="proof-l">Economia média/membro</div></div>
+      <div class="proof-item"><div class="proof-n">4.9⭐</div><div class="proof-l">Avaliação dos membros</div></div>
+      <div class="proof-item"><div class="proof-n">0</div><div class="proof-l">Deals falsos enviados</div></div>
+    </div>
+  </section>
+
+  <!-- FOOTER CTA -->
+  <section class="footer-cta">
+    <h2>PRONTO PARA ECONOMIZAR?</h2>
+    <p>Junte-se a milhares de latinos que já recebem os melhores deals americanos</p>
+    <div class="groups-grid" id="groups-container-footer" style="justify-content:center">
+      <div class="groups-loading" style="color:rgba(13,27,62,.5)">Carregando...</div>
+    </div>
+  </section>
+
+  <footer>
+    <div style="margin-bottom:12px">
+      <a href="#">Privacidade</a>
+      <a href="#">Termos</a>
+      <a href="#">Contato</a>
+      <a href="#" onclick="openModal('login')">Painel do membro</a>
+    </div>
+    © 2025 Clube USA. Feito para latinos que querem economizar de verdade.
+  </footer>
+
+</div><!-- /landing -->
+
+<!-- ============================================================
+     DASHBOARD
+============================================================ -->
+<div id="dashboard">
+  <div class="dash-layout">
+    <!-- Sidebar -->
+    <div class="dash-sidebar">
+      <div style="padding:0 12px 20px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:12px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold-l);letter-spacing:2px">CLUBE USA</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px" id="dash-plan-badge">Plano Free</div>
+      </div>
+      <div class="dash-sidebar-title">Menu</div>
+      <button class="dash-nav-item active" onclick="showTab('deals')"><span class="dash-nav-icon">🔥</span> Deals de Hoje</button>
+      <button class="dash-nav-item" onclick="showTab('referral')"><span class="dash-nav-icon">🎁</span> Indicações</button>
+      <button class="dash-nav-item" onclick="showTab('leaderboard')"><span class="dash-nav-icon">🏆</span> Ranking</button>
+      <button class="dash-nav-item" onclick="showTab('news')"><span class="dash-nav-icon">📰</span> Notícias</button>
+      <button class="dash-nav-item" onclick="showTab('forum')">💬 Fórum</button>
+      <button class="dash-nav-item" onclick="showTab('products')">📦 Meus Produtos</button>
+      <button class="dash-nav-item" onclick="showTab('profile')"><span class="dash-nav-icon">👤</span> Perfil</button>
+      <div style="margin-top:auto;padding-top:20px;border-top:1px solid rgba(255,255,255,.08)">
+        <button class="dash-nav-item" onclick="logout()"><span class="dash-nav-icon">🚪</span> Sair</button>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="dash-main">
+      <div class="dash-greeting">Olá, <span id="dash-member-name">Membro</span>! 👋</div>
+      <div class="dash-greeting-sub" id="dash-greeting-sub">Aqui estão os melhores deals de hoje</div>
+
+      <!-- DEALS TAB -->
+      <div class="tab-panel active" id="tab-deals">
+        <div class="deals-grid" id="deals-grid">
+          <div style="color:var(--muted);padding:40px;text-align:center;grid-column:1/-1">
+            <div class="spinner" style="border-color:rgba(0,0,0,.2);border-top-color:var(--navy)"></div>
+            Carregando deals...
+          </div>
+        </div>
+      </div>
+
+      <!-- REFERRAL TAB -->
+      <div class="tab-panel" id="tab-referral">
+        <div class="vip-promo" id="vip-promo-box">
+          <h3>🎁 GANHE VIP GRÁTIS POR 30 DIAS</h3>
+          <p>Indique <strong>3 amigos</strong> que entrem no grupo e fiquem por pelo menos 7 dias.</p>
+          <div class="vip-progress"><div class="vip-bar" id="vip-bar-fill" style="width:0%"></div></div>
+          <div class="vip-promo-sub" id="vip-progress-text">0 de 3 indicações confirmadas</div>
+        </div>
+        <div class="ref-card">
+          <h3>Seu link de indicação</h3>
+          <p>Compartilhe e ganhe <strong>+200 pontos</strong> por cada amigo que entrar. Pontos viram descontos e sorteios.</p>
+          <div class="ref-link-box">
+            <div class="ref-link-text" id="ref-link-text">clubeusa.com?ref=...</div>
+            <button class="ref-copy-btn" onclick="copyRefLink()">Copiar</button>
+          </div>
+          <button class="ref-wa-btn" onclick="shareRefOnWhatsApp()">
+            📲 Compartilhar no WhatsApp
+          </button>
+        </div>
+        <div class="ref-card">
+          <h3>Suas estatísticas</h3>
+          <div class="ref-stats">
+            <div class="ref-stat"><div class="ref-stat-n" id="ref-count">0</div><div class="ref-stat-l">Indicações</div></div>
+            <div class="ref-stat"><div class="ref-stat-n" id="ref-points">0</div><div class="ref-stat-l">Pontos</div></div>
+            <div class="ref-stat"><div class="ref-stat-n" id="ref-level">1</div><div class="ref-stat-l">Nível</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEADERBOARD TAB -->
+      <div class="tab-panel" id="tab-leaderboard">
+        <div class="ref-card">
+          <h3>🏆 Top Indicadores do Clube</h3>
+          <p style="margin-bottom:20px">Os membros que mais trazem amigos para o Clube USA. Renovado toda semana.</p>
+          <div class="leaderboard-list" id="leaderboard-list">
+            <div style="color:var(--muted);padding:20px;text-align:center">Carregando ranking...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROFILE TAB -->
+      <div class="tab-panel" id="tab-profile">
+        <div class="ref-card">
+          <h3>Seu perfil</h3>
+          <p id="profile-info" style="margin-bottom:0">Carregando...</p>
+        </div>
+
+        <!-- MEUS NICHOS -->
+        <div class="ref-card">
+          <h3>🎯 Meus Nichos</h3>
+          <p>Escolha as categorias de produtos que mais te interessam para receber deals personalizados.</p>
+          <div class="niche-grid" id="niche-grid"></div>
+          <button class="ref-copy-btn" id="niche-save-btn" onclick="saveCategoriesFromUI()">Salvar nichos</button>
+          <div class="niche-save-msg" id="niche-save-msg"></div>
+        </div>
+
+        <!-- Card VIP: assinar (free) -->
+        <div class="vip-promo" id="vip-upgrade-box" style="display:none">
+          <h3>⭐ VIRE MEMBRO VIP</h3>
+          <p>Alertas de preço automáticos, deals exclusivos e prioridade nas ofertas. <strong>1º mês grátis</strong>, depois $4.99/mês. Cancele quando quiser.</p>
+          <button class="ref-wa-btn" id="vip-subscribe-btn" style="margin-top:16px;background:var(--gold-l);color:var(--navy)" onclick="subscribeVip()">
+            🚀 Assinar VIP
+          </button>
+        </div>
+
+        <!-- Card VIP: gerenciar (vip) -->
+        <div class="ref-card" id="vip-manage-box" style="display:none">
+          <h3>⭐ Assinatura VIP ativa</h3>
+          <p>Gerencie sua assinatura, troque o cartão ou cancele a qualquer momento.</p>
+          <button class="ref-copy-btn" style="margin-top:12px" onclick="openBillingPortal()">
+            Gerenciar assinatura
+          </button>
+        </div>
+      </div>
+
+      <!-- PRODUCTS TAB -->
+      <div class="tab-panel" id="tab-products">
+        <div class="ref-card">
+          <h3>🔎 Adicionar Produto</h3>
+          <p>Cole o link de um produto (Amazon, Walmart, Best Buy...) para comparar preços em outros marketplaces e ver cupons.</p>
+          <div class="tracker-form">
+            <input class="input-field" type="url" id="tracker-url-input" placeholder="https://www.amazon.com/...">
+            <button class="tracker-btn" id="tracker-submit-btn" onclick="handleTrackProduct()">Rastrear</button>
+          </div>
+          <div class="tracker-err" id="tracker-err" style="display:none"></div>
+          <div class="offer-result" id="tracker-result" style="display:none"></div>
+        </div>
+
+        <div class="ref-card">
+          <h3>📦 Meus Produtos Rastreados</h3>
+          <p style="margin-bottom:0">Produtos que você está acompanhando.</p>
+          <div class="tracked-grid" id="tracked-products-list" style="margin-top:16px">
+            <div style="color:var(--muted);padding:20px;text-align:center">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTICIAS TAB -->
+      <div class="tab-panel" id="tab-news">
+        <!-- LISTA -->
+        <div id="news-view-list">
+          <div class="section-header">
+            <h2 class="section-title" style="font-size:28px;text-align:left;margin-bottom:4px">📰 Notícias</h2>
+            <p class="section-sub" style="text-align:left;margin:0 0 20px">Informação para brasileiros nos EUA</p>
+          </div>
+          <div class="news-cats" id="news-cats">
+            <button class="news-cat-btn active" data-cat="">Todas</button>
+            <button class="news-cat-btn" data-cat="immigration">📋 Imigração</button>
+            <button class="news-cat-btn" data-cat="politics">⚖️ Política</button>
+            <button class="news-cat-btn" data-cat="community">🤝 Comunidade</button>
+            <button class="news-cat-btn" data-cat="brazil">🇧🇷 Brasil</button>
+            <button class="news-cat-btn" data-cat="economy">💰 Economia</button>
+          </div>
+          <div id="news-feed" class="news-feed">
+            <div class="loading-state">Carregando notícias...</div>
+          </div>
+        </div>
+        <!-- DETALHE DO ARTIGO -->
+        <div id="news-view-detail" style="display:none">
+          <button class="btn-back" onclick="showNewsList()">← Voltar para Notícias</button>
+          <div id="news-article-content"></div>
+        </div>
+      </div>
+
+      <!-- FORUM -->
+      <div class="tab-panel" id="tab-forum">
+        <div class="section-header">
+          <h2 class="section-title" style="font-size:28px;text-align:left;margin-bottom:4px">💬 Fórum da Comunidade</h2>
+          <p class="section-sub" style="text-align:left;margin:0 0 20px">Perguntas e respostas de brasileiros nos EUA</p>
+        </div>
+        <div id="forum-view-list">
+          <div class="forum-cats" id="forum-cats"></div>
+          <button class="btn-primary" onclick="showForumNew()" style="margin-bottom:16px">✏️ Nova Pergunta</button>
+          <div id="forum-posts-list"></div>
+        </div>
+        <div id="forum-view-thread" style="display:none">
+          <button class="btn-back" onclick="showForumList()">← Voltar</button>
+          <div id="forum-thread-content"></div>
+        </div>
+        <div id="forum-view-new" style="display:none">
+          <button class="btn-back" onclick="showForumList()">← Voltar</button>
+          <h3 style="margin-bottom:16px;color:var(--navy)">Nova Pergunta</h3>
+          <select id="forum-new-cat" class="form-input" style="margin-bottom:12px">
+            <option value="">Selecione a categoria...</option>
+          </select>
+          <input id="forum-new-title" class="form-input" placeholder="Título da pergunta (mín. 10 caracteres)" style="margin-bottom:12px">
+          <textarea id="forum-new-body" class="form-input" rows="5" placeholder="Descreva sua pergunta com detalhes..." style="margin-bottom:16px;resize:vertical"></textarea>
+          <button class="btn-primary" onclick="submitForumPost()">Publicar Pergunta</button>
+        </div>
+      </div>
+
+    </div><!-- /dash-main -->
+  </div><!-- /dash-layout -->
+</div><!-- /dashboard -->
+
+<!-- ============================================================
+     AUTH MODAL
+============================================================ -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal modal-wrap">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-logo"><div class="modal-logo-text">CU</div></div>
+
+    <!-- STEP 1: Cadastro/Login -->
+    <div class="modal-step active" id="step-phone">
+      <h2 id="modal-title">ENTRAR GRÁTIS</h2>
+      <p class="modal-sub" id="modal-sub">Digite seu WhatsApp — vamos enviar um código de confirmação</p>
+      <div class="modal-err" id="modal-err"></div>
+      <div class="input-group name-field" id="name-field-wrap">
+        <label class="input-label">Seu nome</label>
+        <input class="input-field" type="text" id="input-name" placeholder="João Silva" autocomplete="name">
+      </div>
+      <div class="input-group">
+        <label class="input-label">WhatsApp (com código do país)</label>
+        <input class="input-field" type="tel" id="input-phone" placeholder="+1 (555) 123-4567" autocomplete="tel">
+        <div class="input-hint">Exemplo: +55 para Brasil, +52 México, +1 EUA/Canadá</div>
+      </div>
+      <button class="modal-btn wa-btn" id="btn-phone" onclick="handlePhoneSubmit()">
+        📲 Receber código no WhatsApp
+      </button>
+      <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:14px">
+        Ao continuar você aceita nossos <a href="#" style="color:var(--navy)">Termos de Uso</a>
+      </p>
+    </div>
+
+    <!-- STEP 2: OTP -->
+    <div class="modal-step" id="step-otp">
+      <h2>CONFIRME O CÓDIGO</h2>
+      <p class="modal-sub">Enviamos um código de 6 dígitos para o seu WhatsApp. Válido por 10 minutos.</p>
+      <div class="modal-err" id="modal-err-otp"></div>
+      <div class="input-group">
+        <label class="input-label">Código de 6 dígitos</label>
+        <input class="input-field otp-input" type="text" id="input-otp" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+      </div>
+      <button class="modal-btn" id="btn-otp" onclick="handleOTPSubmit()">
+        ✅ Confirmar e entrar
+      </button>
+      <p class="resend-link">Não recebeu? <span onclick="resendOTP()">Reenviar código</span></p>
+    </div>
+
+    <!-- STEP 3: Sucesso -->
+    <div class="modal-step" id="step-success">
+      <div class="modal-success">
+        <div class="modal-success-icon">🎉</div>
+        <div class="modal-success-title">BEM-VINDO AO CLUBE!</div>
+        <p class="modal-success-sub">Você agora recebe os melhores deals americanos direto no seu WhatsApp. Acesse seu painel abaixo.</p>
+        <button class="modal-btn" style="margin-top:20px" onclick="closeModal();showDashboard()">Ir para o painel →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+============================================================ -->
+<script>
+// ============================================================
+//  CONFIG — altere para o endereço real do seu backend
+// ============================================================
+// URL relativa — funciona em localhost E em producao sem alterar nada
+const API_URL = window.location.origin;
+const APP_URL = window.location.origin;
+
+// ============================================================
+//  STATE
+// ============================================================
+let _token   = localStorage.getItem('cu_token') || null;
+let _member  = JSON.parse(localStorage.getItem('cu_member') || 'null');
+let _phone   = '';
+let _isLogin = false;
+
+// Categorias válidas para nichos (mesma lista validada no backend)
+const NICHE_CATEGORIES = [
+  { key: 'electronics', label: '💻 Eletrônicos' },
+  { key: 'kitchen',     label: '🍳 Cozinha' },
+  { key: 'baby',        label: '🍼 Bebê' },
+  { key: 'fitness',     label: '🏋️ Fitness' },
+  { key: 'beauty',      label: '💄 Beleza' },
+  { key: 'tools',       label: '🔧 Ferramentas' },
+  { key: 'pets',        label: '🐾 Pets' },
+  { key: 'fashion',     label: '👗 Moda' },
+  { key: 'automotive',  label: '🚗 Automotivo' },
+  { key: 'books',       label: '📚 Livros' },
+];
+let _trackedProducts = [];
+let _pollTimers = {};
+
+// ============================================================
+//  INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  loadGroups();
+  if (_token && _member) {
+    showDashboard();
+  }
+  handleVipReturn();
+});
+
+// Trata o retorno do checkout Stripe (/vip/sucesso e /vip/cancelado)
+function handleVipReturn() {
+  const path = window.location.pathname;
+  if (path === '/vip/sucesso') {
+    alert('🎉 Pagamento confirmado! Seu VIP está sendo ativado — pode levar alguns segundos.');
+    // O webhook do Stripe ativa o VIP de forma assíncrona; recarrega o perfil depois.
+    setTimeout(() => { if (_token) loadProfile(); }, 4000);
+    window.history.replaceState({}, '', '/painel');
+  } else if (path === '/vip/cancelado') {
+    alert('Pagamento cancelado. Você pode assinar o VIP quando quiser pelo seu perfil.');
+    window.history.replaceState({}, '', '/painel');
+  }
+}
+
+// ============================================================
+//  API HELPER
+// ============================================================
+async function api(method, path, body = null, auth = false) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth && _token) headers['Authorization'] = `Bearer ${_token}`;
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${API_URL}${path}`, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || 'Erro desconhecido');
+  return data;
+}
+
+// ============================================================
+//  LOAD GROUPS (endpoint GET /public/groups precisa ser criado)
+// ============================================================
+async function loadGroups() {
+  try {
+    const data = await api('GET', '/public/groups');
+    renderGroups(data.groups || [], 'groups-container');
+    renderGroups(data.groups || [], 'groups-container-footer');
+  } catch {
+    // fallback estático enquanto endpoint não existe
+    const fallback = [
+      { name: 'Clube USA — Grupo 1', invite_link: '#', member_count: 847, capacity: 1024, language: 'pt' },
+      { name: 'Club USA — Grupo 2', invite_link: '#', member_count: 312, capacity: 1024, language: 'es' },
+    ];
+    renderGroups(fallback, 'groups-container');
+    renderGroups(fallback, 'groups-container-footer');
+  }
+}
+
+function renderGroups(groups, containerId) {
+  const el = document.getElementById(containerId);
+  if (!groups.length) { el.innerHTML = '<div class="groups-loading">Em breve novos grupos!</div>'; return; }
+  el.innerHTML = groups.map(g => {
+    const slots = g.capacity - g.member_count;
+    const pct   = Math.round((g.member_count / g.capacity) * 100);
+    const flag  = g.language === 'es' ? '🇲🇽' : '🇧🇷';
+    return `
+      <a class="group-btn" href="${g.invite_link}" target="_blank" rel="noopener">
+        <svg class="wa-icon" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.125.557 4.126 1.527 5.857L.057 23.882l6.19-1.621A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.93 0-3.742-.518-5.296-1.422l-.379-.224-3.935 1.032 1.049-3.833-.247-.394A9.956 9.956 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+        <div class="group-btn-info">
+          <div>${flag} ${g.name}</div>
+          <div class="group-btn-slots">${slots > 0 ? `${slots} vagas disponíveis` : 'Quase lotado!'}</div>
+        </div>
+      </a>`;
+  }).join('');
+}
+
+// ============================================================
+//  AUTH MODAL
+// ============================================================
+function openModal(mode = 'register') {
+  _isLogin = (mode === 'login');
+  document.getElementById('modal-title').textContent = _isLogin ? 'ENTRAR NO PAINEL' : 'ENTRAR GRÁTIS';
+  document.getElementById('modal-sub').textContent   = _isLogin
+    ? 'Digite seu WhatsApp para receber o código de acesso'
+    : 'Digite seu WhatsApp — vamos enviar um código de confirmação';
+  document.getElementById('name-field-wrap').style.display = _isLogin ? 'none' : 'block';
+  showStep('step-phone');
+  clearErrors();
+  document.getElementById('auth-modal').classList.add('open');
+  document.getElementById('input-phone').focus();
+}
+
+function closeModal() {
+  document.getElementById('auth-modal').classList.remove('open');
+}
+
+function showStep(id) {
+  document.querySelectorAll('.modal-step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function clearErrors() {
+  document.querySelectorAll('.modal-err').forEach(e => { e.classList.remove('show'); e.textContent = ''; });
+  document.querySelectorAll('.input-field').forEach(f => f.classList.remove('error'));
+}
+
+function showError(elId, msg) {
+  const el = document.getElementById(elId);
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function setLoading(btnId, loading, label) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading ? `<span class="spinner"></span> Aguarde...` : label;
+}
+
+async function handlePhoneSubmit() {
+  clearErrors();
+  const phone = document.getElementById('input-phone').value.trim();
+  const name  = document.getElementById('input-name').value.trim();
+  if (!phone || phone.length < 8) {
+    document.getElementById('input-phone').classList.add('error');
+    showError('modal-err', 'Digite um número de WhatsApp válido com código do país.');
+    return;
+  }
+  _phone = phone;
+  setLoading('btn-phone', true, '📲 Receber código no WhatsApp');
+  try {
+    if (!_isLogin) {
+      await api('POST', '/auth/register', { phone, name: name || undefined, language: 'pt' });
+    }
+    await api('POST', '/auth/otp/request', { phone });
+    showStep('step-otp');
+    setTimeout(() => document.getElementById('input-otp').focus(), 100);
+  } catch (e) {
+    showError('modal-err', e.message);
+  } finally {
+    setLoading('btn-phone', false, '📲 Receber código no WhatsApp');
+  }
+}
+
+async function handleOTPSubmit() {
+  clearErrors();
+  const otp = document.getElementById('input-otp').value.trim();
+  if (!otp || otp.length !== 6) {
+    document.getElementById('input-otp').classList.add('error');
+    showError('modal-err-otp', 'Digite o código de 6 dígitos enviado ao seu WhatsApp.');
+    return;
+  }
+  setLoading('btn-otp', true, '✅ Confirmar e entrar');
+  try {
+    const data = await api('POST', '/auth/otp/verify', { phone: _phone, otp });
+    _token  = data.token;
+    _member = { id: data.member_id, plan: data.plan };
+    localStorage.setItem('cu_token', _token);
+    localStorage.setItem('cu_member', JSON.stringify(_member));
+    showStep('step-success');
+  } catch (e) {
+    showError('modal-err-otp', e.message);
+  } finally {
+    setLoading('btn-otp', false, '✅ Confirmar e entrar');
+  }
+}
+
+async function resendOTP() {
+  try {
+    await api('POST', '/auth/otp/request', { phone: _phone });
+    alert('Novo código enviado!');
+  } catch (e) { alert(e.message); }
+}
+
+// ============================================================
+//  DASHBOARD
+// ============================================================
+async function showDashboard() {
+  closeModal();
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('nav-cta-btn').style.display = 'none';
+  document.getElementById('nav-user-info').style.display = 'flex';
+
+  await loadProfile();
+  await loadDeals();
+  showAiWidget();
+
+  // Deep link: ?article=ID abre o artigo direto
+  const articleParam = new URLSearchParams(window.location.search).get('article');
+  if (articleParam) {
+    showTab('news');
+    loadArticleDetail(articleParam);
+  }
+}
+
+async function loadProfile() {
+  try {
+    const data = await api('GET', '/member/profile', null, true);
+    const name = data.name || data.phone || 'Membro';
+    document.getElementById('dash-member-name').textContent = name;
+    document.getElementById('nav-user-name').textContent   = name;
+    document.getElementById('dash-plan-badge').textContent = data.plan === 'vip' ? '⭐ VIP' : 'Plano Free';
+    document.getElementById('profile-info').innerHTML = `
+      <strong>Plano:</strong> ${data.plan === 'vip' ? '⭐ VIP' : 'Free'}<br>
+      <strong>Pontos:</strong> ${data.points || 0}<br>
+      <strong>Nível:</strong> ${data.level || 1}<br>
+      <strong>Indicações:</strong> ${data.referral_count || 0}
+    `;
+    const isVip = data.plan === 'vip';
+    document.getElementById('vip-upgrade-box').style.display = isVip ? 'none' : 'block';
+    document.getElementById('vip-manage-box').style.display  = isVip ? 'block' : 'none';
+    renderNicheGrid(data.categories || []);
+  } catch { /* silencia */ }
+}
+
+// ============================================================
+//  NICHOS (MEMBER CATEGORIES)
+// ============================================================
+function renderNicheGrid(selectedCategories) {
+  const grid = document.getElementById('niche-grid');
+  if (!grid) return;
+  const selected = new Set(selectedCategories || []);
+  grid.innerHTML = NICHE_CATEGORIES.map(c => `
+    <label class="niche-chip ${selected.has(c.key) ? 'checked' : ''}" data-key="${c.key}">
+      <input type="checkbox" value="${c.key}" ${selected.has(c.key) ? 'checked' : ''} onchange="onNicheToggle(this)">
+      ${c.label}
+    </label>`).join('');
+}
+
+function onNicheToggle(checkbox) {
+  const chip = checkbox.closest('.niche-chip');
+  chip.classList.toggle('checked', checkbox.checked);
+}
+
+function getSelectedCategories() {
+  const grid = document.getElementById('niche-grid');
+  if (!grid) return [];
+  return Array.from(grid.querySelectorAll('input[type=checkbox]:checked')).map(i => i.value);
+}
+
+async function saveCategories(selected) {
+  const res = await fetch(`${API_URL}/member/profile`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
+    body: JSON.stringify({ categories: selected }),
+  });
+  if (!res.ok) throw new Error('Falha ao salvar nichos');
+  return res.json();
+}
+
+async function saveCategoriesFromUI() {
+  const msg = document.getElementById('niche-save-msg');
+  const btn = document.getElementById('niche-save-btn');
+  const selected = getSelectedCategories();
+  btn.disabled = true;
+  msg.className = 'niche-save-msg';
+  msg.textContent = 'Salvando...';
+  try {
+    await saveCategories(selected);
+    msg.className = 'niche-save-msg ok';
+    msg.textContent = '✓ Nichos salvos!';
+  } catch (e) {
+    msg.className = 'niche-save-msg err';
+    msg.textContent = e.message || 'Erro ao salvar nichos.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ============================================================
+//  ADICIONAR / RASTREAR PRODUTO
+// ============================================================
+async function trackProduct(url) {
+  const res = await fetch(`${API_URL}/products/track`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Não foi possível rastrear este produto.');
+  }
+  return res.json();
+}
+
+async function fetchTrackedProduct(id) {
+  const res = await fetch(`${API_URL}/products/track/${id}`, {
+    headers: { 'Authorization': `Bearer ${_token}` },
+  });
+  if (!res.ok) throw new Error('Erro ao buscar produto');
+  return res.json();
+}
+
+async function handleTrackProduct() {
+  const input   = document.getElementById('tracker-url-input');
+  const btn     = document.getElementById('tracker-submit-btn');
+  const errBox  = document.getElementById('tracker-err');
+  const resBox  = document.getElementById('tracker-result');
+  const url = input.value.trim();
+  errBox.style.display = 'none';
+  errBox.textContent = '';
+
+  if (!url) {
+    errBox.textContent = 'Cole o link de um produto.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.innerHTML = `<span class="spinner"></span> Rastreando...`;
+  resBox.style.display = 'none';
+  resBox.innerHTML = '';
+
+  try {
+    const product = await trackProduct(url);
+    renderOfferResult(product);
+    input.value = '';
+    loadTrackedProducts();
+  } catch (e) {
+    errBox.textContent = e.message;
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+function renderOfferResult(product) {
+  const resBox = document.getElementById('tracker-result');
+  const offers = (product.offers || []).filter(o => o.price !== null && o.price !== undefined).slice().sort((a, b) => a.price - b.price);
+
+  const offersHtml = offers.length
+    ? offers.map(o => `
+        <div class="offer-item">
+          <div>
+            <div class="offer-mkt">${escHtml(o.marketplace)}</div>
+            <div class="offer-price">$${Number(o.price).toFixed(2)}</div>
+          </div>
+          <a class="offer-link" href="${escHtml(safeUrl(o.url))}" target="_blank" rel="noopener">Ver oferta →</a>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px">Nenhuma outra oferta encontrada ainda.</div>';
+
+  resBox.innerHTML = `
+    <div class="offer-title">${escHtml(product.title || 'Produto rastreado')}</div>
+    <div class="offer-list">${offersHtml}</div>
+    <div class="coupon-box" id="coupon-box-${product.id}"></div>
+  `;
+  resBox.style.display = 'block';
+
+  renderCouponSection(product.id, product.coupons || []);
+  pollForCoupons(product.id);
+}
+
+function renderCouponSection(productId, coupons) {
+  const box = document.getElementById(`coupon-box-${productId}`);
+  if (!box) return;
+
+  if (!coupons || !coupons.length) {
+    box.innerHTML = `<div class="coupon-loading" id="coupon-status-${productId}">Verificando cupons...</div>`;
+    return;
+  }
+
+  box.innerHTML = coupons.map(c => {
+    const verifiedClass = c.verified === true ? 'verified' : 'unverified';
+    const badgeText = c.verified === true
+      ? '✓ cupom confirmado'
+      : 'cupom não confirmado — pode não estar mais ativo';
+    return `
+      <div class="coupon-item">
+        <span class="coupon-badge ${verifiedClass}">${badgeText}</span>
+        <button class="coupon-code" onclick="copyCouponCode('${c.code}')" title="Copiar código">${escHtml(c.code)}</button>
+        ${c.description ? `<span class="coupon-desc">${escHtml(c.description)}</span>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function copyCouponCode(code) {
+  navigator.clipboard.writeText(code).then(() => alert(`Cupom "${code}" copiado!`)).catch(() => alert(code));
+}
+
+// Faz polling em GET /products/track/{id} a cada 5s (até 3 tentativas) esperando
+// os cupons ficarem disponíveis. Timeout de exibição em 15s.
+function pollForCoupons(productId) {
+  if (_pollTimers[productId]) return; // já está fazendo polling para este produto
+
+  let attempts = 0;
+  const maxAttempts = 3;
+  const intervalMs = 5000;
+  const startedAt = Date.now();
+  const timeoutMs = 15000;
+
+  const tick = async () => {
+    attempts += 1;
+    try {
+      const product = await fetchTrackedProduct(productId);
+      if (product.coupons && product.coupons.length) {
+        renderCouponSection(productId, product.coupons);
+        clearInterval(_pollTimers[productId]);
+        delete _pollTimers[productId];
+        return;
+      }
+    } catch {
+      // ignora erros de polling e tenta de novo até o limite
+    }
+
+    const timedOut = (Date.now() - startedAt) >= timeoutMs || attempts >= maxAttempts;
+    if (timedOut) {
+      clearInterval(_pollTimers[productId]);
+      delete _pollTimers[productId];
+      const statusEl = document.getElementById(`coupon-status-${productId}`);
+      if (statusEl) statusEl.textContent = 'Nenhum cupom encontrado.';
+    }
+  };
+
+  _pollTimers[productId] = setInterval(tick, intervalMs);
+}
+
+// ============================================================
+//  MEUS PRODUTOS RASTREADOS
+// ============================================================
+async function loadTrackedProducts() {
+  const list = document.getElementById('tracked-products-list');
+  try {
+    const res = await fetch(`${API_URL}/products/track`, {
+      headers: { 'Authorization': `Bearer ${_token}` },
+    });
+    if (!res.ok) throw new Error('Erro ao carregar produtos');
+    _trackedProducts = await res.json();
+    renderTrackedProducts();
+  } catch {
+    if (list) list.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center">Erro ao carregar seus produtos.</div>';
+  }
+}
+
+function renderTrackedProducts() {
+  const list = document.getElementById('tracked-products-list');
+  if (!list) return;
+  if (!_trackedProducts.length) {
+    list.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center">Você ainda não está rastreando nenhum produto.</div>';
+    return;
+  }
+
+  list.innerHTML = _trackedProducts.map(p => {
+    const offers = (p.offers || []).filter(o => o.price !== null && o.price !== undefined).slice().sort((a, b) => a.price - b.price);
+    const cheapest = offers[0];
+    const img = safeUrl(p.image_url || p.image || '');
+    return `
+      <div class="tracked-card">
+        ${img ? `<img class="tracked-img" src="${escHtml(img)}" alt="">` : ''}
+        <div class="tracked-body">
+          <div class="tracked-title">${escHtml(p.title || 'Produto sem título')}</div>
+          <div class="tracked-meta">
+            ${cheapest ? `<span class="tracked-price">$${Number(cheapest.price).toFixed(2)}</span>` : ''}
+            ${cheapest ? `<span class="offer-mkt">${escHtml(cheapest.marketplace)}</span>` : ''}
+          </div>
+        </div>
+        <button class="tracked-remove" onclick="handleRemoveTrackedProduct('${p.id}')">Remover</button>
+      </div>`;
+  }).join('');
+}
+
+async function removeTrackedProduct(id) {
+  await fetch(`${API_URL}/products/track/${id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${_token}` },
+  });
+}
+
+async function handleRemoveTrackedProduct(id) {
+  if (!confirm('Remover este produto da sua lista de rastreamento?')) return;
+  try {
+    await removeTrackedProduct(id);
+    _trackedProducts = _trackedProducts.filter(p => String(p.id) !== String(id));
+    renderTrackedProducts();
+  } catch {
+    alert('Não foi possível remover o produto. Tente novamente.');
+  }
+}
+
+// ============================================================
+//  BILLING (Stripe)
+// ============================================================
+async function subscribeVip() {
+  const btn = document.getElementById('vip-subscribe-btn');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Abrindo pagamento...';
+  try {
+    const data = await api('POST', '/billing/subscribe', {}, true);
+    window.location.href = data.checkout_url;
+  } catch (e) {
+    alert(e.message || 'Não foi possível iniciar o pagamento. Tente novamente.');
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+async function openBillingPortal() {
+  try {
+    const data = await api('POST', '/billing/portal', {}, true);
+    window.location.href = data.portal_url;
+  } catch (e) {
+    alert(e.message || 'Não foi possível abrir o portal de assinatura.');
+  }
+}
+
+async function loadDeals() {
+  const grid = document.getElementById('deals-grid');
+  try {
+    const data = await api('GET', '/member/deals?limit=20', null, true);
+    const deals = data.deals || [];
+    if (!deals.length) {
+      grid.innerHTML = '<div style="color:var(--muted);padding:40px;text-align:center;grid-column:1/-1">Nenhum deal disponível agora. Volte mais tarde!</div>';
+      return;
+    }
+    grid.innerHTML = deals.map(d => renderDealCard(d)).join('');
+  } catch {
+    grid.innerHTML = '<div style="color:var(--muted);padding:40px;text-align:center;grid-column:1/-1">Erro ao carregar deals. Tente novamente.</div>';
+  }
+}
+
+function renderDealCard(d) {
+  const storeClass = {amazon:'amazon-badge',walmart:'walmart-badge',bestbuy:'bestbuy-badge',target:'target-badge',ebay:'ebay-badge'}[d.source] || 'amazon-badge';
+  const isATL      = d.price_context && d.price_context.includes('todos');
+  const is90       = d.price_context && d.price_context.includes('90') || d.price_context && d.price_context.includes('menor');
+  const savings    = d.price_was ? (d.price_was - d.price_now).toFixed(2) : null;
+  return `
+    <div class="dash-deal-card">
+      <div class="dash-deal-header">
+        <span class="dash-deal-store ${storeClass}">${d.source_label || d.source}</span>
+        <span class="dash-deal-score">Score ${d.score} · ${d.score_label}</span>
+      </div>
+      <div class="dash-deal-body">
+        ${isATL ? '<div class="dash-deal-badges"><span class="dash-badge-atl">🏆 Menor preço de sempre</span></div>' : ''}
+        ${is90 && !isATL ? '<div class="dash-deal-badges"><span class="dash-badge-90">📉 Menor em 90 dias</span></div>' : ''}
+        <div class="dash-deal-title">${d.title}</div>
+        <div class="dash-deal-price-row">
+          <span class="dash-price-now">$${d.price_now.toFixed(2)}</span>
+          ${d.price_was ? `<span class="dash-price-was">$${d.price_was.toFixed(2)}</span>` : ''}
+          <span class="dash-discount">-${d.discount_pct}%</span>
+        </div>
+        <div class="dash-deal-stats">
+          <div class="dash-ds"><div class="dash-ds-l">Você economiza</div><div class="dash-ds-v green">${savings ? '$'+savings : '-'}</div></div>
+          <div class="dash-ds"><div class="dash-ds-l">Contexto</div><div class="dash-ds-v orange">${d.price_context || 'verificando...'}</div></div>
+          <div class="dash-ds"><div class="dash-ds-l">Avaliação</div><div class="dash-ds-v">${d.rating ? '⭐ '+d.rating : '-'}</div></div>
+          <div class="dash-ds"><div class="dash-ds-l">Reviews</div><div class="dash-ds-v">${d.reviews ? d.reviews.toLocaleString() : '-'}</div></div>
+        </div>
+        <button class="dash-deal-cta" onclick="trackAndOpen('${d.id}','${d.affiliate_url}')">
+          🛒 Ver na loja →
+        </button>
+      </div>
+    </div>`;
+}
+
+async function trackAndOpen(dealId, url) {
+  try {
+    const data = await api('POST', '/member/click', { deal_id: dealId }, true);
+    window.open(data.url || url, '_blank');
+  } catch {
+    window.open(url, '_blank');
+  }
+}
+
+// ============================================================
+//  TABS
+// ============================================================
+function showTab(tabName) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.dash-nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  if (tabName === 'referral') loadReferral();
+  if (tabName === 'leaderboard') loadLeaderboard();
+  if (tabName === 'news' && document.getElementById('news-feed') && document.getElementById('news-feed').children.length <= 1) {
+    loadNews(currentNewsCategory);
+  }
+  if (tabName === 'forum' && !forumCategories.length) loadForum();
+  if (tabName === 'products') loadTrackedProducts();
+}
+
+async function loadReferral() {
+  try {
+    const data = await api('GET', '/member/referral', null, true);
+    document.getElementById('ref-link-text').textContent = data.referral_link;
+    document.getElementById('ref-count').textContent     = data.referral_count || 0;
+    document.getElementById('ref-points').textContent    = data.total_points || 0;
+    document.getElementById('ref-level').textContent     = data.level || 1;
+    const confirmed = Math.min(data.referral_count || 0, 3);
+    document.getElementById('vip-bar-fill').style.width  = `${(confirmed / 3) * 100}%`;
+    document.getElementById('vip-progress-text').textContent = `${confirmed} de 3 indicações confirmadas`;
+    if (confirmed >= 3) document.getElementById('vip-promo-box').style.display = 'none';
+  } catch { /* silencia */ }
+}
+
+async function loadLeaderboard() {
+  const list = document.getElementById('leaderboard-list');
+  try {
+    const data = await api('GET', '/member/leaderboard', null, true);
+    const items = data.leaderboard || [];
+    const rankClasses = ['gold','silver','bronze'];
+    list.innerHTML = items.map((m, i) => `
+      <div class="lb-item">
+        <div class="lb-rank ${rankClasses[i] || ''}">${['🥇','🥈','🥉'][i] || i+1}</div>
+        <div class="lb-info">
+          <div class="lb-name">${m.display_name || 'Membro #'+m.member_id.slice(0,6)}</div>
+          <div class="lb-sub">${m.referral_count || 0} indicações</div>
+        </div>
+        <div class="lb-points">${m.points || 0} pts</div>
+      </div>`).join('') || '<div style="color:var(--muted);padding:20px;text-align:center">Nenhum dado ainda</div>';
+    if (data.my_rank) {
+      document.getElementById('dash-greeting-sub').textContent = `Você está em ${data.my_rank}º no ranking!`;
+    }
+  } catch { list.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center">Erro ao carregar ranking</div>'; }
+}
+
+function copyRefLink() {
+  const link = document.getElementById('ref-link-text').textContent;
+  navigator.clipboard.writeText(link).then(() => alert('Link copiado!')).catch(() => alert(link));
+}
+
+function shareRefOnWhatsApp() {
+  const link = document.getElementById('ref-link-text').textContent;
+  const msg  = `Ei! Entra no Clube USA — recebo deals incríveis de Amazon, Walmart e mais direto no WhatsApp, de graça! 🇺🇸💸\n\n${link}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ============================================================
+//  LOGOUT
+// ============================================================
+function logout() {
+  localStorage.removeItem('cu_token');
+  localStorage.removeItem('cu_member');
+  _token = null; _member = null;
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('landing').style.display = 'block';
+  document.getElementById('nav-cta-btn').style.display = 'block';
+  document.getElementById('nav-user-info').style.display = 'none';
+}
+
+// ============================================================
+//  CLOSE MODAL ON OVERLAY CLICK
+// ============================================================
+document.getElementById('auth-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ============================================================
+//  OTP: auto-submit ao digitar 6 dígitos
+// ============================================================
+document.getElementById('input-otp').addEventListener('input', function() {
+  if (this.value.length === 6) handleOTPSubmit();
+});
+
+// ============================================================
+//  NEWS
+// ============================================================
+let currentNewsCategory = '';
+
+async function loadNews(category) {
+  category = category || '';
+  const feed = document.getElementById('news-feed');
+  if (!feed) return;
+  feed.innerHTML = '<div class="loading-state">Carregando notícias...</div>';
+  try {
+    const qs = category ? '?category=' + category + '&limit=20' : '?limit=20';
+    const data = await api('GET', '/news' + qs, null, true);
+    if (!data.articles || !data.articles.length) {
+      feed.innerHTML = '<div class="empty-state">Nenhuma notícia disponível no momento.</div>';
+      return;
+    }
+    feed.innerHTML = data.articles.map(newsCardHTML).join('');
+  } catch(e) {
+    feed.innerHTML = '<div class="empty-state">Erro ao carregar notícias.</div>';
+  }
+}
+
+function newsCardHTML(article) {
+  const catLabels = {immigration:'Imigração',politics:'Política',community:'Comunidade',brazil:'Brasil',economy:'Economia',general:'Geral'};
+  const date = article.published_at ? new Date(article.published_at).toLocaleDateString('pt-BR') : '';
+  const img = article.image_url ? '<img src="' + article.image_url + '" class="news-card-img" onerror="this.style.display=\'none\'" alt="">' : '';
+  return '<div class="news-card" onclick="loadArticleDetail(\'' + article.id + '\')" style="cursor:pointer">' +
+    img +
+    '<div class="news-card-body">' +
+    '<div class="news-card-tag">' + (catLabels[article.category] || 'Geral') + '</div>' +
+    '<div class="news-card-title">' + escHtml(article.title_pt || '') + '</div>' +
+    '<div class="news-card-summary">' + escHtml(article.summary_pt || '') + '</div>' +
+    '<div class="news-card-date">' + date + '</div>' +
+    '</div></div>';
+}
+
+async function loadArticleDetail(articleId) {
+  const listEl   = document.getElementById('news-view-list');
+  const detailEl = document.getElementById('news-view-detail');
+  const contentEl = document.getElementById('news-article-content');
+  listEl.style.display   = 'none';
+  detailEl.style.display = 'block';
+  contentEl.innerHTML    = '<div class="loading-state">Carregando matéria...</div>';
+
+  // Atualiza URL sem recarregar (para o link compartilhável funcionar)
+  history.replaceState(null, '', '?article=' + articleId);
+
+  try {
+    const art = await api('GET', '/news/' + articleId, null, true);
+    const catLabels = {immigration:'Imigração',politics:'Política',community:'Comunidade',brazil:'Brasil',economy:'Economia',general:'Geral'};
+    const date = art.published_at ? new Date(art.published_at).toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric'}) : '';
+    const cat  = catLabels[art.category] || 'Geral';
+
+    contentEl.innerHTML =
+      '<div class="news-card-tag" style="margin-bottom:12px">' + cat + '</div>' +
+      '<div class="news-article-title">' + escHtml(art.title_pt || art.title_original || '') + '</div>' +
+      '<div class="news-article-meta"><span>📅 ' + date + '</span></div>' +
+      '<div class="news-article-body">' + escHtml(art.summary_pt || '') + '</div>' +
+      (art.url ? '<a class="news-article-source" href="' + escHtml(art.url) + '" target="_blank" rel="noopener">🔗 Ver matéria na fonte original</a>' : '');
+  } catch(e) {
+    contentEl.innerHTML = '<div class="empty-state">Erro ao carregar matéria. <button class="btn-back" onclick="showNewsList()">Voltar</button></div>';
+  }
+}
+
+function showNewsList() {
+  document.getElementById('news-view-list').style.display   = 'block';
+  document.getElementById('news-view-detail').style.display = 'none';
+  history.replaceState(null, '', window.location.pathname);
+}
+
+async function markNewsRead(articleId) {
+  try { await api('GET', '/news/' + articleId, null, true); } catch(e) {}
+}
+
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Só aceita URLs https:// — evita esquemas perigosos (javascript:, data:, etc.)
+// injetados via href/src a partir de dados de terceiros (ex: RSS de cupons).
+function safeUrl(str) {
+  return (typeof str === 'string' && /^https:\/\//i.test(str)) ? str : '';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.news-cat-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.news-cat-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      currentNewsCategory = btn.dataset.cat || '';
+      loadNews(currentNewsCategory);
+    });
+  });
+});
+
+// FORUM
+let forumCategories = [];
+let currentForumCat = '';
+
+async function loadForum() {
+  await loadForumCategories();
+  loadForumPosts();
+}
+
+async function loadForumCategories() {
+  try {
+    const data = await api('GET', '/forum/categories', null, true);
+    forumCategories = data.categories || [];
+    const catsEl = document.getElementById('forum-cats');
+    const newCatEl = document.getElementById('forum-new-cat');
+    if (catsEl) {
+      catsEl.innerHTML = '<button class="forum-cat-btn active" onclick="filterForum(this,\'\')">Todas</button>' +
+        forumCategories.map(function(c) {
+          return '<button class="forum-cat-btn" onclick="filterForum(this,\'' + c.slug + '\')">' + c.icon + ' ' + c.name + '</button>';
+        }).join('');
+    }
+    if (newCatEl) {
+      newCatEl.innerHTML = '<option value="">Selecione a categoria...</option>' +
+        forumCategories.map(function(c) { return '<option value="' + c.id + '">' + c.icon + ' ' + c.name + '</option>'; }).join('');
+    }
+  } catch(e) {}
+}
+
+async function loadForumPosts(categorySlug) {
+  categorySlug = categorySlug || '';
+  const el = document.getElementById('forum-posts-list');
+  if (!el) return;
+  el.innerHTML = '<div class="loading-state">Carregando...</div>';
+  try {
+    const qs = categorySlug ? '?category_slug=' + categorySlug + '&limit=20' : '?limit=20';
+    const data = await api('GET', '/forum/posts' + qs, null, true);
+    const posts = data.posts || [];
+    if (!posts.length) {
+      el.innerHTML = '<div class="empty-state">Nenhum post ainda. Seja o primeiro! 🙌</div>';
+      return;
+    }
+    el.innerHTML = posts.map(function(p) {
+      return '<div class="forum-post-card" onclick="loadForumThread(\'' + p.id + '\')">' +
+        '<div class="forum-post-title">' + escHtml(p.title) + '</div>' +
+        '<div class="forum-post-meta"><span>💬 ' + (p.reply_count||0) + ' respostas</span><span>👍 ' + (p.vote_count||0) + ' votos</span><span>🕐 ' + new Date(p.created_at).toLocaleDateString('pt-BR') + '</span></div>' +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state">Erro ao carregar posts.</div>';
+  }
+}
+
+function filterForum(btn, slug) {
+  document.querySelectorAll('.forum-cat-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  currentForumCat = slug;
+  loadForumPosts(slug);
+}
+
+async function loadForumThread(postId) {
+  document.getElementById('forum-view-list').style.display = 'none';
+  document.getElementById('forum-view-thread').style.display = 'block';
+  const el = document.getElementById('forum-thread-content');
+  el.innerHTML = '<div class="loading-state">Carregando...</div>';
+  try {
+    const data = await api('GET', '/forum/posts/' + postId, null, true);
+    const post = data.post;
+    const replies = data.replies || [];
+    el.innerHTML =
+      '<div style="margin-bottom:20px"><h3 style="color:var(--navy);margin-bottom:8px">' + escHtml(post.title) + '</h3>' +
+      '<p style="color:var(--text2);line-height:1.6;margin-bottom:16px">' + escHtml(post.body) + '</p>' +
+      '<button class="forum-cat-btn" onclick="votePost(\'' + post.id + '\')">👍 ' + (post.vote_count||0) + ' votos</button></div>' +
+      '<h4 style="color:var(--navy);margin-bottom:12px">' + replies.length + ' Resposta(s)</h4>' +
+      replies.map(function(r) {
+        return '<div class="forum-reply' + (r.is_ai ? ' is-ai' : '') + '">' +
+          '<div class="forum-reply-header">' + (r.is_ai ? '🤖 Assistente Clube USA' : '👤 Membro') + ' · ' + new Date(r.created_at).toLocaleDateString('pt-BR') + '</div>' +
+          '<div class="forum-reply-body">' + escHtml(r.body) + '</div></div>';
+      }).join('') +
+      '<div style="margin-top:20px"><textarea id="reply-body" class="form-input" rows="3" placeholder="Escreva sua resposta..." style="margin-bottom:10px;resize:vertical"></textarea>' +
+      '<button class="btn-primary" onclick="submitReply(\'' + post.id + '\')">Responder</button></div>';
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state">Erro ao carregar post.</div>';
+  }
+}
+
+function showForumList() {
+  document.getElementById('forum-view-list').style.display = 'block';
+  document.getElementById('forum-view-thread').style.display = 'none';
+  document.getElementById('forum-view-new').style.display = 'none';
+}
+
+function showForumNew() {
+  document.getElementById('forum-view-list').style.display = 'none';
+  document.getElementById('forum-view-new').style.display = 'block';
+}
+
+async function submitForumPost() {
+  const cat = document.getElementById('forum-new-cat').value;
+  const title = document.getElementById('forum-new-title').value.trim();
+  const body = document.getElementById('forum-new-body').value.trim();
+  if (!cat) return alert('Selecione uma categoria.');
+  if (title.length < 10) return alert('Título muito curto (mín. 10 caracteres).');
+  if (body.length < 20) return alert('Descreva melhor sua pergunta (mín. 20 caracteres).');
+  try {
+    await api('POST', '/forum/posts', {category_id: cat, title: title, body: body}, true);
+    showForumList();
+    loadForumPosts(currentForumCat);
+    alert('Pergunta publicada! A IA responderá em instantes. 🤖');
+  } catch(e) { alert('Erro ao publicar. Tente novamente.'); }
+}
+
+async function submitReply(postId) {
+  const body = document.getElementById('reply-body').value.trim();
+  if (body.length < 5) return alert('Resposta muito curta.');
+  try {
+    await api('POST', '/forum/posts/' + postId + '/reply', {body: body}, true);
+    loadForumThread(postId);
+  } catch(e) { alert('Erro ao enviar resposta.'); }
+}
+
+async function votePost(postId) {
+  try { await api('POST', '/forum/posts/' + postId + '/vote', {}, true); } catch(e) {}
+  loadForumThread(postId);
+}
+
+// AI CHAT WIDGET
+let aiChatOpen = false;
+let aiChatLoaded = false;
+
+function toggleAiChat() {
+  aiChatOpen = !aiChatOpen;
+  document.getElementById('ai-chat-window').style.display = aiChatOpen ? 'flex' : 'none';
+  if (aiChatOpen && !aiChatLoaded) {
+    loadAiHistory();
+    aiChatLoaded = true;
+  }
+  if (aiChatOpen) document.getElementById('ai-chat-input').focus();
+}
+
+async function loadAiHistory() {
+  try {
+    const data = await api('GET', '/assistant/history', null, true);
+    const msgs = data.messages || [];
+    if (!msgs.length) {
+      appendAiMsg('assistant', 'Olá! Sou o Assistente Clube USA. 👋\nComo posso te ajudar hoje? Pode perguntar sobre imigração, documentos, emprego, moradia, saúde ou qualquer dúvida sobre vida nos EUA!');
+    } else {
+      msgs.forEach(function(m) { appendAiMsg(m.role, m.content); });
+    }
+  } catch(e) {
+    appendAiMsg('assistant', 'Olá! Sou o Assistente Clube USA. Como posso te ajudar?');
+  }
+}
+
+function appendAiMsg(role, content, isLoading) {
+  const el = document.getElementById('ai-chat-messages');
+  const div = document.createElement('div');
+  div.className = 'ai-msg ' + role + (isLoading ? ' loading' : '');
+  div.textContent = content;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  return div;
+}
+
+async function sendAiMessage() {
+  const input = document.getElementById('ai-chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  appendAiMsg('user', text);
+  const loadingEl = appendAiMsg('assistant', 'Pensando...', true);
+  try {
+    const data = await api('POST', '/assistant/chat', {content: text}, true);
+    loadingEl.remove();
+    appendAiMsg('assistant', data.response);
+  } catch(e) {
+    loadingEl.textContent = 'Erro ao processar. Tente novamente.';
+    loadingEl.classList.remove('loading');
+  }
+}
+
+function showAiWidget() {
+  document.getElementById('ai-chat-widget').style.display = 'block';
+}
+</script>
+<!-- AI CHAT WIDGET -->
+<div id="ai-chat-widget" style="display:none">
+  <button id="ai-chat-toggle" onclick="toggleAiChat()" title="Assistente Clube USA">🤖</button>
+  <div id="ai-chat-window" style="display:none">
+    <div id="ai-chat-header">
+      <span>🤖 Assistente Clube USA</span>
+      <button onclick="toggleAiChat()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div id="ai-chat-messages"></div>
+    <div id="ai-chat-input-area">
+      <input id="ai-chat-input" placeholder="Sua dúvida sobre vida nos EUA..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiMessage()}">
+      <button onclick="sendAiMessage()">→</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

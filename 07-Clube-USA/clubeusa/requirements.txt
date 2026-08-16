@@ -1,0 +1,29 @@
+# ============================================================
+#  Clube USA — dependencias da API
+#  Instalar: pip install -r requirements.txt
+# ============================================================
+
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+
+# Banco / auth
+supabase
+python-jose[cryptography]
+cryptography
+
+# Integracoes externas
+requests
+stripe
+
+# Scanner de deals (dealscanner2)
+feedparser
+
+# Testes
+pytest
+pytest-asyncio
+pytest-mock
+
+# Verificacao de cupons (navegador headless)
+playwright

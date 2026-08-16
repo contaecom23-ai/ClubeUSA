@@ -1,0 +1,32 @@
+# ============================================================
+#  Clube USA — Dependencias do sistema atual
+#  Instalar: pip install -r requirements.txt
+# ============================================================
+
+# API
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+python-dotenv==1.0.1
+
+# Banco de dados (supabase 2.30+ suporta chaves sb_secret_ / sb_publishable_)
+supabase>=2.30.0
+
+# Seguranca e autenticacao
+cryptography==42.0.8
+python-jose[cryptography]==3.3.0
+
+# Pagamentos
+stripe==9.9.0
+
+# HTTP
+requests==2.32.3
+feedparser==6.0.11
+httpx==0.27.0
+
+# Imagens (card_generator.py)
+Pillow>=10.0.0
+
+# Testes
+pytest==8.2.0
+pytest-mock==3.14.0

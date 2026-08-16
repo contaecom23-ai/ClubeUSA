@@ -1,0 +1,98 @@
+# ============================================================
+#  render.yaml — Blueprint de deploy do Clube USA no Render
+#
+#  Cria 2 servicos:
+#   - clubeusa-api        (web)     API FastAPI + serve o site
+#   - clubeusa-scheduler  (worker)  loop de envio de deals (dealscanner2)
+#
+#  Como usar: Render Dashboard > New > Blueprint > aponte para este arquivo.
+#  Os segredos (sync:false) sao preenchidos no painel, nunca commitados.
+#
+#  Observacao de plano: Background Workers no Render exigem instancia paga.
+#  A API web roda no plano free (hiberna apos inatividade). Ajuste "plan"
+#  conforme sua conta.
+# ============================================================
+
+services:
+  # ---- API + site ----
+  - type: web
+    name: clubeusa-api
+    runtime: python
+    rootDir: 07-Clube-USA/clubeusa
+    plan: free
+    buildCommand: pip install -r requirements.txt && playwright install --with-deps chromium
+    startCommand: PYTHONPATH="$PYTHONPATH:.:api" uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - fromGroup: clubeusa-secrets
+
+  # ---- Scheduler de deals (loop continuo) ----
+  - type: worker
+    name: clubeusa-scheduler
+    runtime: python
+    rootDir: 07-Clube-USA/clubeusa
+    plan: starter          # workers exigem plano pago no Render
+    buildCommand: pip install -r requirements.txt && playwright install --with-deps chromium
+    startCommand: PYTHONPATH="$PYTHONPATH:." python dealscanner2/scheduler.py
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - fromGroup: clubeusa-secrets
+
+# ============================================================
+#  Grupo de variaveis compartilhado pelos 2 servicos.
+#  sync:false => voce preenche o valor no painel do Render (segredo).
+# ============================================================
+envVarGroups:
+  - name: clubeusa-secrets
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: APP_URL          # URL publica da API (ex: https://clubeusa-api.onrender.com)
+        sync: false
+      - key: MESSENGER         # "telegram" ou "zapi"
+        value: telegram
+
+      # Supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+
+      # Seguranca
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
+
+      # Stripe
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_VIP_PRICE_ID
+        sync: false
+
+      # WhatsApp (Z-API) — se usar MESSENGER=zapi
+      - key: ZAPI_INSTANCE
+        sync: false
+      - key: ZAPI_TOKEN
+        sync: false
+      - key: ZAPI_CLIENT_TOKEN
+        sync: false
+
+      # Telegram — se usar MESSENGER=telegram
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHANNEL_PT
+        sync: false
+      - key: TELEGRAM_CHANNEL_ES
+        sync: false

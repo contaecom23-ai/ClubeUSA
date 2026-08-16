@@ -1,0 +1,13 @@
+# NUNCA subir esses arquivos pro git
+.env
+.env.local
+.env.production
+*.pem
+*.key
+secrets/
+data/
+dealscanner2/data/          # estado de runtime do scanner (cache, sent_ids, slots, deals)
+logs/
+__pycache__/
+*.pyc
+.DS_Store
