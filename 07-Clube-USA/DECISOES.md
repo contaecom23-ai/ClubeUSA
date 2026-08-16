@@ -1,7 +1,7 @@
 # DECISOES — Clube USA
 
 > Fila de decisões que dependem do dono do produto (você).
-> Para cada item: data, contexta, pergunta objetiva, opções com prós/contras e recomendação do Claude.
+> Para cada item: data, contexto, pergunta objetiva, opções com prós/contras e recomendação do Claude.
 > Claude NÃO age em itens desta lista sem sua aprovação explícita.
 
 ---
@@ -12,7 +12,7 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
-## 🚨 SITUAÇÃO ATUAL DO PROJETO (2026-08-15)
+## 🚨 SITUAÇÃO ATUAL DO PROJETO (2026-08-16)
 
 ### Estado do repositório
 
@@ -22,7 +22,7 @@ A `main` contém apenas ROADMAP.md, DECISOES.md e o workflow YAML. **Nenhum cód
 
 O builder criou ~60 PRs ao longo de junho–agosto por duas razões:
 1. O YAML do workflow estava quebrado (indentação inválida → 0 jobs → builder rodava via sessions externas sem restrição)
-2. Como a `main` nunca tinha código, cada rodada via o ROADMAP todo desmarcado e criava um novo PR para Fase 0.1
+2. Como a `main` nunca tinha código, cada rodada via o ROADMAP todo desmarcado e criava um novo PR para a mesma Fase 0.1
 
 ### PRs restantes abertos (11 no total)
 
@@ -61,7 +61,7 @@ Após esses 2 merges, o próximo run avança automaticamente para Fase 0.2 (refe
 ### [2026-08-14] 🔴 BLOQUEANTE — Mergear PR #51 e PR #46
 
 **Contexto:**
-O builder está travado há 7 dias. A cada rodada lê o ROADMAP.md da `main`, vê tudo desmarcado, não tem código para avançar.
+O builder está travado há 8 dias. A cada rodada lê o ROADMAP.md da `main`, vê tudo desmarcado, não tem código para avançar.
 
 **O que o PR #46 entrega (Fase 0.1):**
 - Backend FastAPI com `/register` (rate-limit 5/min), `/login` (rate-limit 10/min), `/me`, `PUT /me`, `/logout`
@@ -82,7 +82,7 @@ O builder está travado há 7 dias. A cada rodada lê o ROADMAP.md da `main`, v�
 2. Configurar env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, `FRONTEND_URL`, `ALLOWED_ORIGINS`
 3. Rodar migration SQL: `07-Clube-USA/schema/001_users_profile.sql`
 
-**Status:** PENDENTE — **7º DIA CONSECUTIVO SEM AÇÃO DO DONO**
+**Status:** PENDENTE — **8º DIA CONSECUTIVO SEM AÇÃO DO DONO**
 
 ---
 
@@ -114,6 +114,15 @@ O builder está travado há 7 dias. A cada rodada lê o ROADMAP.md da `main`, v�
 ---
 
 ## 📋 Histórico de runs (cronologia reversa)
+
+### 2026-08-16 — 8º dia consecutivo sem ação do dono
+
+- Situação idêntica aos runs anteriores. Nenhum PR foi mergeado.
+- **Diagnóstico honesto:** O workflow YAML no branch `main` está completamente quebrado (indentação inválida — tudo aninhado dentro do item `schedule:`, tornando `jobs:` invisível para o GitHub Actions). Isso significa que este run foi provavelmente disparado manualmente via Claude.ai, não via GitHub Actions.
+- O PR #51 corrige o workflow YAML. O PR #46 tem o código completo da Fase 0.1.
+- O builder **não criou novos PRs** — não há tarefas desbloqueadas sem os merges.
+- **Avaliação do código em PRs:** PR #46 está limpo, testado, sem conflitos com a main. PR #51 está clean. Ambos prontos para merge imediato.
+- Notificação enviada ao dono do produto.
 
 ### 2026-08-15 (run 2) — 7º dia consecutivo sem ação do dono
 
@@ -157,4 +166,4 @@ O builder está travado há 7 dias. A cada rodada lê o ROADMAP.md da `main`, v�
 
 ---
 
-*Atualizado em: 2026-08-15 (run 2 — 7º dia consecutivo sem ação do dono)*
+*Atualizado em: 2026-08-16 (8º dia consecutivo sem ação do dono)*
