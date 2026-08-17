@@ -4,10 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Clube USA — Admin</title>
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+<link rel="apple-touch-icon" href="/assets/favicon-180.png">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
   header { background: #1e293b; padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #334155; }
+  header img.logo { height: 30px; width: auto; display: block; }
   header h1 { font-size: 18px; font-weight: 700; color: #f8fafc; }
   header span { font-size: 12px; color: #64748b; }
   nav { display: flex; gap: 4px; padding: 16px 24px 0; border-bottom: 1px solid #334155; }
@@ -54,7 +59,8 @@
 <body>
 
 <div id="token-screen">
-  <h2>🔐 Clube USA Admin</h2>
+  <img src="/assets/logo.png" alt="Clube USA" style="height:56px;width:auto;margin-bottom:8px">
+  <h2>Admin</h2>
   <input type="password" id="token-input" placeholder="Token de administrador" />
   <button onclick="saveToken()">Entrar</button>
   <p id="token-error" style="color:#fca5a5;display:none">Token inválido.</p>
@@ -62,7 +68,8 @@
 
 <div id="app" style="display:none">
   <header>
-    <h1>Clube USA Admin</h1>
+    <img src="/assets/logo.png" alt="Clube USA" class="logo">
+    <h1>Admin</h1>
     <span id="header-stats"></span>
     <button class="btn btn-gray" style="margin-left:auto" onclick="logout()">Sair</button>
   </header>

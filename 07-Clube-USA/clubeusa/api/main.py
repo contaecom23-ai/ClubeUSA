@@ -45,6 +45,7 @@ from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
 from deps import get_current_member, require_vip, require_paid_plan, require_admin
@@ -82,6 +83,14 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+
+_ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
+app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse(os.path.join(_ASSETS_DIR, "favicon.ico"))
 
 # CORS — origens autorizadas (o site e servido pelo proprio FastAPI, entao CORS e so para dominios externos)
 _CORS_ORIGINS = [
