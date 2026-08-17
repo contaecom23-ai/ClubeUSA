@@ -12,7 +12,7 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ---
 
-## 🚨 SITUAÇÃO ATUAL DO PROJETO (2026-08-16)
+## 🚨 SITUAÇÃO ATUAL DO PROJETO (2026-08-17)
 
 ### Estado do repositório
 
@@ -59,7 +59,7 @@ Após esses 2 merges, o próximo run fecha os PRs #3–20 e reconstrói Fase 0.2
 ### [2026-08-16] 🔴 BLOQUEANTE — Mergear PR #51 e PR #46
 
 **Contexto:**
-O builder está travado há 9 dias. A cada rodada lê o ROADMAP.md da `main`, vê tudo desmarcado, não tem código para avançar.
+O builder está travado há 10 dias. A cada rodada lê o ROADMAP.md da `main`, vê tudo desmarcado, não tem código para avançar.
 
 **O que o PR #46 entrega (Fase 0.1):**
 - Backend FastAPI com `/register` (rate-limit 5/min), `/login` (rate-limit 10/min), `/me`, `PUT /me`, `/logout`
@@ -78,47 +78,21 @@ O builder está travado há 9 dias. A cada rodada lê o ROADMAP.md da `main`, v�
 - Testes mockam Supabase corretamente, nenhuma chamada real ocorre em CI ✅
 - **Conclusão: PR #46 está pronto para merge.**
 
-**Status:** PENDENTE — **9º DIA CONSECUTIVO SEM AÇÃO DO DONO**
+**Status:** PENDENTE — **10º DIA CONSECUTIVO SEM AÇÃO DO DONO**
 
 ---
 
-### [2026-08-16] ⚠️ NOVO — Conflito arquitetural entre Fase 0.1 (PR #46) e Fases 0.2–1.5 (PRs #3–20)
+### [2026-08-16] ⚠️ Conflito arquitetural entre Fase 0.1 (PR #46) e Fases 0.2–1.5 (PRs #3–20)
 
 **Contexto:** Auditado em run 2 de 2026-08-16.
 
 As Fases 0.2–1.5 (PRs #3–20) foram construídas sobre a `main` vazia, **sem a base da Fase 0.1**. Resultado: arquiteturas incompatíveis.
 
-**Fase 0.1 (PR #46) usa:**
-```
-backend/
-  core/config.py      ← get_settings() via Pydantic Settings
-  core/security.py    ← decode_jwt, get_current_user_id
-  core/limiter.py
-  core/supabase_client.py
-  routers/auth.py
-  models/user.py
-```
-
-**Fase 0.2 (PR #3) usa:**
-```
-backend/
-  config.py           ← settings (raiz, estrutura diferente)
-  auth/router.py      ← re-implementa autenticação
-  users/router.py
-  referrals/router.py
-  db/                 ← módulo de banco separado
-  core/limiter.py
-```
-
-**Problema real:** A Fase 0.2 re-implementou auth porque foi construída do zero sem a 0.1. Imports, organização de pastas e padrão de config são incompatíveis. Um rebase simples não resolve — seria necessário refatorar para usar `core/config.py`, `core/security.py`, `routers/` da Fase 0.1.
-
-**Pergunta:** O que fazer com os PRs #3–20 após mergear #46?
-
 **Opções:**
-- **A) Fechar PRs #3–20 + reconstruir do zero** (recomendado): O próximo run após merge de #46 cria Fase 0.2 corretamente sobre a base estabelecida. Trabalho limpo, sem dívida técnica. Prazo: 1–2 runs para Fase 0.2 pronta. As *lógicas de negócio* dos PRs antigos (referral tracking, analytics, etc.) servem de referência, o código estrutural é descartado.
-- **B) Refatorar PRs existentes**: Rebase + ajuste de imports em 9 PRs. Trabalhoso, arriscado de introduzir regressões, e a lógica de negócio precisaria mesmo assim ser auditada contra a nova base. Não recomendado.
+- **A) Fechar PRs #3–20 + reconstruir do zero** (recomendado): próximo run após merge de #46 cria Fase 0.2 corretamente sobre a base estabelecida. Sem dívida técnica.
+- **B) Refatorar PRs existentes**: rebase + ajuste de imports em 9 PRs. Trabalhoso e arriscado.
 
-**Recomendação do Claude:** Opção A. Os PRs #3–20 contêm lógica de negócio valiosa (como o algoritmo de tracking de referral, o schema de empregos, etc.) que será aproveitada, mas a estrutura de código será reconstruída limpa. Isso é mais rápido e mais seguro do que refatorar 9 PRs com conflitos.
+**Recomendação:** Opção A. A lógica de negócio dos PRs antigos (algoritmo de referral, schema de empregos, etc.) serve de referência, mas a estrutura de código é reconstruída limpa.
 
 **Status:** PENDENTE (depende do merge de #46 primeiro)
 
@@ -153,25 +127,29 @@ backend/
 
 ## 📋 Histórico de runs (cronologia reversa)
 
+### 2026-08-17 — 10º dia consecutivo sem ação do dono
+
+- Leu DECISOES.md na branch `docs/decisoes-2026-08-14` (PR #51).
+- Situação idêntica: main sem código, PR #46 e #51 aguardando merge do dono.
+- Nenhum PR novo criado (bloqueio reconhecido).
+- Notificação enviada ao dono via PushNotification.
+
 ### 2026-08-16 (run 2) — 9º dia consecutivo sem ação do dono
 
 **Novas descobertas:**
-- **Conflito arquitetural confirmado:** Auditado Phase 0.2 (PR #3, branch `claude/fase-0.2-referral`). A Fase 0.2 tem estrutura de pastas completamente diferente da Fase 0.1 — re-implementa auth, usa `config.py` na raiz em vez de `core/config.py`, usa `auth/router.py` em vez de `routers/auth.py`. Os PRs #3–20 **não podem ser simplesmente rebased** após merge de #46; precisam ser reconstruídos sobre a arquitetura correta.
-- **YAML do workflow em PR #51 verificado:** YAML corrigido é válido — `workflow_dispatch`, `permissions` e `jobs` estão no nível correto. Prompt atualizado para checar PRs antes de criar novos.
-- **Recomendação adicionada:** Após mergear #46, fechar PRs #3–20 e reconstruir Fase 0.2 do zero sobre a base da 0.1. A lógica de negócio dos PRs antigos será aproveitada como referência.
+- **Conflito arquitetural confirmado:** Fase 0.2 (PR #3) tem estrutura incompatível com Fase 0.1 (PR #46). PRs #3–20 precisam ser reconstruídos após merge de #46.
+- **YAML do workflow em PR #51 verificado:** YAML corrigido é válido.
 - Nenhum código novo criado (sem tarefa desbloqueada sem os merges).
 
 ### 2026-08-16 (run 1) — 9º dia consecutivo sem ação do dono
 
-**Run 1 (auditoria completa PR #46):**
-- Leu e auditou todo o código do PR #46 ponta a ponta: main.py, routers/auth.py, core/security.py, core/config.py, core/supabase_client.py, models/user.py, tests/conftest.py, tests/test_auth.py, schema/001_users_profile.sql.
-- **Bug encontrado e corrigido:** `user_id UUID NOT NULL UNIQUE` sem FK para `auth.users(id)`. Fix pushado diretamente no branch `feature/fase-0.1-cadastro-auth`.
-- **Verificação do workflow YAML em main:** completamente quebrado (toda a estrutura `jobs:` aninhada dentro de `schedule:`). PR #51 tem o YAML corrigido e válido.
+- Auditoria completa PR #46 ponta a ponta.
+- Bug encontrado e corrigido: FK `user_id → auth.users(id)` ausente no schema SQL.
+- Verificação do workflow YAML em main: completamente quebrado. PR #51 tem o YAML corrigido.
 
 ### 2026-08-15 (runs 1 e 2) — 7º dia consecutivo sem ação do dono
 
-- Situação idêntica ao run anterior. Nenhum PR foi mergeado.
-- Código completo de Fases 0.1–1.5 está em PRs abertos aguardando merge.
+- Situação idêntica. Nenhum PR mergeado. Nenhum PR novo criado.
 
 ### 2026-08-14 — 6º dia consecutivo
 
@@ -202,4 +180,4 @@ backend/
 
 ---
 
-*Atualizado em: 2026-08-16 (run 2 — 9º dia consecutivo sem ação do dono)*
+*Atualizado em: 2026-08-17 (run — 10º dia consecutivo sem ação do dono)*
