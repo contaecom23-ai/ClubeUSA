@@ -240,6 +240,19 @@ class AlertFromLink(BaseModel):
         return v
 
 
+class UpdateEmailRequest(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_field(cls, v):
+        from utils.security import validate_email
+        try:
+            return validate_email(v)
+        except ValueError as e:
+            raise ValueError(str(e))
+
+
 class StatusUpdate(BaseModel):
     status: str
 
@@ -417,6 +430,40 @@ class UpdateCategoriesRequest(BaseModel):
                  "beauty","tools","pets","fashion","automotive","books"}
         cleaned = [c for c in v if c in valid]
         return cleaned or ["all"]
+
+
+@app.post("/auth/email/request-confirmation", status_code=200)
+async def email_request_confirmation(member: dict = Depends(get_current_member)):
+    """Solicita confirmacao de email. Envia link por email. Requer autenticacao."""
+    from services.email_service import request_email_confirmation
+    try:
+        return request_email_confirmation(member["sub"])
+    except ValueError as e:
+        status_code = 429 if "Aguarde" in str(e) else 400
+        raise HTTPException(status_code=status_code, detail=str(e))
+
+
+@app.get("/auth/email/confirm")
+async def email_confirm_route(token: str):
+    """Confirma email via token recebido por email. Rota publica (sem auth)."""
+    from services.email_service import confirm_email_token
+    try:
+        return confirm_email_token(token)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.patch("/member/profile/email")
+async def update_profile_email(
+    body: UpdateEmailRequest, member: dict = Depends(get_current_member)
+):
+    """Adiciona ou atualiza email do membro. Reseta confirmacao."""
+    from services.email_service import update_member_email
+    try:
+        return update_member_email(member["sub"], body.email)
+    except ValueError as e:
+        status_code = 409 if "em uso" in str(e) else 422
+        raise HTTPException(status_code=status_code, detail=str(e))
 
 
 @app.patch("/member/profile")
