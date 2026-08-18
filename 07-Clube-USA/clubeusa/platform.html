@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="/assets/favicon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/vanilla-tilt@1.8.0/dist/vanilla-tilt.min.js" defer></script>
 <style>
 /* ============================================================
    RESET + TOKENS
@@ -191,7 +192,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,255,255,
 
 .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px;max-width:1000px;margin:0 auto}
 .step-card{text-align:center;padding:32px 24px;background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);position:relative;transition:transform .25s ease,box-shadow .25s ease}
-.step-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(13,27,62,.14)}
+.step-card:hover{box-shadow:0 12px 32px rgba(13,27,62,.14)}
 .step-num{width:52px;height:52px;background:var(--navy);color:var(--accent-l);font-family:'Bebas Neue',sans-serif;font-size:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
 .step-card h3{font-size:18px;font-weight:800;color:var(--navy);margin-bottom:10px}
 .step-card p{font-size:14px;color:var(--muted);line-height:1.6}
@@ -235,7 +236,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,255,255,
 ============================================================ */
 .features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;max-width:1100px;margin:0 auto}
 .feature-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);transition:transform .25s ease,box-shadow .25s ease}
-.feature-card:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 32px rgba(13,27,62,.14)}
+.feature-card:hover{box-shadow:0 12px 32px rgba(13,27,62,.14)}
 .feature-icon{width:48px;height:48px;border-radius:12px;background:rgba(13,27,62,.08);display:flex;align-items:center;justify-content:center;margin-bottom:14px;color:var(--navy)}
 .feature-icon svg{width:24px;height:24px}
 .icon{stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
@@ -1092,7 +1093,25 @@ document.addEventListener('DOMContentLoaded', () => {
   initDealCarousel();
   initActivityTicker();
   initGamiTeaser();
+  initTilt();
 });
+
+// ============================================================
+//  3D TILT (vanilla-tilt via CDN)
+// ============================================================
+function initTilt() {
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced || typeof VanillaTilt === 'undefined') return;
+  const targets = document.querySelectorAll('.feature-card, .step-card, .deal-carousel .deal-sample');
+  VanillaTilt.init(targets, {
+    max: 7,
+    speed: 400,
+    glare: true,
+    'max-glare': 0.12,
+    scale: 1.02,
+    perspective: 900,
+  });
+}
 
 // ============================================================
 //  ACTIVITY TICKER (mensagens agregadas, sem inventar pessoas/eventos especificos)
