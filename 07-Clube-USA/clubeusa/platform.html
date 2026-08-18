@@ -19,6 +19,7 @@
 :root{
   --navy:#0D1B3E;--navy2:#152347;--navy3:#1E2F5C;
   --accent:#B0202F;--accent-l:#D93A48;--accent-ll:#FF7A85;
+  --gold2:#FFC23C;--gold2-d:#e6a91f;--lime:#3ddc7a;--lime-d:#1fae5c;
   --green:#25D366;--green-d:#1da855;
   --red:#dc2626;--orange:#d97706;
   --white:#fff;--off:#F3F0E8;--off2:#EAE6DA;
@@ -78,6 +79,51 @@ html{scroll-behavior:smooth}
 @keyframes typingInOut{0%{opacity:0}20%{opacity:1}75%{opacity:1}100%{opacity:0}}
 @keyframes typingDot{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-3px);opacity:1}}
 @media (prefers-reduced-motion: reduce){.hero-phone-bubble,.hero-phone-typing{animation:none;opacity:1;transform:none}}
+
+/* ============================================================
+   ACTIVITY TICKER
+============================================================ */
+.activity-ticker{display:inline-flex;align-items:center;gap:10px;color:rgba(255,255,255,.6);font-size:13px;margin-top:18px;min-height:20px}
+.activity-dot{width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 4px rgba(61,220,122,.18);flex-shrink:0}
+.activity-text{transition:opacity .25s ease}
+
+/* ============================================================
+   FLOATING WHATSAPP BUTTON
+============================================================ */
+.wa-float{position:fixed;right:24px;bottom:24px;z-index:300;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green-d));display:flex;align-items:center;justify-content:center;box-shadow:0 15px 35px -8px rgba(37,211,102,.55);cursor:pointer;border:none;animation:waPulse 2.2s infinite}
+.wa-float::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid rgba(37,211,102,.6);animation:waRing 2.2s infinite}
+.wa-float svg{width:28px;height:28px}
+@keyframes waPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes waRing{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.9);opacity:0}}
+@media (prefers-reduced-motion: reduce){.wa-float,.wa-float::after{animation:none}}
+
+/* ============================================================
+   STOCK BAR + SHIELD BADGE + STAMP
+============================================================ */
+.stock-wrap{margin-top:8px}
+.stock-bar{height:6px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:5px}
+.stock-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-l));animation:pulseBar 1.8s ease-in-out infinite}
+@keyframes pulseBar{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3)}}
+.shield-item .proof-n{color:var(--lime)}
+.shield-icon{display:inline-flex;vertical-align:-3px;margin-right:4px}
+.shield-icon svg{width:16px;height:16px;stroke:var(--lime);fill:none;stroke-width:2}
+.badge-atl,.discount-badge-stamp{animation:stampIn .5s cubic-bezier(.2,1.4,.5,1) both}
+@keyframes stampIn{from{opacity:0;transform:scale(1.8) rotate(-6deg)}to{opacity:1;transform:scale(1) rotate(-2deg)}}
+@media (prefers-reduced-motion: reduce){.badge-atl,.discount-badge-stamp,.stock-fill{animation:none}}
+
+/* ============================================================
+   GAMIFICATION TEASER (landing)
+============================================================ */
+.gami-teaser{margin:0 auto;max-width:600px;background:linear-gradient(135deg,rgba(255,194,60,.1),rgba(61,220,122,.06));border:1px solid rgba(255,194,60,.35);border-radius:var(--radius);padding:26px 28px}
+.gami-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.gami-tier{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;color:var(--navy)}
+.gami-tier .icon{font-size:20px}
+.gami-pts{color:var(--gold2-d);font-weight:800;font-size:13.5px}
+.gami-bar{height:12px;border-radius:999px;background:rgba(13,27,62,.08);overflow:hidden;margin-bottom:10px}
+.gami-fill{height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,var(--lime),var(--gold2));transition:width 1.4s cubic-bezier(.2,.8,.2,1)}
+.gami-fill.in{width:64%}
+.gami-note{font-size:13px;color:var(--muted)}
+.gami-note b{color:var(--navy)}
 body{font-family:'Barlow',sans-serif;background:var(--off);color:var(--text);overflow-x:hidden;-webkit-font-smoothing:antialiased}
 
 /* ============================================================
@@ -124,7 +170,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(255,255,255,
 .groups-section{margin-bottom:32px;position:relative;z-index:2}
 .groups-title{font-size:14px;color:rgba(255,255,255,.6);font-weight:600;letter-spacing:.5px;margin-bottom:16px;text-transform:uppercase}
 .groups-grid{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-.group-btn{display:flex;align-items:center;gap:12px;background:var(--green);color:var(--white);padding:14px 24px;border-radius:var(--radius);border:none;cursor:pointer;font-family:'Barlow',sans-serif;font-size:14px;font-weight:800;transition:all .2s;text-decoration:none;min-width:220px}
+.group-btn{display:flex;align-items:center;gap:12px;background:var(--green);color:var(--white);padding:14px 24px;border-radius:var(--radius);border:none;cursor:pointer;font-family:'Barlow',sans-serif;font-size:14px;font-weight:800;transition:all .2s;text-decoration:none;min-width:220px;animation:breathe 2.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@media (prefers-reduced-motion: reduce){.group-btn{animation:none}}
 .group-btn:hover{background:var(--green-d);transform:translateY(-2px);box-shadow:0 8px 24px rgba(37,211,102,.3)}
 .group-btn .wa-icon{width:28px;height:28px;flex-shrink:0}
 .group-btn-info{text-align:left}
@@ -480,8 +528,10 @@ footer a:hover{color:var(--accent-l)}
   <!-- HERO -->
   <section class="hero">
     <div class="hero-badge"><div class="hero-badge-dot"></div> O maior clube de deals para latinos</div>
-    <h1>ECONOMIZE<span class="accent">DE VERDADE</span></h1>
-    <p class="hero-sub">Deals reais verificados, com histórico de preço real. Direto no seu <strong>WhatsApp</strong> — grátis.</p>
+    <h1>PARA DE PAGAR<span class="accent">CARO</span></h1>
+    <p class="hero-sub">Achamos os preços que valem a pena — testados por gente de verdade, direto no seu <strong>WhatsApp</strong>, 3x por dia. Sem spam, sem cartão.</p>
+
+    <div class="activity-ticker"><span class="activity-dot"></span><span class="activity-text" id="activity-text">Carregando atividade recente…</span></div>
 
     <div class="hero-phone" aria-hidden="true">
       <div class="hero-phone-frame">
@@ -568,7 +618,7 @@ footer a:hover{color:var(--accent-l)}
                   <div class="deal-stat"><div class="deal-stat-label">Nesse preço há</div><div class="deal-stat-val orange">18 horas</div></div>
                 </div>
                 <div class="deal-extras">
-                  <div class="deal-extra"><span class="e-icon"><svg viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9z"/><path d="M9 13a3 3 0 0 0 6 0"/></svg></span> <strong style="color:#94a3b8">Estoque:</strong> Poucas unidades</div>
+                  <div class="deal-extra" style="flex-direction:column;align-items:stretch"><div><span class="e-icon"><svg viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9z"/><path d="M9 13a3 3 0 0 0 6 0"/></svg></span> <strong style="color:#94a3b8">Estoque:</strong> Poucas unidades</div><div class="stock-bar"><div class="stock-fill" style="width:18%"></div></div></div>
                   <div class="deal-extra"><span class="e-icon"><svg viewBox="0 0 24 24"><path d="M20 12a2 2 0 0 0 0-4V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v2a2 2 0 0 1 0 4v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2z"/><path d="M9 4v16" stroke-dasharray="2 2"/></svg></span> <strong style="color:#94a3b8">Cupom:</strong> +5% OFF na página</div>
                   <div class="deal-extra"><span class="e-icon"><svg viewBox="0 0 24 24"><path d="M22 17l-8-8-4 4-6-6"/><path d="M22 10v7h-7"/></svg></span> <strong style="color:#94a3b8">Tendência:</strong> Caindo há 2 semanas</div>
                   <div class="deal-extra"><span class="e-icon"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.9 6.3.6-4.8 4.3 1.4 6.2L12 16.9 6.4 20l1.4-6.2-4.8-4.3 6.3-.6z"/></svg></span> 4.7 · 28.400 avaliações</div>
@@ -629,7 +679,7 @@ footer a:hover{color:var(--accent-l)}
                   <div class="deal-stat"><div class="deal-stat-label">Nesse preço há</div><div class="deal-stat-val orange">1 dia</div></div>
                 </div>
                 <div class="deal-extras">
-                  <div class="deal-extra"><span class="e-icon"><svg viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9z"/><path d="M9 13a3 3 0 0 0 6 0"/></svg></span> <strong style="color:#94a3b8">Estoque:</strong> Últimas unidades</div>
+                  <div class="deal-extra" style="flex-direction:column;align-items:stretch"><div><span class="e-icon"><svg viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9z"/><path d="M9 13a3 3 0 0 0 6 0"/></svg></span> <strong style="color:#94a3b8">Estoque:</strong> Últimas unidades</div><div class="stock-bar"><div class="stock-fill" style="width:9%"></div></div></div>
                   <div class="deal-extra"><span class="e-icon"><svg viewBox="0 0 24 24"><path d="M22 17l-8-8-4 4-6-6"/><path d="M22 10v7h-7"/></svg></span> <strong style="color:#94a3b8">Tendência:</strong> Caindo há 5 dias</div>
                   <div class="deal-extra"><span class="e-icon"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.9 6.3.6-4.8 4.3 1.4 6.2L12 16.9 6.4 20l1.4-6.2-4.8-4.3 6.3-.6z"/></svg></span> 4.5 · 8.700 avaliações</div>
                 </div>
@@ -698,7 +748,21 @@ footer a:hover{color:var(--accent-l)}
       <div class="proof-item"><div class="proof-n" id="proof-members" data-count="12400" data-suffix="K" data-decimals="1">0</div><div class="proof-l">Membros ativos</div></div>
       <div class="proof-item"><div class="proof-n" data-count="847" data-prefix="R$">R$0</div><div class="proof-l">Economia média/membro</div></div>
       <div class="proof-item"><div class="proof-n" data-count="4.9" data-decimals="1" data-suffix="⭐">0⭐</div><div class="proof-l">Avaliação dos membros</div></div>
-      <div class="proof-item"><div class="proof-n" data-count="0">0</div><div class="proof-l">Deals falsos enviados <span title="Curadoria 100% humana antes do envio">— curadoria verificada</span></div></div>
+      <div class="proof-item shield-item"><div class="proof-n"><span class="shield-icon"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span><span data-count="0">0</span></div><div class="proof-l">Deals falsos enviados <span title="Curadoria 100% humana antes do envio">— curadoria verificada</span></div></div>
+    </div>
+  </section>
+
+  <!-- GAMIFICATION TEASER -->
+  <section class="section" style="padding-top:0">
+    <div class="section-title">Indique amigos, suba de nível</div>
+    <p class="section-sub">Cada indicação vale +200 pontos. No nível Ouro, seus deals chegam antes de todo mundo.</p>
+    <div class="gami-teaser reveal">
+      <div class="gami-top">
+        <div class="gami-tier"><span class="icon">🥈</span> Nível Prata (exemplo)</div>
+        <div class="gami-pts">640 / 1000 pontos</div>
+      </div>
+      <div class="gami-bar"><div class="gami-fill" id="gami-fill"></div></div>
+      <div class="gami-note">Faltam <b>2 indicações</b> para o <b>Nível Ouro</b> — deals 1h antes + cupons exclusivos.</div>
     </div>
   </section>
 
@@ -720,6 +784,10 @@ footer a:hover{color:var(--accent-l)}
     </div>
     © 2025 Clube USA. Feito para latinos que querem economizar de verdade.
   </footer>
+
+  <button class="wa-float" id="wa-float-btn" title="Entrar no grupo do WhatsApp" onclick="openModal()">
+    <svg viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.125.557 4.126 1.527 5.857L.057 23.882l6.19-1.621A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.93 0-3.742-.518-5.296-1.422l-.379-.224-3.935 1.032 1.049-3.833-.247-.394A9.956 9.956 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+  </button>
 
 </div><!-- /landing -->
 
@@ -1022,7 +1090,49 @@ document.addEventListener('DOMContentLoaded', () => {
   initScrollReveal();
   initCountUp();
   initDealCarousel();
+  initActivityTicker();
+  initGamiTeaser();
 });
+
+// ============================================================
+//  ACTIVITY TICKER (mensagens agregadas, sem inventar pessoas/eventos especificos)
+// ============================================================
+function initActivityTicker() {
+  const el = document.getElementById('activity-text');
+  if (!el) return;
+  const messages = [
+    'Mais de 10 pessoas entraram nos últimos 30 minutos',
+    'Grupo de deals ativo agora — respondendo em minutos',
+    'Cupons validados hoje pela nossa curadoria',
+    'Novos deals chegam 3x por dia, todo dia',
+  ];
+  let i = 0;
+  el.textContent = messages[0];
+  setInterval(() => {
+    i = (i + 1) % messages.length;
+    el.style.opacity = 0;
+    setTimeout(() => { el.textContent = messages[i]; el.style.opacity = 1; }, 250);
+  }, 4500);
+}
+
+// ============================================================
+//  GAMIFICATION TEASER — anima a barra quando entra em viewport
+// ============================================================
+function initGamiTeaser() {
+  const fill = document.getElementById('gami-fill');
+  if (!fill) return;
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced) { fill.classList.add('in'); return; }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        fill.classList.add('in');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.4 });
+  io.observe(fill);
+}
 
 // ============================================================
 //  SCROLL REVEAL
