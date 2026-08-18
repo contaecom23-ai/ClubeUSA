@@ -23,6 +23,7 @@
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
+#  GET  /admin/analytics         — funil, crescimento e engajamento (admin)
 #  GET  /admin/members           — lista membros (admin)
 #  GET  /admin/members/{id}      — perfil completo (admin)
 #  POST /admin/members/{id}/status — alterar status (admin)
@@ -52,6 +53,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.analytics import router as analytics_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -83,6 +85,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(analytics_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -361,9 +364,9 @@ async def request_otp(body: OTPRequest, request: Request):
 
 
 @app.post("/auth/otp/verify")
-async def verify_otp(body: OTPVerify):
+async def verify_otp(body: OTPVerify, request: Request):
     """Verifica OTP e retorna JWT se valido."""
-    from utils.security import validate_phone, hash_pii, create_token
+    from utils.security import validate_phone, hash_pii, create_token, hash_ip
 
     try:
         phone = validate_phone(body.phone)
@@ -390,6 +393,22 @@ async def verify_otp(body: OTPVerify):
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
     token = create_token(member["id"], member["plan"])
+
+    # Fase 0.3: registra evento de login no audit_log para analytics.
+    # Não-bloqueante: falha silenciosa para não impedir o login.
+    try:
+        ip_hash = hash_ip(request.client.host) if request.client else None
+        sb.table("audit_logs").insert({
+            "actor_id":    member["id"],
+            "actor_type":  "member",
+            "action":      "member.login",
+            "target_type": "member",
+            "target_id":   member["id"],
+            "ip_hash":     ip_hash,
+        }).execute()
+    except Exception:
+        pass
+
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
 
 
