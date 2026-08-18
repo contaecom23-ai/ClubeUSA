@@ -1,16 +1,30 @@
 # ============================================================
 #  render.yaml — Blueprint de deploy do Clube USA no Render
 #
-#  Cria 2 servicos:
-#   - clubeusa-api        (web)     API FastAPI + serve o site
-#   - clubeusa-scheduler  (worker)  loop de envio de deals (dealscanner2)
+#  Cria 1 servico:
+#   - clubeusa-api        (web)     API FastAPI + serve o site (plano free)
+#
+#  O clubeusa-scheduler (worker de envio automatico de deals) foi removido
+#  deste Blueprint porque Background Workers no Render exigem instancia
+#  paga (nao ha plano free para o tipo "worker"). Para reativar o envio
+#  automatico de deals, adicione de volta um servico "type: worker" aqui
+#  quando estiver pronto para colocar um cartao na conta do Render:
+#
+#  - type: worker
+#    name: clubeusa-scheduler
+#    runtime: python
+#    rootDir: 07-Clube-USA/clubeusa
+#    plan: starter
+#    buildCommand: pip install -r requirements.txt && playwright install --with-deps chromium
+#    startCommand: PYTHONPATH="$PYTHONPATH:." python dealscanner2/scheduler.py
+#    autoDeploy: true
+#    envVars:
+#      - key: PYTHON_VERSION
+#        value: "3.12.7"
+#      - fromGroup: clubeusa-secrets
 #
 #  Como usar: Render Dashboard > New > Blueprint > aponte para este arquivo.
 #  Os segredos (sync:false) sao preenchidos no painel, nunca commitados.
-#
-#  Observacao de plano: Background Workers no Render exigem instancia paga.
-#  A API web roda no plano free (hiberna apos inatividade). Ajuste "plan"
-#  conforme sua conta.
 # ============================================================
 
 services:
@@ -23,20 +37,6 @@ services:
     buildCommand: pip install -r requirements.txt && playwright install --with-deps chromium
     startCommand: PYTHONPATH="$PYTHONPATH:.:api" uvicorn api.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /
-    autoDeploy: true
-    envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.7"
-      - fromGroup: clubeusa-secrets
-
-  # ---- Scheduler de deals (loop continuo) ----
-  - type: worker
-    name: clubeusa-scheduler
-    runtime: python
-    rootDir: 07-Clube-USA/clubeusa
-    plan: starter          # workers exigem plano pago no Render
-    buildCommand: pip install -r requirements.txt && playwright install --with-deps chromium
-    startCommand: PYTHONPATH="$PYTHONPATH:." python dealscanner2/scheduler.py
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
