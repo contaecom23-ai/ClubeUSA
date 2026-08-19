@@ -1165,6 +1165,13 @@ let _member  = JSON.parse(localStorage.getItem('cu_member') || 'null');
 let _phone   = '';
 let _isLogin = false;
 
+// Captura referral_code da URL (?ref=CODE) na chegada e persiste
+// no sessionStorage para sobreviver a recarregamentos na mesma aba.
+// Ex: clubeusa.com?ref=ABC123 -> _pendingRef = 'ABC123'
+let _pendingRef = (new URLSearchParams(window.location.search).get('ref') || '').trim().toUpperCase();
+if (!_pendingRef) _pendingRef = sessionStorage.getItem('cu_ref') || '';
+if (_pendingRef) sessionStorage.setItem('cu_ref', _pendingRef);
+
 // Categorias válidas para nichos (mesma lista validada no backend)
 const NICHE_CATEGORIES = [
   { key: 'electronics', label: '💻 Eletrônicos' },
@@ -1512,7 +1519,12 @@ async function handlePhoneSubmit() {
   setLoading('btn-phone', true, '📲 Receber código no WhatsApp');
   try {
     if (!_isLogin) {
-      await api('POST', '/auth/register', { phone, name: name || undefined, language: 'pt' });
+      const regPayload = { phone, name: name || undefined, language: 'pt' };
+      if (_pendingRef) regPayload.referral_code = _pendingRef;
+      await api('POST', '/auth/register', regPayload);
+      // Limpa o ref após o cadastro para não reutilizar em logins futuros
+      sessionStorage.removeItem('cu_ref');
+      _pendingRef = '';
     }
     await api('POST', '/auth/otp/request', { phone });
     showStep('step-otp');
