@@ -4,23 +4,42 @@
 
 ---
 
-## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
+## ESTADO REAL EM 2026-08-20
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+O código em `07-Clube-USA/clubeusa/` (branch `main`) **já implementa mais do que o ROADMAP indicava**:
+
+| O que já existe em `main` | Rota / Módulo |
+|---------------------------|---------------|
+| Registro por telefone + WhatsApp OTP | `POST /auth/register`, `POST /auth/otp/*` |
+| Perfil de membro | `GET/PATCH /member/profile` |
+| Referral com código único + stats | `GET /member/referral` |
+| Promoções/deals por categoria | `GET /member/deals` |
+| Rastreador de preço com alertas | `GET/POST /products/track`, `/alerts` |
+| Painel admin completo | `GET /admin/*` |
+| Billing Stripe (VIP $4,99/mês) | `POST /billing/*` |
+| Segurança: rate-limit, OTP TTL, HMAC Stripe | middlewares |
+
+**18 PRs abertos, nenhum merged.** 4 bloqueios críticos em DECISOES.md.
+
+---
+
+## FASE 0 — PRÉ-LANÇAMENTO
+
+- [~] **0.1** Cadastro + perfil mínimo — **EXISTE em `main`** via WhatsApp OTP + `/member/profile`. Pendente: decisão do dono sobre modelo de auth (WhatsApp vs email) — ver DECISOES.md #2.
+- [~] **0.2** REFERRAL rastreável — **backend EXISTE em `main`** (`/member/referral`, código único gerado no cadastro, stats, histórico). Pendente: merge PR #52 (redirect `/i/{code}`) e PR #57 (captura `?ref=` no frontend).
+- [ ] **0.3** Analytics básico — PR #55 aberto e pronto para merge (baseado em `main` atual).
+- [ ] **0.4** "Cadastro válido" verificável + anti-fraude — PR #58 aberto e pronto para merge (baseado em `main` atual).
 
 ---
 
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
-- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
-- [ ] **1.2** Busca por ZIP + raio 1–5 milhas
-- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
-- [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
-- [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
-- [x] **1.6** Rastreador de preço de produto — membro cola o link de um produto (Amazon/Walmart/BestBuy), vê o histórico de preço e ofertas cruzadas nos outros marketplaces, cupons verificados automaticamente (Playwright) com selo confirmado/não confirmado, e recebe alerta quando o preço cai (recheck a cada 6h)
+- [~] **1.1** PROMOÇÕES/ACHADOS = carro-chefe — **backend EXISTE em `main`** (`/member/deals`, scanner automático, aprovação admin). Pendente: avaliação do produto com usuários reais.
+- [ ] **1.2** Busca por ZIP + raio 1–5 milhas — PR #14 (stacked em branch antiga, não merged).
+- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO — PR #16 (stacked em branch antiga, não merged).
+- [ ] **1.4** Empregos (seed manual) — PR #19 (stacked em branch antiga, não merged).
+- [ ] **1.5** Moradia (quartos/roommates/casas) — PR #20 (stacked em branch antiga, não merged).
+- [x] **1.6** Rastreador de preço de produto — COMPLETO em `main` (`/products/track`, cupons, alertas, Playwright).
 
 ---
 
@@ -66,4 +85,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-08-20*
