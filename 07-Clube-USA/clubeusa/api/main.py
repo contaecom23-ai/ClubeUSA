@@ -44,7 +44,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -478,7 +478,7 @@ async def get_referral(member: dict = Depends(get_current_member)):
         raise HTTPException(status_code=404)
 
     m = result.data[0]
-    referral_link = f"{APP_URL}?ref={m['referral_code']}"
+    referral_link = f"{APP_URL}/i/{m['referral_code']}"
 
     # Historico de indicacoes
     refs = sb.table("referrals").select(
@@ -764,6 +764,20 @@ def _send_vip_welcome(member_id: str):
         )
     except Exception as e:
         log.warning(f"Falha ao enviar boas-vindas VIP: {e}")
+
+
+# ============================================================
+#  ROTAS — INDICACAO (redirect publico)
+# ============================================================
+
+@app.get("/i/{code}", include_in_schema=False)
+async def referral_redirect(code: str):
+    """Redireciona clubeusa.com/i/{code} para /?ref={code} para captura no frontend."""
+    import re
+    clean = code.strip().upper()
+    if not re.match(r'^[A-Z0-9]{4,16}$', clean):
+        return RedirectResponse(url="/", status_code=302)
+    return RedirectResponse(url=f"/?ref={clean}", status_code=302)
 
 
 # ============================================================

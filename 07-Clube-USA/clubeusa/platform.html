@@ -1185,6 +1185,12 @@ let _pollTimers = {};
 //  INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+  // Captura codigo de indicacao da URL (?ref= ou via /i/{code} redirect) e persiste no localStorage
+  const _urlRef = new URLSearchParams(window.location.search).get('ref');
+  if (_urlRef && /^[A-Z0-9]{4,16}$/i.test(_urlRef)) {
+    localStorage.setItem('cu_ref', _urlRef.toUpperCase());
+  }
+
   loadGroups();
   if (_token && _member) {
     showDashboard();
@@ -1512,7 +1518,10 @@ async function handlePhoneSubmit() {
   setLoading('btn-phone', true, '📲 Receber código no WhatsApp');
   try {
     if (!_isLogin) {
-      await api('POST', '/auth/register', { phone, name: name || undefined, language: 'pt' });
+      const _regBody = { phone, name: name || undefined, language: 'pt' };
+      const _storedRef = localStorage.getItem('cu_ref');
+      if (_storedRef) _regBody.referral_code = _storedRef;
+      await api('POST', '/auth/register', _regBody);
     }
     await api('POST', '/auth/otp/request', { phone });
     showStep('step-otp');
