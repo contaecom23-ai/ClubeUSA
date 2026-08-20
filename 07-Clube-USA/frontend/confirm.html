@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmação de Email — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 3rem 2rem; width: 100%; max-width: 420px;
+      text-align: center;
+    }
+    .icon { font-size: 3.5rem; margin-bottom: 1.25rem; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #1a202c; margin-bottom: .75rem; }
+    p { color: #718096; font-size: .95rem; line-height: 1.6; margin-bottom: 2rem; }
+    a.btn {
+      display: inline-block; padding: .875rem 2rem;
+      background: #3b82f6; color: #fff;
+      font-size: 1rem; font-weight: 600;
+      border-radius: 8px; text-decoration: none;
+      transition: background .15s;
+    }
+    a.btn:hover { background: #2563eb; }
+    .error { color: #e53e3e; }
+  </style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="icon" id="icon">⏳</div>
+  <h1 id="title">Verificando seu email...</h1>
+  <p id="desc">Aguarde um momento.</p>
+</div>
+
+<script>
+  // Supabase redireciona para esta página após confirmação
+  // A URL pode conter #access_token ou ?error=... dependendo do resultado
+  function parseHashOrSearch() {
+    const hash = window.location.hash.slice(1);
+    const search = window.location.search.slice(1);
+    const params = new URLSearchParams(hash || search);
+    return params;
+  }
+
+  const params = parseHashOrSearch();
+  const icon = document.getElementById('icon');
+  const title = document.getElementById('title');
+  const desc = document.getElementById('desc');
+  const card = document.getElementById('card');
+
+  if (params.get('error') || params.get('error_description')) {
+    icon.textContent = '❌';
+    title.textContent = 'Falha na confirmação';
+    desc.innerHTML = `<span class="error">${params.get('error_description') || 'Link inválido ou expirado.'}</span><br><br>Solicite um novo email de confirmação fazendo login.`;
+    card.insertAdjacentHTML('beforeend', '<a class="btn" href="login.html">Ir para Login</a>');
+  } else if (params.get('access_token') || params.get('type') === 'email') {
+    icon.textContent = '✅';
+    title.textContent = 'Email confirmado!';
+    desc.textContent = 'Sua conta está ativa. Você já pode entrar na plataforma.';
+    card.insertAdjacentHTML('beforeend', '<a class="btn" href="login.html">Entrar agora</a>');
+  } else {
+    // Chegou na página sem parâmetros — possível acesso direto
+    icon.textContent = '📧';
+    title.textContent = 'Confirme seu email';
+    desc.textContent = 'Verifique sua caixa de entrada e clique no link que enviamos para ativar sua conta.';
+    card.insertAdjacentHTML('beforeend', '<a class="btn" href="login.html">Ir para Login</a>');
+  }
+</script>
+</body>
+</html>

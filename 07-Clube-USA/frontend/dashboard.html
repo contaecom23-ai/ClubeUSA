@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel — Clube USA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8; min-height: 100vh; padding: 2rem 1rem;
+    }
+    header {
+      max-width: 720px; margin: 0 auto 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      background: #fff; padding: 1rem 1.5rem;
+      border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+    .logo { font-size: 1.25rem; font-weight: 700; color: #1a202c; }
+    .logo span { margin-right: .4rem; }
+    button#logoutBtn {
+      background: none; border: 1.5px solid #e2e8f0;
+      padding: .5rem 1rem; border-radius: 6px;
+      cursor: pointer; color: #4a5568; font-size: .875rem;
+      transition: background .15s;
+    }
+    button#logoutBtn:hover { background: #f7fafc; }
+    .card {
+      max-width: 720px; margin: 0 auto;
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 2rem;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #1a202c; margin-bottom: .5rem; }
+    .email-tag {
+      font-size: .875rem; color: #718096; margin-bottom: 1.5rem;
+    }
+    .badge {
+      display: inline-block; padding: .25rem .65rem;
+      border-radius: 99px; font-size: .78rem; font-weight: 600;
+      margin-left: .5rem;
+    }
+    .badge.confirmed { background: #dcfce7; color: #166534; }
+    .badge.pending { background: #fef9c3; color: #713f12; }
+    .section { margin-top: 2rem; }
+    .section h2 { font-size: 1rem; font-weight: 600; color: #4a5568; margin-bottom: 1rem; }
+    .coming-soon {
+      background: #f7fafc; border-radius: 8px; padding: 1.5rem;
+      text-align: center; color: #a0aec0; font-size: .875rem;
+    }
+    #loading { color: #718096; text-align: center; padding: 3rem; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo"><span>🇺🇸</span>Clube USA</div>
+  <button id="logoutBtn">Sair</button>
+</header>
+
+<div class="card">
+  <div id="loading">Carregando...</div>
+  <div id="content" style="display:none">
+    <h1 id="greeting"></h1>
+    <p class="email-tag" id="emailTag"></p>
+    <div class="section">
+      <h2>Em breve</h2>
+      <div class="coming-soon">
+        Promoções, empregos, moradia e muito mais para brasileiros nos EUA 🚀
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : '';
+
+  async function init() {
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (res.status === 401) {
+        sessionStorage.clear();
+        window.location.href = 'login.html';
+        return;
+      }
+
+      if (!res.ok) throw new Error('Erro ao carregar perfil');
+
+      const user = await res.json();
+      document.getElementById('greeting').textContent = `Olá, ${user.full_name}!`;
+
+      const badge = user.email_confirmed
+        ? '<span class="badge confirmed">✓ Email confirmado</span>'
+        : '<span class="badge pending">⚠ Email pendente</span>';
+      document.getElementById('emailTag').innerHTML = `${user.email}${badge}`;
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+    } catch {
+      document.getElementById('loading').textContent = 'Erro ao carregar. Recarregue a página.';
+    }
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    const token = sessionStorage.getItem('access_token');
+    if (token) {
+      try {
+        await fetch(`${API_BASE}/api/v1/auth/logout`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+      } catch { /* best-effort */ }
+    }
+    sessionStorage.clear();
+    window.location.href = 'login.html';
+  });
+
+  init();
+</script>
+</body>
+</html>
