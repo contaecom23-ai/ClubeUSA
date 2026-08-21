@@ -827,6 +827,14 @@ async def group_webhook(request: Request):
     Recebe eventos de entrada/saida de membros via Z-API.
     Atualiza member_count em tempo real para manter os 2 grupos corretos no site.
     """
+    # Verifica que a requisicao veio da Z-API (client-token header)
+    expected_token = os.environ.get("ZAPI_CLIENT_TOKEN", "")
+    if expected_token:
+        received = request.headers.get("client-token", "")
+        if received != expected_token:
+            log.warning("Webhook /webhook/group rejeitado: client-token invalido")
+            return {"ok": True}  # 200 para evitar retry storm da Z-API
+
     try:
         payload = await request.json()
     except Exception:
