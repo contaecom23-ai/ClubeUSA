@@ -21,6 +21,7 @@
 #  GET  /alerts              — listar alertas ativos (plano pago)
 #  DELETE /alerts/{id}       — cancelar alerta (plano pago)
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
+#  GET  /i/{code}            — redirect de indicacao (Fase 0.2)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
 #  GET  /admin/members           — lista membros (admin)
@@ -32,6 +33,7 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  GET  /admin/analytics         — funil e metricas (admin, Fase 0.3)
 # ============================================================
 
 import hmac
@@ -44,7 +46,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -52,6 +54,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.analytics import router as analytics_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -83,6 +86,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(analytics_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -361,7 +365,7 @@ async def request_otp(body: OTPRequest, request: Request):
 
 
 @app.post("/auth/otp/verify")
-async def verify_otp(body: OTPVerify):
+async def verify_otp(body: OTPVerify, request: Request):
     """Verifica OTP e retorna JWT se valido."""
     from utils.security import validate_phone, hash_pii, create_token
 
@@ -390,6 +394,21 @@ async def verify_otp(body: OTPVerify):
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
     token = create_token(member["id"], member["plan"])
+
+    # Audit log de login (nao-bloqueante)
+    try:
+        from utils.security import hash_ip
+        ip_hash = hash_ip(request.client.host if request.client else "unknown")
+        sb.table("audit_logs").insert({
+            "actor_type":  "member",
+            "action":      "auth.login",
+            "target_type": "member",
+            "target_id":   member["id"],
+            "metadata":    {"ip_hash": ip_hash, "plan": member["plan"]},
+        }).execute()
+    except Exception:
+        pass
+
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
 
 
@@ -478,7 +497,7 @@ async def get_referral(member: dict = Depends(get_current_member)):
         raise HTTPException(status_code=404)
 
     m = result.data[0]
-    referral_link = f"{APP_URL}?ref={m['referral_code']}"
+    referral_link = f"{APP_URL}/i/{m['referral_code']}"
 
     # Historico de indicacoes
     refs = sb.table("referrals").select(
@@ -767,6 +786,20 @@ def _send_vip_welcome(member_id: str):
 
 
 # ============================================================
+#  ROTA — REDIRECT DE INDICACAO (Fase 0.2)
+# ============================================================
+
+@app.get("/i/{code}", include_in_schema=False)
+async def referral_redirect(code: str):
+    """Redireciona link de indicacao /i/CODE para /?ref=CODE."""
+    import re
+    clean = code.strip().upper()
+    if not re.match(r'^[A-Z0-9]{4,16}$', clean):
+        return RedirectResponse(url="/", status_code=302)
+    return RedirectResponse(url=f"/?ref={clean}", status_code=302)
+
+
+# ============================================================
 #  ROTAS — PUBLICAS (sem autenticacao)
 # ============================================================
 
@@ -827,6 +860,14 @@ async def group_webhook(request: Request):
     Recebe eventos de entrada/saida de membros via Z-API.
     Atualiza member_count em tempo real para manter os 2 grupos corretos no site.
     """
+    # Verifica client-token da Z-API (rejeita requests sem token valido)
+    expected_token = os.environ.get("ZAPI_CLIENT_TOKEN", "")
+    if expected_token:
+        received = request.headers.get("client-token", "")
+        if received != expected_token:
+            log.warning("Webhook /webhook/group rejeitado: client-token invalido")
+            return {"ok": True}  # 200 para evitar retry storm da Z-API
+
     try:
         payload = await request.json()
     except Exception:
