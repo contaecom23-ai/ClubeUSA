@@ -1,26 +1,45 @@
 # ROADMAP — Clube USA
 
-> Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
+> Fonte da verdade do projeto. Última leitura do código: 2026-08-22.
 
 ---
 
-## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
+## ESTADO REAL EM 2026-08-22
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+O código em `07-Clube-USA/clubeusa/` (branch `main`) já implementa:
+
+| Item | O que existe em `main` | Status |
+|------|----------------------|--------|
+| 0.1 Cadastro + auth | WhatsApp OTP → JWT, `/member/profile`, `/auth/register` | ✅ em main |
+| 0.2 Referral backend | Código único gerado no cadastro, `/member/referral`, stats, histórico | ✅ em main |
+| 0.2 Referral redirect | `/i/{code}` → captura `?ref=` no frontend | PR #62 aguarda merge |
+| 0.3 Analytics | Tracking de eventos, funil de cadastro | PR #62 aguarda merge |
+| 0.4 Cadastro válido + anti-fraude | Email descartável bloqueado | PR #62 aguarda merge |
+| 1.1 Promoções/Deals | Scanner + aprovação admin + `/member/deals` por categoria | ✅ em main |
+| 1.6 Rastreador de preço | Amazon/Walmart, cupons Playwright, alertas de queda | ✅ em main |
+| Segurança webhook Z-API | Verificação de token no `/webhook/group` | PR #62 aguarda merge |
+
+**Próxima ação do dono:** Mergear PR #62 e PR #56 (CI). Ver DECISOES.md.
+
+---
+
+## FASE 0 — PRÉ-LANÇAMENTO
+
+- [x] **0.1** Cadastro + perfil mínimo — implementado via WhatsApp OTP em `main` (`/auth/register`, `/auth/otp/*`, `/member/profile`)
+- [~] **0.2** REFERRAL rastreável — backend ✅ em `main` (`/member/referral`, código único, stats); redirect `/i/{code}` aguarda PR #62
+- [ ] **0.3** Analytics básico — PR #62 aguarda merge
+- [ ] **0.4** "Cadastro válido" + anti-fraude — PR #62 aguarda merge
 
 ---
 
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
-- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
-- [ ] **1.2** Busca por ZIP + raio 1–5 milhas
-- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
-- [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
-- [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
-- [x] **1.6** Rastreador de preço de produto — membro cola o link de um produto (Amazon/Walmart/BestBuy), vê o histórico de preço e ofertas cruzadas nos outros marketplaces, cupons verificados automaticamente (Playwright) com selo confirmado/não confirmado, e recebe alerta quando o preço cai (recheck a cada 6h)
+- [x] **1.1** PROMOÇÕES/ACHADOS — backend em `main`, scanner automático + painel admin
+- [ ] **1.2** Busca por ZIP + raio 1–5 milhas — aguarda Fase 0 completa
+- [ ] **1.3** Influenciadores pago por resultado — aguarda Fase 0 completa
+- [ ] **1.4** Empregos (seed manual) — aguarda Fase 0 completa
+- [ ] **1.5** Moradia (quartos/roommates/casas) — aguarda Fase 0 completa
+- [x] **1.6** Rastreador de preço de produto — completo em `main`
 
 ---
 
@@ -66,4 +85,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-08-22 (leitura do código confirmada)*
