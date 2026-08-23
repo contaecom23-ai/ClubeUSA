@@ -50,6 +50,7 @@ from pydantic import BaseModel, field_validator
 import stripe
 from deps import get_current_member, require_vip, require_paid_plan, require_admin
 from routers.news import router as news_router
+# utils.geo importado localmente nos handlers para evitar import pesado no startup
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
 
@@ -429,17 +430,64 @@ async def update_profile_categories(body: UpdateCategoriesRequest, member: dict 
         raise HTTPException(status_code=404, detail=str(e))
 
 
+class UpdateLocationRequest(BaseModel):
+    zip_code: str
+
+    @field_validator("zip_code")
+    @classmethod
+    def validate_zip(cls, v):
+        from utils.geo import is_valid_us_zip
+        if not is_valid_us_zip(v):
+            raise ValueError("ZIP code invalido. Use 5 digitos (ex: 33101).")
+        return v
+
+
+@app.patch("/member/location")
+async def update_member_location(
+    body: UpdateLocationRequest,
+    member: dict = Depends(get_current_member),
+):
+    """
+    Atualiza o ZIP code do membro e geocodifica para lat/lng (via Nominatim, gratis).
+    Chamada rara — apenas quando membro altera localizacao — entao rate limit (1 req/s) nao e problema.
+    """
+    from supabase import create_client
+    from utils.geo import geocode_zip
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+
+    coords = geocode_zip(body.zip_code)
+    update_data: dict = {"zip_code": body.zip_code}
+    if coords:
+        update_data["member_lat"] = coords[0]
+        update_data["member_lng"] = coords[1]
+
+    result = sb.table("members").update(update_data).eq("id", member["sub"]).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Membro nao encontrado.")
+
+    return {
+        "zip_code": body.zip_code,
+        "geocoded": coords is not None,
+        "lat": coords[0] if coords else None,
+        "lng": coords[1] if coords else None,
+    }
+
+
 @app.get("/member/deals")
 async def get_deals(
     category: Optional[str] = None,
     limit: int = 20,
-    member: dict = Depends(get_current_member)
+    radius_miles: float = 25.0,
+    member: dict = Depends(get_current_member),
 ):
     """
     Deals da semana filtrados por categoria.
-    VIP recebe mais deals e com antecedencia.
+    - VIP recebe mais deals e com antecedencia.
+    - Se o membro tiver ZIP configurado, deals locais sao filtrados por raio (padrao 25 milhas).
+    - radius_miles=0 desativa filtro geografico (ve todos).
     """
     from supabase import create_client
+    from utils.geo import filter_deals_by_radius
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
     # VIP ve todos, free ve apenas os enviados
@@ -452,7 +500,8 @@ async def get_deals(
 
     query = (
         sb.table("deals")
-        .select("id,title,price_now,price_was,discount_pct,rating,reviews,score,score_label,price_context,affiliate_url,category,sent_at")
+        .select("id,title,price_now,price_was,discount_pct,rating,reviews,score,score_label,"
+                "price_context,affiliate_url,category,sent_at,is_local,lat,lng,zip_code")
         .in_("status", status_filter)
         .order("score", desc=True)
         .limit(limit)
@@ -461,7 +510,25 @@ async def get_deals(
         query = query.eq("category", category)
 
     result = query.execute()
-    return {"deals": result.data or [], "plan": member.get("plan", "free")}
+    deals = result.data or []
+
+    # Filtro geografico: busca lat/lng do membro no banco (nao esta no token)
+    member_lat = member_lng = None
+    if radius_miles > 0 and deals:
+        loc_result = (
+            sb.table("members")
+            .select("member_lat,member_lng")
+            .eq("id", member["sub"])
+            .single()
+            .execute()
+        )
+        if loc_result.data:
+            member_lat = loc_result.data.get("member_lat")
+            member_lng = loc_result.data.get("member_lng")
+    if radius_miles > 0 and member_lat is not None and member_lng is not None:
+        deals = filter_deals_by_radius(deals, float(member_lat), float(member_lng), radius_miles)
+
+    return {"deals": deals, "plan": member.get("plan", "free"), "radius_miles": radius_miles}
 
 
 @app.get("/member/referral")
