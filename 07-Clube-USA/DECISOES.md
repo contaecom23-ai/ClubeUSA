@@ -5,24 +5,15 @@
 
 ---
 
-## ⚠️ SITUAÇÃO ATUAL — 2026-08-23
+## ⚠️ SITUAÇÃO ATUAL — 2026-08-24
 
-**25 PRs abertos. Nenhum merge em 13+ dias.**
+**26 PRs abertos. Nenhum merge em 14+ dias.**
 
-O builder autônomo está funcionando (features sendo construídas com qualidade), mas o loop de revisão está quebrado. Mais código sendo criado sem os anteriores chegarem ao main não ajuda.
+**VULNERABILIDADE CONFIRMADA EM PRODUÇÃO:** `POST /webhook/group` em `main.py` não verifica o `Client-Token` da Z-API. Qualquer pessoa pode chamar esse endpoint e manipular a contagem de membros nos grupos WhatsApp exibidos no site.
 
-**O que já está funcionando em main (confirmado lendo main.py hoje):**
-- ✅ Fase 0.1: Auth com WhatsApp OTP — funciona
-- ✅ Fase 1.1: Deals/Promoções + DealScanner — funciona
-- ✅ Fase 1.6: Rastreador de preço — funciona
-- ✅ Stripe billing VIP — funciona
-- ✅ Admin panel (membros, deals, métricas) — funciona
-
-**O que está pronto mas não chegou ao main (aguardando revisão):**
-- 0.2 redirect `/i/{code}` + 0.3 analytics → PR #62
-- 0.4 cadastro válido + anti-fraude → PR #58
-- 1.2 ZIP search → PR #65
-- CI automático → PR #56
+- **Severidade:** Média-baixa (afeta dados cosméticos, não dados de usuários ou pagamentos)
+- **Fix pronto:** PR #62 já inclui a verificação — é o **único PR que resolve isso**
+- **Ação necessária:** Mergear PR #62
 
 ---
 
@@ -32,12 +23,11 @@ O builder autônomo está funcionando (features sendo construídas com qualidade
 
 | Ordem | PR | O que é | Risco |
 |-------|-----|---------|-------|
-| 1º | **#64** | ROADMAP + DECISOES atualizados (docs apenas) | Zero |
-| 2º | **este PR** (docs/estado-2026-08-23) | ROADMAP + DECISOES atualizados (docs apenas) | Zero |
-| 3º | **#56** | CI pytest automático | Muito baixo |
-| 4º | **#62** | Referral redirect + analytics + segurança Z-API | Médio — testar antes |
-| 5º | **#65** | Busca ZIP (Fase 1.2) | Médio — feature nova |
-| 6º | **#58** | Cadastro válido (Fase 0.4) | Médio — checar conflito com #62 |
+| 1º | **#62** | Referral redirect + analytics + **fix segurança webhook** | Médio — testar antes |
+| 2º | **#56** | CI pytest automático | Muito baixo |
+| 3º | **#65** | Busca ZIP (Fase 1.2) | Médio — feature nova |
+| 4º | **#58** | Cadastro válido (Fase 0.4) | Médio — checar conflito com #62 |
+| 5º | **#63** | Testes de segurança | Baixo |
 
 ### Passo 2: Fechar PRs obsoletos (substituídos por versões mais recentes)
 
@@ -53,10 +43,11 @@ Clique "Close pull request" em cada um — o código não se perde, só arquiva:
 - **#51** (fix yaml + docs antigos) → stale
 - **#52** (0.2 referral antigo) → substituído por #62
 - **#53** (docs 2026-08-17) → stale
-- **#57** (fix referral frontend) → checar se #62 já inclui; fechar se sim
+- **#57** (fix referral frontend) → substituído por #62
 - **#59** (docs 2026-08-19) → stale
 - **#60** (docs 2026-08-20) → stale
 - **#61** (fix security webhook antigo) → substituído por #62
+- **#64** (docs 2026-08-22) → substituído por este PR (#66)
 
 ### Passo 3: Decidir sobre PRs restantes
 
@@ -64,14 +55,13 @@ Clique "Close pull request" em cada um — o código não se perde, só arquiva:
 - **#19** (1.4 empregos) → revisar e mergear se aprovado
 - **#20** (1.5 moradia) → revisar e mergear se aprovado
 - **#54** (email confirmation) → ver Decisão D-002 abaixo
-- **#63** (testes de segurança) → revisar e mergear se aprovado
 
 ---
 
 ## Decisões Pendentes
 
 ### [2026-08-23] D-001: Processo de revisão de PRs
-**Contexto:** Builder autônomo cria features de qualidade, mas sem revisão do dono nenhuma chega ao main. 13+ dias sem merge gera trabalho que se acumula e perde valor.
+**Contexto:** Builder autônomo cria features de qualidade, mas sem revisão do dono nenhuma chega ao main. 14+ dias sem merge gera trabalho que se acumula e perde valor.
 **Pergunta:** Como você quer gerenciar o fluxo de revisão daqui pra frente?
 **Opções:**
 - **A**: Você revisa e merga 1x/semana em horário fixo (ex: sábado de manhã — 30 min)
@@ -95,10 +85,11 @@ Clique "Close pull request" em cada um — o código não se perde, só arquiva:
 
 | Data | O que foi feito |
 |------|----------------|
+| 2026-08-24 | Auditoria profunda de `main.py` vs PR #62: **confirmada vulnerabilidade** em `/webhook/group` (sem verificação de Client-Token Z-API). PR #62 já corrige — é o único PR que fecha essa falha. Nenhum bug adicional encontrado. Nenhuma feature nova criada; criar mais PRs sobre 26 não revisados seria contraproducente. |
 | 2026-08-23 | Auditoria de estado completa: leitura de main.py, mapeamento de 25 PRs, ROADMAP + DECISOES atualizados com estado real. Sem feature nova (acumular mais PRs seria contraproducente). |
 | 2026-08-22 | PR #64 (docs estado real) + PR #65 (ZIP search Fase 1.2) |
 | 2026-08-10 a 2026-08-22 | PRs #56–#63: features acumuladas sem merge |
 
 ---
 
-*Atualizado em: 2026-08-23*
+*Atualizado em: 2026-08-24*
