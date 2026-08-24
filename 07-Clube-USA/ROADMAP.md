@@ -6,9 +6,20 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
+- [~] **0.1** Cadastro + perfil mínimo + email confirmado
+  - ✅ Cadastro por telefone com OTP WhatsApp implementado
+  - ✅ Perfil mínimo (`/member/profile`) implementado
+  - ⏳ Confirmação de email: aguarda decisão sobre provedor (ver DECISOES.md #2026-08-24-email-provider)
+- [x] **0.2** Sistema de REFERRAL rastreável
+  - ✅ `referral_code` único por membro gerado automaticamente
+  - ✅ Atribuição via `referred_by` + tabela `referrals`
+  - ✅ Link `{APP_URL}?ref={code}` retornado em `/member/referral`
+  - ✅ Pontos atribuídos ao indicador; milestone de 3 indicações = trial VIP 30 dias
+  - Nota: URL no formato `?ref=CODE` (não `/i/slug`). Mudança de formato = DECISOES.md se quiser slug personalizado.
+- [x] **0.3** Analytics básico
+  - ✅ `GET /admin/analytics?days=30` — série temporal de cadastros, logins e referrals por dia
+  - ✅ Distribuição de planos, taxa de indicação, top-5 estados
+  - ✅ 4 testes automatizados cobrindo estrutura, séries, taxa e DB vazio
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
 ---
@@ -66,4 +77,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-08-24*

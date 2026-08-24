@@ -1,7 +1,7 @@
 import os
 import logging
-from datetime import datetime, timedelta, timezone
-from collections import Counter
+from datetime import datetime, date, timedelta, timezone
+from collections import Counter, defaultdict
 
 log = logging.getLogger("admin_service")
 
@@ -55,6 +55,96 @@ def get_metrics() -> dict:
         "deals":      {"pending": pending, "approved": approved, "sent_this_week": sent_week},
         "engagement": {"clicks_this_week": len(clicks_week), "top_category": top_cat},
         "alerts":     {"active": alerts_active, "triggered_this_week": alerts_week},
+    }
+
+
+def get_analytics(days: int = 30) -> dict:
+    """
+    Série temporal de métricas chave para os últimos N dias.
+    Consulta tabelas existentes — sem schema extra (ok até ~100k membros).
+    """
+    sb = _supabase()
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(days=days)).isoformat()
+
+    # ---- cadastros por dia ----
+    members_raw = sb.table("members").select("created_at,referred_by,state,plan").execute().data
+
+    reg_by_day: dict = defaultdict(int)
+    ref_by_day: dict = defaultdict(int)
+    total_with_referrer = 0
+    state_counter: Counter = Counter()
+    plan_counter: Counter = Counter()
+
+    for m in members_raw:
+        created = m.get("created_at", "")
+        if created >= since:
+            day = created[:10]
+            reg_by_day[day] += 1
+            if m.get("referred_by"):
+                ref_by_day[day] += 1
+        if m.get("referred_by"):
+            total_with_referrer += 1
+        if m.get("state"):
+            state_counter[m["state"]] += 1
+        plan_counter[m.get("plan", "free")] += 1
+
+    total_members = len(members_raw)
+    referral_rate = round(total_with_referrer / total_members * 100, 1) if total_members else 0.0
+
+    # ---- logins por dia (via audit_logs) ----
+    login_raw = (
+        sb.table("audit_logs")
+        .select("created_at")
+        .eq("action", "member.login")
+        .gte("created_at", since)
+        .execute()
+        .data
+    )
+    login_by_day: dict = defaultdict(int)
+    for row in login_raw:
+        day = (row.get("created_at") or "")[:10]
+        if day:
+            login_by_day[day] += 1
+
+    # ---- referrals confirmados por dia ----
+    refs_raw = (
+        sb.table("referrals")
+        .select("created_at")
+        .gte("created_at", since)
+        .execute()
+        .data
+    )
+    referrals_by_day: dict = defaultdict(int)
+    for row in refs_raw:
+        day = (row.get("created_at") or "")[:10]
+        if day:
+            referrals_by_day[day] += 1
+
+    # ---- preenche série completa de datas (sem lacunas) ----
+    date_series = [
+        (now - timedelta(days=i)).strftime("%Y-%m-%d")
+        for i in range(days - 1, -1, -1)
+    ]
+    registrations_series = [
+        {"date": d, "count": reg_by_day.get(d, 0)} for d in date_series
+    ]
+    logins_series = [
+        {"date": d, "count": login_by_day.get(d, 0)} for d in date_series
+    ]
+    referrals_series = [
+        {"date": d, "count": referrals_by_day.get(d, 0)} for d in date_series
+    ]
+
+    return {
+        "period_days":         days,
+        "total_members":       total_members,
+        "referral_rate_pct":   referral_rate,
+        "plan_distribution":   dict(plan_counter),
+        "top_states":          state_counter.most_common(5),
+        "registrations_by_day": registrations_series,
+        "logins_by_day":        logins_series,
+        "referrals_by_day":     referrals_series,
     }
 
 
