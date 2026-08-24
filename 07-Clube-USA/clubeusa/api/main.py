@@ -32,6 +32,12 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  POST /business                — cadastrar empresa
+#  GET  /business/profile        — perfil da empresa (dono)
+#  PATCH /business/profile       — atualizar empresa (dono)
+#  GET  /business/directory      — diretorio publico (sem auth)
+#  POST /business/subscribe      — assinar premium da empresa
+#  POST /business/portal         — portal billing da empresa
 # ============================================================
 
 import hmac
@@ -52,14 +58,16 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.business import router as business_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
 
 # Stripe
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-STRIPE_VIP_PRICE_ID   = os.environ.get("STRIPE_VIP_PRICE_ID", "")   # $4.99/mes
+STRIPE_WEBHOOK_SECRET    = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_VIP_PRICE_ID      = os.environ.get("STRIPE_VIP_PRICE_ID", "")        # $4.99/mes
+STRIPE_BUSINESS_PRICE_ID = os.environ.get("STRIPE_BUSINESS_PRICE_ID", "")   # $10-30/mes
 APP_URL = os.environ.get("APP_URL", "https://clubeusa.com")
 
 
@@ -83,6 +91,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(business_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -107,7 +116,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_CORS_ORIGINS,
     allow_credentials=_CORS_ORIGINS != ["*"],  # browser rejects credentials=true with wildcard origin
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "DELETE", "PATCH"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -611,7 +620,7 @@ async def billing_portal(member: dict = Depends(get_current_member)):
 async def stripe_webhook(request: Request):
     """
     Webhook Stripe — processa eventos de pagamento.
-    Ativa/desativa VIP automaticamente.
+    Ativa/desativa VIP e plano premium de empresa automaticamente.
     DEVE ser chamado pelo Stripe, nao pelo frontend.
     """
     payload   = await request.body()
@@ -641,10 +650,42 @@ async def stripe_webhook(request: Request):
 #  HELPERS STRIPE
 # ============================================================
 
+def _activate_business_premium(business_id: str, customer_id: str):
+    """Ativa plano premium de empresa apos pagamento confirmado."""
+    from supabase import create_client
+    from datetime import datetime, timedelta
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+
+    sb.table("businesses").update({
+        "plan":               "premium",
+        "premium_started_at": datetime.utcnow().isoformat(),
+        "premium_expires_at": (datetime.utcnow() + timedelta(days=32)).isoformat(),
+        "stripe_customer_id": customer_id,
+    }).eq("id", business_id).execute()
+
+    sb.table("audit_logs").insert({
+        "actor_type":  "system",
+        "action":      "business.premium_activated",
+        "target_type": "business",
+        "target_id":   business_id,
+        "metadata":    {"stripe_customer_id": customer_id},
+    }).execute()
+
+    log.info(f"Business premium ativado para empresa {business_id}")
+
+
 def _handle_checkout_completed(session: dict):
-    """Ativa VIP apos pagamento confirmado."""
-    member_id   = session.get("metadata", {}).get("member_id")
+    """Ativa VIP ou premium de empresa apos pagamento confirmado."""
+    metadata    = session.get("metadata", {})
     customer_id = session.get("customer")
+
+    # Checkout de empresa tem precedencia
+    business_id = metadata.get("business_id")
+    if business_id:
+        _activate_business_premium(business_id, customer_id)
+        return
+
+    member_id = metadata.get("member_id")
     if not member_id:
         return
 
@@ -679,7 +720,7 @@ def _handle_checkout_completed(session: dict):
 
 
 def _handle_subscription_cancelled(subscription: dict):
-    """Cancela VIP quando assinatura e cancelada."""
+    """Cancela VIP ou premium de empresa quando assinatura e cancelada."""
     customer_id = subscription.get("customer")
     if not customer_id:
         return
@@ -687,6 +728,22 @@ def _handle_subscription_cancelled(subscription: dict):
     from supabase import create_client
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
+    # Tenta localizar empresa com este customer_id
+    biz_result = sb.table("businesses").select("id").eq("stripe_customer_id", customer_id).execute()
+    if biz_result.data:
+        business_id = biz_result.data[0]["id"]
+        sb.table("businesses").update({"plan": "free"}).eq("id", business_id).execute()
+        sb.table("audit_logs").insert({
+            "actor_type":  "system",
+            "action":      "business.premium_cancelled",
+            "target_type": "business",
+            "target_id":   business_id,
+            "metadata":    {"stripe_customer_id": customer_id},
+        }).execute()
+        log.info(f"Business premium cancelado para empresa {business_id}")
+        return
+
+    # Fallback: verifica membro VIP
     result = sb.table("members").select("id").eq("stripe_customer_id", customer_id).execute()
     if not result.data:
         return
