@@ -59,6 +59,71 @@ def get_metrics() -> dict:
 
 
 # ============================================================
+#  ANALYTICS DIARIO
+# ============================================================
+
+def get_daily_analytics(days: int = 30) -> dict:
+    """
+    Cadastros por dia nos ultimos N dias, taxa de conversao via indicacao,
+    e top 5 indicadores do periodo.
+    Queries apenas nas tabelas existentes — sem dependencia externa.
+    """
+    sb = _supabase()
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(days=days)).isoformat()
+
+    members = (
+        sb.table("members")
+        .select("id,created_at,referred_by,plan")
+        .gte("created_at", since)
+        .execute()
+        .data
+    )
+
+    from collections import defaultdict
+    daily: dict = defaultdict(lambda: {"total": 0, "via_referral": 0, "vip": 0})
+    for m in members:
+        day = m["created_at"][:10]
+        daily[day]["total"] += 1
+        if m.get("referred_by"):
+            daily[day]["via_referral"] += 1
+        if m.get("plan") == "vip":
+            daily[day]["vip"] += 1
+
+    total = len(members)
+    via_referral = sum(1 for m in members if m.get("referred_by"))
+    referral_rate = round(via_referral / total * 100, 1) if total else 0.0
+
+    referrals = (
+        sb.table("referrals")
+        .select("referrer_id,created_at")
+        .gte("created_at", since)
+        .eq("status", "confirmed")
+        .execute()
+        .data
+    )
+    referrer_counts = Counter(r["referrer_id"] for r in referrals)
+    top_referrers = [
+        {"member_id": mid, "referrals": cnt}
+        for mid, cnt in referrer_counts.most_common(5)
+    ]
+
+    return {
+        "period_days": days,
+        "totals": {
+            "registrations": total,
+            "via_referral": via_referral,
+            "referral_rate_pct": referral_rate,
+        },
+        "daily": [
+            {"date": d, **counts}
+            for d, counts in sorted(daily.items())
+        ],
+        "top_referrers": top_referrers,
+    }
+
+
+# ============================================================
 #  MEMBROS
 # ============================================================
 

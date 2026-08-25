@@ -15,6 +15,7 @@
 #  POST /billing/portal       — portal de gestao da assinatura
 #  POST /billing/webhook      — webhook Stripe (pagamento confirmado)
 #  GET  /public/groups        — 2 grupos WhatsApp ativos (sem auth)
+#  GET  /i/{code}             — redirect de link de indicacao (sem auth)
 #  POST /webhook/group        — webhook Z-API entradas/saidas de grupo
 #  GET  /health               — health check
 #  POST /alerts              — criar alerta de preco (plano pago)
@@ -23,6 +24,7 @@
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
+#  GET  /admin/analytics/daily   — cadastros por dia + funil indicacao (admin)
 #  GET  /admin/members           — lista membros (admin)
 #  GET  /admin/members/{id}      — perfil completo (admin)
 #  POST /admin/members/{id}/status — alterar status (admin)
@@ -44,7 +46,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -478,7 +480,7 @@ async def get_referral(member: dict = Depends(get_current_member)):
         raise HTTPException(status_code=404)
 
     m = result.data[0]
-    referral_link = f"{APP_URL}?ref={m['referral_code']}"
+    referral_link = f"{APP_URL}/i/{m['referral_code']}"
 
     # Historico de indicacoes
     refs = sb.table("referrals").select(
@@ -818,6 +820,24 @@ async def public_groups():
 
 
 # ============================================================
+#  ROTA PUBLICA — LINK CURTO DE INDICACAO
+# ============================================================
+
+@app.get("/i/{referral_code}", include_in_schema=False)
+async def referral_redirect(referral_code: str):
+    """
+    Link curto de indicacao: clubeusa.com/i/JOAO -> cadastro com ref pre-preenchido.
+    Publico. Sempre redireciona — nao valida existencia do codigo (nao vaza info).
+    A validacao real acontece em /auth/register.
+    """
+    import re
+    code = re.sub(r'[^A-Z0-9]', '', referral_code.upper()[:12])
+    if not code:
+        return RedirectResponse(url="/", status_code=302)
+    return RedirectResponse(url=f"/?ref={code}", status_code=302)
+
+
+# ============================================================
 #  WEBHOOK — Z-API (entradas e saidas de membros no grupo)
 # ============================================================
 
@@ -859,7 +879,7 @@ async def group_webhook(request: Request):
             "is_full":      is_full,
         }).eq("id", group["id"]).execute()
 
-        log.info(f"Webhook grupo {group_id_zapi}: {event_type} → count={new_count}")
+        log.info(f"Webhook grupo {group_id_zapi}: {event_type} -> count={new_count}")
     except Exception as e:
         log.error(f"Erro webhook grupo: {e}")
 
@@ -1013,6 +1033,13 @@ async def admin_panel():
 async def admin_metrics(_=Depends(require_admin)):
     from services.admin_service import get_metrics
     return get_metrics()
+
+
+@app.get("/admin/analytics/daily")
+async def admin_daily_analytics(_=Depends(require_admin)):
+    """Cadastros por dia, taxa de conversao via indicacao, top indicadores (ultimos 30 dias)."""
+    from services.admin_service import get_daily_analytics
+    return get_daily_analytics()
 
 
 @app.get("/admin/members")
