@@ -7,8 +7,13 @@
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
 - [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
+  - Cadastro por WhatsApp OTP ✅ | Email confirmado: ver DECISOES.md (pendente dono)
+- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/JOAO + atribuição de qual cadastro veio de qual link)
+  - Backend completo: schema (referral_code, referred_by, referrals table), atribuição no cadastro, pontos, milestone VIP 3 indicações, `/member/referral` endpoint ✅
+  - Link curto `/i/{code}` → redirect para `/?ref=CODE` ✅ (2026-08-25)
+- [x] **0.3** Analytics básico
+  - `/admin/metrics`: total membros, VIP, novos na semana, clicks, deals ✅
+  - `/admin/analytics/daily`: cadastros por dia, taxa de conversão via indicação, top indicadores (últimos 30 dias) ✅ (2026-08-25)
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
 ---
@@ -66,4 +71,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-08-25*
