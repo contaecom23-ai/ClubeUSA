@@ -15,6 +15,7 @@
 #  POST /billing/portal       — portal de gestao da assinatura
 #  POST /billing/webhook      — webhook Stripe (pagamento confirmado)
 #  GET  /public/groups        — 2 grupos WhatsApp ativos (sem auth)
+#  GET  /i/{code}             — link curto de indicacao (sem auth)
 #  POST /webhook/group        — webhook Z-API entradas/saidas de grupo
 #  GET  /health               — health check
 #  POST /alerts              — criar alerta de preco (plano pago)
@@ -212,7 +213,7 @@ class AlertCreate(BaseModel):
     def validate_asin(cls, v):
         import re
         if not re.match(r'^[A-Z0-9]{10}$', v.strip().upper()):
-            raise ValueError("ASIN inválido. Deve ter 10 caracteres alfanuméricos.")
+            raise ValueError("ASIN invalido. Deve ter 10 caracteres alfanumericos.")
         return v.strip().upper()
 
 
@@ -247,7 +248,7 @@ class StatusUpdate(BaseModel):
     @classmethod
     def validate_status(cls, v):
         if v not in ("active", "inactive", "banned"):
-            raise ValueError("Status inválido. Use: active, inactive, banned.")
+            raise ValueError("Status invalido. Use: active, inactive, banned.")
         return v
 
 
@@ -478,7 +479,7 @@ async def get_referral(member: dict = Depends(get_current_member)):
         raise HTTPException(status_code=404)
 
     m = result.data[0]
-    referral_link = f"{APP_URL}?ref={m['referral_code']}"
+    referral_link = f"{APP_URL}/i/{m['referral_code']}"
 
     # Historico de indicacoes
     refs = sb.table("referrals").select(
@@ -818,6 +819,46 @@ async def public_groups():
 
 
 # ============================================================
+#  ROTA — LINK DE INDICACAO (publico, sem auth)
+# ============================================================
+
+@app.get("/i/{code}", include_in_schema=False)
+async def referral_redirect(code: str):
+    """
+    Link curto de indicacao: clubeusa.com/i/CODIGO
+    Valida o codigo, seta cookie ref= (30 dias) e redireciona para /?ref=CODE.
+    Cookie httponly=False para que o JS leia e envie no cadastro posterior.
+    """
+    import re
+    from fastapi.responses import RedirectResponse
+
+    code = code.strip().upper()
+    if not re.match(r"^[A-Z0-9]{4,12}$", code):
+        return RedirectResponse(url="/", status_code=302)
+
+    if os.environ.get("SUPABASE_URL"):
+        try:
+            from supabase import create_client
+            sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+            result = sb.table("members").select("id").eq("referral_code", code).execute()
+            if not result.data:
+                return RedirectResponse(url="/", status_code=302)
+        except Exception as e:
+            log.warning(f"Erro ao validar referral code {code}: {e}")
+
+    response = RedirectResponse(url=f"/?ref={code}", status_code=302)
+    response.set_cookie(
+        key="ref",
+        value=code,
+        max_age=30 * 24 * 3600,
+        samesite="lax",
+        httponly=False,
+        secure=os.environ.get("ENVIRONMENT") == "production",
+    )
+    return response
+
+
+# ============================================================
 #  WEBHOOK — Z-API (entradas e saidas de membros no grupo)
 # ============================================================
 
@@ -859,7 +900,7 @@ async def group_webhook(request: Request):
             "is_full":      is_full,
         }).eq("id", group["id"]).execute()
 
-        log.info(f"Webhook grupo {group_id_zapi}: {event_type} → count={new_count}")
+        log.info(f"Webhook grupo {group_id_zapi}: {event_type} -> count={new_count}")
     except Exception as e:
         log.error(f"Erro webhook grupo: {e}")
 
@@ -912,7 +953,7 @@ async def cancel_alert(alert_id: str, member: dict = Depends(require_paid_plan))
     from services.alert_service import cancel_alert as svc_cancel
     found = svc_cancel(alert_id, member["sub"])
     if not found:
-        raise HTTPException(status_code=404, detail="Alerta não encontrado.")
+        raise HTTPException(status_code=404, detail="Alerta nao encontrado.")
 
 
 @app.post("/alerts/from-link", status_code=201)
@@ -955,7 +996,7 @@ async def get_tracked_product_route(tracked_id: str, member: dict = Depends(requ
     from services.tracked_product_service import get_tracked_product
     result = get_tracked_product(tracked_id, member["sub"])
     if not result:
-        raise HTTPException(status_code=404, detail="Produto rastreado não encontrado.")
+        raise HTTPException(status_code=404, detail="Produto rastreado nao encontrado.")
     return result
 
 
@@ -965,7 +1006,7 @@ async def cancel_tracked_product_route(tracked_id: str, member: dict = Depends(r
     from services.tracked_product_service import cancel_tracked_product
     found = cancel_tracked_product(tracked_id, member["sub"])
     if not found:
-        raise HTTPException(status_code=404, detail="Produto rastreado não encontrado.")
+        raise HTTPException(status_code=404, detail="Produto rastreado nao encontrado.")
 
 
 def _send_otp_whatsapp(phone: str, otp: str):
@@ -1030,7 +1071,7 @@ async def admin_get_member(member_id: str, _=Depends(require_admin)):
     from services.admin_service import get_member
     m = get_member(member_id)
     if not m:
-        raise HTTPException(status_code=404, detail="Membro não encontrado.")
+        raise HTTPException(status_code=404, detail="Membro nao encontrado.")
     return m
 
 
@@ -1042,7 +1083,7 @@ async def admin_set_member_status(
     try:
         found = set_member_status(member_id, body.status)
         if not found:
-            raise HTTPException(status_code=404, detail="Membro não encontrado.")
+            raise HTTPException(status_code=404, detail="Membro nao encontrado.")
         return {"ok": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1058,7 +1099,7 @@ async def admin_list_deals(status: str = None, _=Depends(require_admin)):
 async def admin_approve_deal(deal_id: str, _=Depends(require_admin)):
     from services.admin_service import approve_deal
     if not approve_deal(deal_id):
-        raise HTTPException(status_code=404, detail="Deal não encontrado.")
+        raise HTTPException(status_code=404, detail="Deal nao encontrado.")
     return {"ok": True}
 
 
@@ -1066,7 +1107,7 @@ async def admin_approve_deal(deal_id: str, _=Depends(require_admin)):
 async def admin_reject_deal(deal_id: str, _=Depends(require_admin)):
     from services.admin_service import reject_deal
     if not reject_deal(deal_id):
-        raise HTTPException(status_code=404, detail="Deal não encontrado.")
+        raise HTTPException(status_code=404, detail="Deal nao encontrado.")
     return {"ok": True}
 
 
