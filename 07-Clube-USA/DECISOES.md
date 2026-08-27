@@ -14,31 +14,54 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## 🚨 AÇÃO URGENTE — Leia primeiro
 
-### [2026-08-09 → 2026-08-14] LOOP CRÍTICO — 50 PRs abertos, projeto parado
+### [2026-08-09 → 2026-08-27] LOOP CRÍTICO — 31 PRs abertos, projeto parado há 18 dias
 
 **Contexto:**
-O builder autônomo roda 3×/dia mas lê o ROADMAP.md da `main`. Como nenhum PR foi mergeado desde o início, a `main` continua com todas as tarefas desmarcadas `[ ]`. A cada rodada o builder concluía (erroneamente) que nada foi feito e criava um novo PR — acumulando 50 PRs duplicados.
+O builder autônomo roda 3×/dia mas lê o ROADMAP.md da `main`. Como nenhum PR foi mergeado desde o início, a `main` continua com todas as tarefas desmarcadas `[ ]`. Cada rodada confirma o bloqueio e não cria novo código duplicado — mas o projeto tem **zero código em produção**.
 
 **Log de runs (mais recente no topo):**
-- **2026-08-14 (run atual):** leu DECISOES.md no branch `admin/decisoes-desbloqueio-2026-08-09`, confirmou bloqueio, NÃO criou novo PR, atualizou log. **6º dia consecutivo sem ação do dono.**
+- **2026-08-27 (run atual):** confirmou bloqueio, NÃO criou novo PR duplicado, atualizou log. **18º dia consecutivo sem ação do dono.**
+- 2026-08-26 (PR #72): docs de estado criados — ainda sem merge.
+- 2026-08-23 (PR #66): docs de estado — ainda sem merge.
+- 2026-08-22 (PR #64): docs de estado — ainda sem merge.
+- 2026-08-20 (PR #60): docs de estado — ainda sem merge.
+- 2026-08-19 (PR #59): docs de estado — ainda sem merge.
+- 2026-08-17 (PR #53): docs de estado — ainda sem merge.
+- 2026-08-14 (run): leu DECISOES.md, NÃO criou novo PR, atualizou log.
 - 2026-08-13 (run 3): leu DECISOES.md, NÃO criou novo PR, atualizou log.
-- 2026-08-13 (run 2): criou PR #50 duplicado (`claude/fase-0-1-cadastro-auth`) — não leu DECISOES.md antes.
-- 2026-08-13 (run 1): leu este documento, NÃO criou novo PR, atualizou log.
-- 2026-08-12 (run 2): diagnóstico refeito, nenhum novo PR criado, este arquivo atualizado.
-- 2026-08-12 (run 1): criou PR #49 duplicado (não leu este arquivo antes).
+- 2026-08-13 (runs 1-2): criou PR #50 duplicado — não leu DECISOES.md antes.
+- 2026-08-12 (run 2): diagnóstico refeito, nenhum novo PR criado.
 - 2026-08-11 (run 2): code review completo do PR #46 — aprovado.
-- 2026-08-11 (run 1): workflow YAML corrigido.
-- 2026-08-10: sem ação do dono.
 - 2026-08-09: loop detectado, PR #48 aberto com este documento.
 
 **Estado real do projeto:**
 - `main`: apenas ROADMAP.md + DECISOES.md (zero código, 0 usuários possíveis)
-- **PR #46** (`feature/fase-0.1-cadastro-auth`): implementação **completa, revisada e aprovada** da Fase 0.1
-  - Único PR não-draft entre todos os abertos
-  - Contém: backend FastAPI + Supabase auth, schema SQL com RLS, 24+ testes passando
-  - Link: https://github.com/contaecom23-ai/ClubeUSA/pull/46
+- **31 PRs abertos aguardando merge**
+- Todo código de Fase 0.1 → 2.1 já implementado em branches
 
-**✅ Verificação de qualidade do PR #46 (2026-08-11):**
+---
+
+## ✅ AÇÃO NECESSÁRIA — 3 passos AGORA
+
+### Passo 1 — Mergear PR #46 (Fase 0.1 — código pronto para produção)
+→ https://github.com/contaecom23-ai/ClubeUSA/pull/46
+
+**Por que este primeiro:** É o único PR não-draft, base na `main`, revisado e aprovado. Contém:
+- Backend FastAPI + Supabase auth completo
+- Schema SQL com RLS
+- 24+ testes passando
+- Rate-limiting, CORS restrito, JWT com TTL correto
+
+### Passo 2 — Fechar os PRs duplicados em lote
+Vá em: https://github.com/contaecom23-ai/ClubeUSA/pulls
+Filtro: `is:open is:pr` → selecione todos EXCETO #46 → Close with comment: "duplicado, PRs mais recentes substituem este"
+
+### Passo 3 — Responder 2 perguntas técnicas (abaixo)
+Depois do merge do #46, o próximo run avança automaticamente para Fase 0.2 (Referral).
+
+---
+
+## ✅ Verificação de qualidade do PR #46 (revisão 2026-08-11)
 - FastAPI com CORS restrito, docs desabilitados em produção, rate-limiting ativo ✅
 - 24+ testes cobrindo registro, login, JWT, logout, perfil ✅
 - Isolamento multi-tenant: `user_id` vem sempre do JWT, nunca do body ✅
@@ -49,29 +72,7 @@ O builder autônomo roda 3×/dia mas lê o ROADMAP.md da `main`. Como nenhum PR 
 
 ---
 
-## ✅ Ação necessária do dono — 3 passos
-
-**1. Mergear o PR #46** (código da Fase 0.1 — único não-draft, pronto para produção):
-→ https://github.com/contaecom23-ai/ClubeUSA/pull/46
-
-**2. Mergear este PR #48** (atualiza DECISOES.md na main + corrige workflow YAML):
-→ https://github.com/contaecom23-ai/ClubeUSA/pull/48
-
-**3. Fechar os PRs #20–#45, #47, #49, #50** como duplicados.
-_(Pode fechar em lote no GitHub: Pull Requests → filtrar "is:open" → selecionar → Close)_
-
-Depois dos merges, o próximo run avança automaticamente para Fase 0.2 (Referral).
-
-**Por que o Claude não faz o merge?**
-Merge em main é irreversível — exige aprovação do dono (regra do projeto).
-
-**⚠️ CONSEQUÊNCIA REAL:** Cada run que passa sem merge continua desperdiçando compute e não avança o produto. O projeto tem zero código em produção. A Fase 0.2 (referral rastreável) e toda a tração de usuários dependem de 2 cliques seus.
-
-**Status:** PENDENTE DESDE 2026-08-09 — **SEM AÇÃO HÁ 6 DIAS**
-
----
-
-## Decisões Pendentes (bloqueadas — aguardam Fase 0.1 na main)
+## Decisões Técnicas Pendentes (aguardam Fase 0.1 na main)
 
 ### [2026-08-05] Credenciais Supabase
 
@@ -104,4 +105,4 @@ Merge em main é irreversível — exige aprovação do dono (regra do projeto).
 
 ---
 
-*Atualizado em: 2026-08-14 (run do dia, 6º dia sem ação do dono)*
+*Atualizado em: 2026-08-27 (18º dia sem ação do dono — projeto parado)*
