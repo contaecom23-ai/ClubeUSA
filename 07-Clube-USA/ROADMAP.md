@@ -4,6 +4,29 @@
 
 ---
 
+## ⚠️ ESTADO REAL — 2026-08-28
+
+**0 itens concluídos no main. 31 PRs abertos sem merge.**
+
+O agente autônomo rodou por semanas, mas nenhum PR foi mergeado. O código existe nas branches, não na main. Ver `DECISOES.md` para ação necessária.
+
+| Item | main | PRs disponíveis |
+|------|------|-----------------|
+| 0.1 Cadastro + email | ❌ | PR #46 (pronto), #54, #62 |
+| 0.2 Referral rastreável | ❌ | PR #52, #57, #70 |
+| 0.3 Analytics básico | ❌ | PR #55, #67, #70 |
+| 0.4 Cadastro válido + anti-fraude | ❌ | PR #5, #58, #62 |
+| 1.1 Promoções/Achados | ❌ | PR #12 |
+| 1.2 Busca ZIP + raio | ❌ | PR #14, #65 |
+| 1.3 Influenciadores | ❌ | PR #16 |
+| 1.4 Empregos | ❌ | PR #19 |
+| 1.5 Moradia | ❌ | PR #20 |
+| 2.1 Assinatura empresas | ❌ | PR #68 |
+
+**Ação necessária: mergear PR #46 → libera a cascata inteira.**
+
+---
+
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
 - [ ] **0.1** Cadastro + perfil mínimo + email confirmado
@@ -20,7 +43,6 @@
 - [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
 - [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
 - [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
-- [x] **1.6** Rastreador de preço de produto — membro cola o link de um produto (Amazon/Walmart/BestBuy), vê o histórico de preço e ofertas cruzadas nos outros marketplaces, cupons verificados automaticamente (Playwright) com selo confirmado/não confirmado, e recebe alerta quando o preço cai (recheck a cada 6h)
 
 ---
 
@@ -66,4 +88,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-08-28*
