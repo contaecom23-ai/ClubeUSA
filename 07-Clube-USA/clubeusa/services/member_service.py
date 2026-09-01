@@ -84,16 +84,16 @@ def register_member(
     # 2. Verificar duplicata por hash (sem expor dados)
     sb = _supabase()
     phone_hash = hash_pii(phone)
-    existing = sb.table("members").select("id,status").eq("phone_hash", phone_hash).execute()
+    existing = sb.table("members").select("id,status,plan").eq("phone_hash", phone_hash).execute()
 
     if existing.data:
         member = existing.data[0]
         if member["status"] == "banned":
             raise PermissionError("Acesso negado.")
         # Membro ja existe — retorna token sem criar novo
-        token = create_token(member["id"])
+        token = create_token(member["id"], member.get("plan", "free"))
         _audit("member.login", member["id"], ip=ip)
-        return {"action": "login", "member_id": member["id"], "token": token}
+        return {"action": "login", "member_id": member["id"], "token": token, "plan": member.get("plan", "free")}
 
     # 3. Resolver indicacao
     referred_by = None
