@@ -67,8 +67,31 @@ APP_URL = os.environ.get("APP_URL", "https://clubeusa.com")
 #  APP
 # ============================================================
 
+def _validate_env():
+    """Valida variáveis de ambiente críticas em produção e emite warnings."""
+    if os.environ.get("ENVIRONMENT") != "production":
+        return
+    missing = []
+    # Z-API é sempre necessário para envio de OTP via WhatsApp, independente do MESSENGER
+    for key in ("ZAPI_INSTANCE", "ZAPI_TOKEN", "ZAPI_CLIENT_TOKEN"):
+        if not os.environ.get(key):
+            missing.append(key)
+    if missing:
+        log.critical(
+            "CONFIGURACAO INCOMPLETA: variáveis Z-API ausentes: %s. "
+            "OTP de login nao sera entregue — usuarios nao conseguirao fazer login. "
+            "Z-API é sempre necessário para autenticacao por WhatsApp, "
+            "independente do valor de MESSENGER. Veja SETUP_PENDENTE.md.",
+            ", ".join(missing),
+        )
+    for key in ("SUPABASE_URL", "SUPABASE_SERVICE_KEY", "JWT_SECRET", "ENCRYPTION_KEY", "ADMIN_SECRET"):
+        if not os.environ.get(key):
+            log.error("Variavel obrigatoria ausente: %s", key)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _validate_env()
     log.info("Clube USA API iniciando...")
     yield
     log.info("Clube USA API encerrando...")
