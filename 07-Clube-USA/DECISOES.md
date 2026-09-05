@@ -2,7 +2,7 @@
 
 > Fila de decisões que dependem do dono do produto (você).
 > Claude NÃO age em itens desta lista sem sua aprovação explícita.
-> **Atualizado em: 2026-09-05** (2ª rodada sem resposta — projeto parado há +30 dias)
+> **Atualizado em: 2026-09-05** (3ª rodada sem resposta — projeto parado há +30 dias)
 
 ---
 
@@ -10,7 +10,7 @@
 
 **31 PRs abertos, NENHUM mergeado. O projeto está parado.**
 
-O Claude rodou 2 sessões seguidas (2026-09-04 e 2026-09-05) sem nada novo para fazer além de registrar este bloqueio. Criar mais PRs não resolve — o problema é decisão, não código.
+O Claude rodou 3 sessões seguidas (2026-09-04 e 2 sessões em 2026-09-05) sem nada novo para fazer além de registrar este bloqueio. Criar mais PRs não resolve — o problema é decisão, não código.
 
 **O que existe e está esperando:**
 - PR #62 ← **NÃO É DRAFT** — consolida 0.2+0.3+segurança, marcado como "PRONTO PARA MERGE"
@@ -54,7 +54,7 @@ Como você quer lidar com os PRs acumulados?
 
 **Recomendação do Claude:** **Opção A** (merge seletivo dos 4 PRs críticos). É o caminho mais rápido para ter features reais em produção sem risco.
 
-**Status:** PENDENTE — 2ª sessão sem resposta (2026-09-05)
+**Status:** PENDENTE — 3ª sessão sem resposta (2026-09-05)
 
 ---
 
@@ -112,4 +112,4 @@ Ou responda aqui na sessão do Claude diretamente.
 
 ---
 
-*Atualizado em: 2026-09-05 | PR #81 | Sessão: https://claude.ai/code/session_01MbnZNepTJAnywiNKVCVauH*
+*Atualizado em: 2026-09-05 (3ª sessão) | PR #81*
