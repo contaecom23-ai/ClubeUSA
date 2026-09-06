@@ -36,6 +36,7 @@
 
 import hmac
 import os
+import re
 import logging
 import subprocess
 import sys
@@ -44,7 +45,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -478,7 +479,7 @@ async def get_referral(member: dict = Depends(get_current_member)):
         raise HTTPException(status_code=404)
 
     m = result.data[0]
-    referral_link = f"{APP_URL}?ref={m['referral_code']}"
+    referral_link = f"{APP_URL}/i/{m['referral_code']}"
 
     # Historico de indicacoes
     refs = sb.table("referrals").select(
@@ -986,6 +987,32 @@ def _send_otp_whatsapp(phone: str, otp: str):
 # ============================================================
 #  ROTAS — FRONTEND (serve o site)
 # ============================================================
+
+_REFERRAL_CODE_RE = re.compile(r'^[A-Z0-9]{4,12}$')
+
+
+@app.get("/i/{referral_code}", include_in_schema=False)
+async def referral_redirect(referral_code: str):
+    """
+    Link de indicação rastreável: clubeusa.com/i/ABCD1234
+    Redireciona para a home com ?ref= e seta cookie de 7 dias como backup.
+    Valida formato mas NÃO consulta o banco — a atribuição ocorre no /auth/register.
+    """
+    code = referral_code.upper()
+    if not _REFERRAL_CODE_RE.match(code):
+        return RedirectResponse("/", status_code=302)
+    response = RedirectResponse(f"/?ref={code}", status_code=302)
+    # Cookie backup: se o usuário fechar o browser e voltar, o ref é preservado
+    response.set_cookie(
+        key="clubeusa_ref",
+        value=code,
+        max_age=7 * 24 * 3600,
+        httponly=False,     # precisa ser lido pelo JS do frontend
+        samesite="lax",
+        secure=os.environ.get("ENVIRONMENT") == "production",
+    )
+    return response
+
 
 @app.get("/", include_in_schema=False)
 @app.get("/painel", include_in_schema=False)

@@ -7,7 +7,7 @@ from collections import defaultdict
 from threading import Lock
 
 JWT_ALGORITHM  = "HS256"
-JWT_EXPIRE_HRS = 24
+JWT_EXPIRE_HRS = 168  # 7 days — curto o suficiente para seguranca, longo o suficiente para nao irritar o usuario
 
 def _get_env(key):
     val = os.environ.get(key)

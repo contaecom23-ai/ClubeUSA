@@ -1512,7 +1512,10 @@ async function handlePhoneSubmit() {
   setLoading('btn-phone', true, '📲 Receber código no WhatsApp');
   try {
     if (!_isLogin) {
-      await api('POST', '/auth/register', { phone, name: name || undefined, language: 'pt' });
+      const _refCode = localStorage.getItem('clubeusa_ref') || undefined;
+      await api('POST', '/auth/register', { phone, name: name || undefined, language: 'pt', referral_code: _refCode });
+      // Limpa o código após uso para não reatribuir em cadastros futuros do mesmo browser
+      if (_refCode) localStorage.removeItem('clubeusa_ref');
     }
     await api('POST', '/auth/otp/request', { phone });
     showStep('step-otp');
@@ -1567,6 +1570,21 @@ async function showDashboard() {
   await loadProfile();
   await loadDeals();
   showAiWidget();
+
+  // Captura código de indicação da URL (?ref=CODE) e persiste no localStorage
+  const _urlRef = new URLSearchParams(window.location.search).get('ref');
+  if (_urlRef && /^[A-Z0-9]{4,12}$/i.test(_urlRef)) {
+    localStorage.setItem('clubeusa_ref', _urlRef.toUpperCase());
+    // Remove o parâmetro da URL sem recarregar (link fica limpo)
+    history.replaceState(null, '', window.location.pathname);
+  } else if (!localStorage.getItem('clubeusa_ref')) {
+    // Fallback: tenta ler do cookie setado pelo servidor em /i/{code}
+    const cookieRef = document.cookie.split(';').map(c => c.trim())
+      .find(c => c.startsWith('clubeusa_ref='));
+    if (cookieRef) {
+      localStorage.setItem('clubeusa_ref', cookieRef.split('=')[1]);
+    }
+  }
 
   // Deep link: ?article=ID abre o artigo direto
   const articleParam = new URLSearchParams(window.location.search).get('article');
