@@ -394,6 +394,73 @@ async def verify_otp(body: OTPVerify):
 
 
 # ============================================================
+#  ROTAS — CONFIRMACAO DE EMAIL (Fase 0.1)
+# ============================================================
+
+@app.post("/auth/email/confirm-request")
+async def request_email_confirmation(member: dict = Depends(get_current_member)):
+    """
+    Envia (ou reenviar) email de confirmacao para o membro autenticado.
+    Requer que o membro tenha cadastrado um email.
+    """
+    from supabase import create_client
+    from services.email_service import (
+        generate_confirmation_token, store_confirmation_token, send_confirmation_email
+    )
+    from utils.security import decrypt
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("members").select(
+        "email_enc,email_confirmed_at"
+    ).eq("id", member["sub"]).execute()
+
+    if not result.data or not result.data[0].get("email_enc"):
+        raise HTTPException(
+            status_code=400,
+            detail="Nenhum email cadastrado. Atualize seu perfil com um email."
+        )
+
+    m = result.data[0]
+    if m.get("email_confirmed_at"):
+        return {"message": "Email ja confirmado.", "already_confirmed": True}
+
+    email = decrypt(m["email_enc"])
+    raw_token, token_hash = generate_confirmation_token()
+    store_confirmation_token(member["sub"], token_hash)
+    sent = send_confirmation_email(member["sub"], email, raw_token)
+
+    if not sent and os.environ.get("ENVIRONMENT") == "production":
+        raise HTTPException(status_code=503, detail="Falha ao enviar email. Tente novamente.")
+
+    return {
+        "message": "Email de confirmacao enviado. Verifique sua caixa de entrada.",
+        "expires_in": 86400,
+    }
+
+
+@app.get("/auth/email/confirm", include_in_schema=False)
+async def confirm_email(token: str):
+    """
+    Confirma o email via token enviado no link.
+    Rota publica — chamada quando usuario clica no link do email.
+    """
+    from services.email_service import consume_confirmation_token
+
+    if not token or len(token) > 128:
+        raise HTTPException(status_code=400, detail="Token invalido.")
+
+    member_id = consume_confirmation_token(token)
+    if not member_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Token invalido, expirado ou ja utilizado."
+        )
+
+    log.info(f"Email confirmado para membro {member_id}")
+    return {"message": "Email confirmado com sucesso!", "member_id": member_id}
+
+
+# ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
 
