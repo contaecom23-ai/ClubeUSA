@@ -360,6 +360,22 @@ async def request_otp(body: OTPRequest, request: Request):
     return {"message": "Codigo enviado para seu WhatsApp.", "expires_in": 600}
 
 
+@app.get("/auth/email/confirm")
+async def confirm_email(token: str = ""):
+    """
+    Confirma email do membro via link enviado no cadastro.
+    Publico (sem auth) — o token e o mecanismo de autenticacao.
+    """
+    from services.member_service import confirm_email_token
+    try:
+        result = confirm_email_token(token)
+        if result.get("already_confirmed"):
+            return {"message": "Email ja confirmado anteriormente.", "already_confirmed": True}
+        return {"message": "Email confirmado com sucesso! Ja pode fechar esta aba.", "ok": True}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.post("/auth/otp/verify")
 async def verify_otp(body: OTPVerify):
     """Verifica OTP e retorna JWT se valido."""
@@ -992,6 +1008,7 @@ def _send_otp_whatsapp(phone: str, otp: str):
 @app.get("/vip", include_in_schema=False)
 @app.get("/vip/sucesso", include_in_schema=False)
 @app.get("/vip/cancelado", include_in_schema=False)
+@app.get("/email-confirmado", include_in_schema=False)
 async def serve_site():
     """Serve o site (platform.html) em qualquer rota do frontend."""
     html_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "platform.html")
