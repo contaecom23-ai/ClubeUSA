@@ -1105,6 +1105,10 @@ footer a:hover{color:var(--accent-l)}
         <label class="input-label">Seu nome</label>
         <input class="input-field" type="text" id="input-name" placeholder="João Silva" autocomplete="name">
       </div>
+      <div class="input-group email-field" id="email-field-wrap" style="display:none">
+        <label class="input-label">Email (opcional — para receber alertas)</label>
+        <input class="input-field" type="email" id="input-email" placeholder="joao@email.com" autocomplete="email">
+      </div>
       <div class="input-group">
         <label class="input-label">WhatsApp (com código do país)</label>
         <input class="input-field" type="tel" id="input-phone" placeholder="+1 (555) 123-4567" autocomplete="tel">
@@ -1162,6 +1166,10 @@ const APP_URL = window.location.origin;
 // ============================================================
 let _token   = localStorage.getItem('cu_token') || null;
 let _member  = JSON.parse(localStorage.getItem('cu_member') || 'null');
+
+// Captura ?ref=CODE da URL e persiste na sessao para atribuir ao cadastro
+const _refParam = new URLSearchParams(window.location.search).get('ref') || '';
+if (_refParam) sessionStorage.setItem('cu_ref', _refParam);
 let _phone   = '';
 let _isLogin = false;
 
@@ -1466,7 +1474,8 @@ function openModal(mode = 'register') {
   document.getElementById('modal-sub').textContent   = _isLogin
     ? 'Digite seu WhatsApp para receber o código de acesso'
     : 'Digite seu WhatsApp — vamos enviar um código de confirmação';
-  document.getElementById('name-field-wrap').style.display = _isLogin ? 'none' : 'block';
+  document.getElementById('name-field-wrap').style.display  = _isLogin ? 'none' : 'block';
+  document.getElementById('email-field-wrap').style.display = _isLogin ? 'none' : 'block';
   showStep('step-phone');
   clearErrors();
   document.getElementById('auth-modal').classList.add('open');
@@ -1503,16 +1512,28 @@ async function handlePhoneSubmit() {
   clearErrors();
   const phone = document.getElementById('input-phone').value.trim();
   const name  = document.getElementById('input-name').value.trim();
+  const email = document.getElementById('input-email').value.trim();
   if (!phone || phone.length < 8) {
     document.getElementById('input-phone').classList.add('error');
     showError('modal-err', 'Digite um número de WhatsApp válido com código do país.');
+    return;
+  }
+  // Valida email se preenchido (campo opcional)
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    document.getElementById('input-email').classList.add('error');
+    showError('modal-err', 'Email inválido. Corrija ou deixe em branco.');
     return;
   }
   _phone = phone;
   setLoading('btn-phone', true, '📲 Receber código no WhatsApp');
   try {
     if (!_isLogin) {
-      await api('POST', '/auth/register', { phone, name: name || undefined, language: 'pt' });
+      const referral_code = sessionStorage.getItem('cu_ref') || undefined;
+      const regBody = { phone, language: 'pt' };
+      if (name)          regBody.name          = name;
+      if (email)         regBody.email         = email;
+      if (referral_code) regBody.referral_code = referral_code;
+      await api('POST', '/auth/register', regBody);
     }
     await api('POST', '/auth/otp/request', { phone });
     showStep('step-otp');
@@ -1539,6 +1560,10 @@ async function handleOTPSubmit() {
     _member = { id: data.member_id, plan: data.plan };
     localStorage.setItem('cu_token', _token);
     localStorage.setItem('cu_member', JSON.stringify(_member));
+    // Limpa referral da sessao apos uso bem-sucedido
+    sessionStorage.removeItem('cu_ref');
+    // Remove ?ref= da URL sem reload (fica limpo para compartilhar)
+    if (window.location.search) history.replaceState(null, '', window.location.pathname);
     showStep('step-success');
   } catch (e) {
     showError('modal-err-otp', e.message);

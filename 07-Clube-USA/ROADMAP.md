@@ -6,8 +6,19 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Cadastro via WhatsApp OTP (identidade verificada no ato)
+  - Email opcional: coleta, armazena criptografado, envia link de confirmação via SendGrid (dev: loga o link)
+  - Campos: nome, WhatsApp, email, estado, categorias, idioma
+  - Token de confirmação de 32 bytes, TTL 72h, one-time-use (apagado após uso)
+  - `email_confirmed` exposto no perfil do membro
+  - PR: feat/phase-0.1-email-confirmation
+- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa + atribuição de qual cadastro veio de qual link)
+  - Backend completo: referral_code único, tabela referrals, atribuição na criação do membro
+  - Frontend corrigido: lê `?ref=CODE` da URL, persiste em sessionStorage, passa `referral_code` ao register
+  - URL de compartilhamento: `clubeusa.com?ref={CODE}` (exibida no painel do membro)
+  - Milestone automático: 3 indicações = 30 dias VIP grátis
+  - PR: feat/phase-0.1-email-confirmation
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
@@ -66,4 +77,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-07*
