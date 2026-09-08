@@ -6,8 +6,17 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Cadastro via phone/WhatsApp OTP (já existia)
+  - Email confirmation flow: migração `email_confirmation_migration.sql`, serviço `email_confirmation_service.py`
+  - Endpoints: `POST /auth/email/send-confirmation`, `GET /auth/email/confirm/{token}`, `PATCH /auth/email`
+  - Envia email real via SendGrid ou SMTP (ver `.env.example`); em dev loga o link
+  - ⚠️ Requer: owner configurar `SENDGRID_API_KEY` ou `SMTP_*` no .env de produção (ver DECISOES.md)
+- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+  - `referral_code` único por membro (já existia)
+  - Atribuição na `referrals` table + pontos ao indicador (já existia)
+  - `GET /member/referral` com link + stats (já existia)
+  - `GET /i/{code}` → redirect para `/?ref={code}` (adicionado agora)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
@@ -66,4 +75,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-08*

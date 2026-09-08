@@ -44,7 +44,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -183,6 +183,9 @@ class OTPRequest(BaseModel):
 class OTPVerify(BaseModel):
     phone: str
     otp:   str
+
+class EmailUpdateRequest(BaseModel):
+    email: str
 
 class ClickRequest(BaseModel):
     deal_id: str
@@ -391,6 +394,73 @@ async def verify_otp(body: OTPVerify):
 
     token = create_token(member["id"], member["plan"])
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
+
+
+# ============================================================
+#  ROTAS — EMAIL CONFIRMATION (Fase 0.1)
+# ============================================================
+
+@app.post("/auth/email/send-confirmation")
+async def send_email_confirmation(member: dict = Depends(get_current_member)):
+    """Envia link de confirmacao de email para o membro autenticado."""
+    from services.email_confirmation_service import send_confirmation_email
+    try:
+        result = send_confirmation_email(member["sub"])
+        if result.get("already_confirmed"):
+            return {"message": "Email ja confirmado.", "already_confirmed": True}
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        log.error(f"Falha ao enviar email de confirmacao: {e}")
+        raise HTTPException(status_code=502, detail="Falha ao enviar email. Tente novamente.")
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def confirm_email(token: str):
+    """Verifica token de confirmacao de email (link clicado pelo usuario)."""
+    from services.email_confirmation_service import verify_confirmation_token
+    try:
+        verify_confirmation_token(token)
+        # Redireciona para o site com sucesso
+        return RedirectResponse(
+            url=f"{APP_URL}/painel?email_confirmed=1",
+            status_code=302,
+        )
+    except ValueError as e:
+        # Redireciona com erro descritivo (sem expor detalhes tecnicos)
+        return RedirectResponse(
+            url=f"{APP_URL}/?email_error=1",
+            status_code=302,
+        )
+
+
+@app.patch("/auth/email")
+async def update_email(body: EmailUpdateRequest, member: dict = Depends(get_current_member)):
+    """Adiciona ou atualiza email do membro (reseta confirmacao)."""
+    from services.email_confirmation_service import add_or_update_email
+    try:
+        return add_or_update_email(member["sub"], body.email)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============================================================
+#  ROTA — REFERRAL REDIRECT (Fase 0.2)
+#  clubeusa.com/i/{code} → redireciona para / com ?ref={code}
+# ============================================================
+
+@app.get("/i/{referral_code}", include_in_schema=False)
+async def referral_redirect(referral_code: str):
+    """Redirect de link de indicacao curto para a home com parametro ref."""
+    import re
+    # Valida formato do codigo (8 chars alfanumericos maiusculos)
+    if not re.match(r'^[A-Z0-9]{6,12}$', referral_code.upper()):
+        return RedirectResponse(url=APP_URL, status_code=302)
+    return RedirectResponse(
+        url=f"{APP_URL}/?ref={referral_code.upper()}",
+        status_code=302,
+    )
 
 
 # ============================================================
