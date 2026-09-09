@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Perfil — Clube USA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo">🇧🇷 Clube USA</a>
+  <nav>
+    <button
+      id="logoutBtn"
+      style="background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.875rem;"
+    >Sair</button>
+  </nav>
+</header>
+
+<div class="container" style="padding-top:32px;">
+
+  <!-- Loading state -->
+  <div id="loading" style="text-align:center; padding:40px; color:var(--muted);">
+    Carregando perfil...
+  </div>
+
+  <!-- Profile view / edit -->
+  <div id="profileSection" style="display:none;">
+    <div class="card">
+      <div style="margin-bottom:20px;">
+        <div class="profile-name" id="displayName">—</div>
+        <div class="profile-meta" id="displayMeta">—</div>
+      </div>
+      <hr class="divider">
+
+      <div id="alertMsg" class="alert alert-danger"></div>
+      <div id="successMsg" class="alert alert-success"></div>
+
+      <form id="profileForm" novalidate>
+        <div class="form-group">
+          <label for="first_name">Nome *</label>
+          <input type="text" id="first_name" required autocomplete="given-name">
+          <span class="field-error" id="err_first_name"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="last_name">Sobrenome</label>
+          <input type="text" id="last_name" autocomplete="family-name">
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Telefone</label>
+          <input type="tel" id="phone" autocomplete="tel">
+        </div>
+
+        <div class="form-group">
+          <label for="zip_code">ZIP Code (EUA)</label>
+          <input type="text" id="zip_code" maxlength="10" inputmode="numeric">
+          <span class="field-error" id="err_zip_code"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="state">Estado</label>
+          <input type="text" id="state" maxlength="2" placeholder="Ex: FL" style="max-width:80px;">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="saveBtn" data-label="Salvar alterações">
+          Salvar alterações
+        </button>
+      </form>
+    </div>
+
+    <!-- Seção de Referral -->
+    <div class="card" id="referralCard" style="margin-top:24px; display:none;">
+      <h2 style="font-size:1.1rem; margin-bottom:4px;">Indique um amigo</h2>
+      <p style="color:var(--muted); font-size:.875rem; margin-bottom:16px;">
+        Compartilhe seu link e acompanhe quantos amigos você trouxe para o Clube USA.
+      </p>
+
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input
+          type="text"
+          id="refLinkInput"
+          readonly
+          style="flex:1; min-width:0; font-size:.85rem; background:var(--surface); color:var(--text-primary); border:1px solid var(--border); border-radius:6px; padding:8px 12px;"
+        >
+        <button
+          id="copyRefBtn"
+          class="btn"
+          style="white-space:nowrap; padding:8px 16px; font-size:.875rem; background:var(--primary); color:#fff; border:none; border-radius:6px; cursor:pointer;"
+        >Copiar link</button>
+      </div>
+
+      <div style="display:flex; gap:24px; margin-top:16px;">
+        <div style="text-align:center;">
+          <div id="refSignupCount" style="font-size:1.75rem; font-weight:700; color:var(--primary);">—</div>
+          <div style="font-size:.8rem; color:var(--muted);">cadastros</div>
+        </div>
+        <div style="text-align:center;">
+          <div id="refClickCount" style="font-size:1.75rem; font-weight:700; color:var(--primary);">—</div>
+          <div style="font-size:.8rem; color:var(--muted);">cliques</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+  if (!requireAuth()) {
+    // requireAuth() já redirecionou para login.html
+  }
+
+  const loadingEl  = document.getElementById("loading");
+  const sectionEl  = document.getElementById("profileSection");
+  const alertEl    = document.getElementById("alertMsg");
+  const successEl  = document.getElementById("successMsg");
+  const saveBtn    = document.getElementById("saveBtn");
+
+  document.getElementById("logoutBtn").addEventListener("click", () => Auth.logout());
+
+  function fillForm(profile) {
+    document.getElementById("first_name").value = profile.first_name || "";
+    document.getElementById("last_name").value  = profile.last_name  || "";
+    document.getElementById("phone").value      = profile.phone      || "";
+    document.getElementById("zip_code").value   = profile.zip_code   || "";
+    document.getElementById("state").value      = profile.state      || "";
+
+    const full = [profile.first_name, profile.last_name].filter(Boolean).join(" ");
+    document.getElementById("displayName").textContent = full || "Seu nome";
+    const meta = [profile.zip_code, profile.state].filter(Boolean).join(", ");
+    document.getElementById("displayMeta").textContent = meta || "Adicione seu ZIP code e estado";
+  }
+
+  async function loadReferralStats() {
+    const result = await apiRequest("/referrals/me", { auth: true });
+    if (!result || !result.ok) return;
+
+    const stats = result.data;
+    if (!stats.slug) return;
+
+    const baseUrl = window.location.origin + window.location.pathname.replace("profile.html", "");
+    const refUrl  = `${baseUrl}register.html?ref=${encodeURIComponent(stats.slug)}`;
+
+    document.getElementById("refLinkInput").value     = refUrl;
+    document.getElementById("refSignupCount").textContent = stats.signup_count;
+    document.getElementById("refClickCount").textContent  = stats.click_count;
+    document.getElementById("referralCard").style.display = "block";
+
+    document.getElementById("copyRefBtn").addEventListener("click", () => {
+      navigator.clipboard.writeText(refUrl).then(() => {
+        const btn = document.getElementById("copyRefBtn");
+        btn.textContent = "Copiado!";
+        setTimeout(() => { btn.textContent = "Copiar link"; }, 2000);
+      });
+    });
+  }
+
+  async function loadProfile() {
+    const result = await apiRequest("/users/me", { auth: true });
+    if (!result) return;
+
+    if (result.ok) {
+      loadingEl.style.display  = "none";
+      sectionEl.style.display  = "block";
+      fillForm(result.data);
+      loadReferralStats();
+    } else {
+      loadingEl.textContent = "Erro ao carregar perfil. " + (result.data?.detail || "");
+    }
+  }
+
+  document.getElementById("profileForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    hideAlert(alertEl);
+    hideAlert(successEl);
+
+    document.querySelectorAll(".field-error").forEach(el => { el.style.display = "none"; el.textContent = ""; });
+    document.querySelectorAll("input[type!=hidden]").forEach(i => i.classList.remove("error"));
+
+    const payload = {};
+    const first = document.getElementById("first_name").value.trim();
+    if (first) payload.first_name = first;
+    const last  = document.getElementById("last_name").value.trim();
+    if (last)  payload.last_name  = last;
+    const phone = document.getElementById("phone").value.trim();
+    if (phone) payload.phone = phone;
+    const zip   = document.getElementById("zip_code").value.trim();
+    if (zip)   payload.zip_code  = zip;
+    const state = document.getElementById("state").value.trim().toUpperCase();
+    if (state) payload.state = state;
+
+    setLoading(saveBtn, true);
+
+    try {
+      const result = await apiRequest("/users/me", { method: "PUT", body: payload, auth: true });
+      if (!result) return;
+
+      if (result.ok) {
+        fillForm(result.data);
+        showAlert(successEl, "Perfil atualizado com sucesso!", "success");
+      } else if (result.status === 422) {
+        const errors = result.data?.detail;
+        if (Array.isArray(errors)) {
+          errors.forEach(err => {
+            const field = err.loc?.[err.loc.length - 1];
+            if (field) {
+              const input = document.getElementById(field);
+              const errEl = document.getElementById("err_" + field);
+              if (input) input.classList.add("error");
+              if (errEl) { errEl.textContent = err.msg; errEl.style.display = "block"; }
+            }
+          });
+        } else {
+          showAlert(alertEl, errors || "Dados inválidos.");
+        }
+      } else {
+        showAlert(alertEl, result.data?.detail || "Erro ao salvar. Tente novamente.");
+      }
+    } catch {
+      showAlert(alertEl, "Erro de conexão. Verifique sua internet.");
+    } finally {
+      setLoading(saveBtn, false);
+    }
+  });
+
+  loadProfile();
+</script>
+</body>
+</html>
