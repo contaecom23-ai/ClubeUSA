@@ -7,7 +7,7 @@ from collections import defaultdict
 from threading import Lock
 
 JWT_ALGORITHM  = "HS256"
-JWT_EXPIRE_HRS = 24
+JWT_EXPIRE_HRS = 24 * 7  # 7 dias — sem refresh token; 24h forçava re-auth diária via WhatsApp OTP
 
 def _get_env(key):
     val = os.environ.get(key)
