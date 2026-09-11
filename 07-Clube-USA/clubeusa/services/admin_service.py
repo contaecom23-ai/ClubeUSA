@@ -1,7 +1,7 @@
 import os
 import logging
 from datetime import datetime, timedelta, timezone
-from collections import Counter
+from collections import Counter, defaultdict
 
 log = logging.getLogger("admin_service")
 
@@ -55,6 +55,65 @@ def get_metrics() -> dict:
         "deals":      {"pending": pending, "approved": approved, "sent_this_week": sent_week},
         "engagement": {"clicks_this_week": len(clicks_week), "top_category": top_cat},
         "alerts":     {"active": alerts_active, "triggered_this_week": alerts_week},
+    }
+
+
+def get_analytics(days: int = 30) -> dict:
+    """Série temporal de crescimento — cadastros e referrals por dia (Fase 0.3)."""
+    sb = _supabase()
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(days=days)).isoformat()
+
+    members = (
+        sb.table("members")
+        .select("created_at,referred_by")
+        .gte("created_at", since)
+        .execute()
+        .data
+    )
+
+    daily_new: dict = defaultdict(int)
+    daily_referred: dict = defaultdict(int)
+    for m in members:
+        day = (m.get("created_at") or "")[:10]
+        if not day:
+            continue
+        daily_new[day] += 1
+        if m.get("referred_by"):
+            daily_referred[day] += 1
+
+    # Total de membros antes do período para calcular cumulativo
+    total_before_result = (
+        sb.table("members")
+        .select("id", count="exact")
+        .lt("created_at", since)
+        .execute()
+    )
+    total_before = total_before_result.count or 0
+
+    series = []
+    cumulative = total_before
+    for i in range(days):
+        day = (now - timedelta(days=days - 1 - i)).strftime("%Y-%m-%d")
+        new = daily_new.get(day, 0)
+        cumulative += new
+        series.append({
+            "date":          day,
+            "new_members":   new,
+            "referred_new":  daily_referred.get(day, 0),
+            "cumulative":    cumulative,
+        })
+
+    total_new = sum(daily_new.values())
+    total_referred = sum(daily_referred.values())
+    referral_rate = round(total_referred / total_new * 100, 1) if total_new > 0 else 0.0
+
+    return {
+        "period_days":                  days,
+        "total_new_members":            total_new,
+        "total_referred_new":           total_referred,
+        "referral_conversion_rate_pct": referral_rate,
+        "series":                       series,
     }
 
 
