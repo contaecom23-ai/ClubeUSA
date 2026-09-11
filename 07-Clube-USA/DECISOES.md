@@ -14,65 +14,78 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ## 🚨 AÇÃO URGENTE — Leia primeiro
 
-### [2026-08-09 → 2026-08-27] LOOP CRÍTICO — 31 PRs abertos, projeto parado há 18 dias
+### [2026-08-09 → 2026-09-11] LOOP CRÍTICO — 90 PRs abertos, projeto parado há 33 dias
 
 **Contexto:**
-O builder autônomo roda 3×/dia mas lê o ROADMAP.md da `main`. Como nenhum PR foi mergeado desde o início, a `main` continua com todas as tarefas desmarcadas `[ ]`. Cada rodada confirma o bloqueio e não cria novo código duplicado — mas o projeto tem **zero código em produção**.
+O builder autônomo roda 3×/dia mas lê o ROADMAP.md da `main`. Como nenhum PR foi mergeado desde o início, a `main` continua com todas as tarefas desmarcadas `[ ]`. Cada rodada confirma o bloqueio. O projeto tem **zero código em produção**.
 
 **Log de runs (mais recente no topo):**
-- **2026-08-27 (run atual):** confirmou bloqueio, NÃO criou novo PR duplicado, atualizou log. **18º dia consecutivo sem ação do dono.**
-- 2026-08-26 (PR #72): docs de estado criados — ainda sem merge.
-- 2026-08-23 (PR #66): docs de estado — ainda sem merge.
-- 2026-08-22 (PR #64): docs de estado — ainda sem merge.
-- 2026-08-20 (PR #60): docs de estado — ainda sem merge.
-- 2026-08-19 (PR #59): docs de estado — ainda sem merge.
-- 2026-08-17 (PR #53): docs de estado — ainda sem merge.
-- 2026-08-14 (run): leu DECISOES.md, NÃO criou novo PR, atualizou log.
-- 2026-08-13 (run 3): leu DECISOES.md, NÃO criou novo PR, atualizou log.
-- 2026-08-13 (runs 1-2): criou PR #50 duplicado — não leu DECISOES.md antes.
-- 2026-08-12 (run 2): diagnóstico refeito, nenhum novo PR criado.
-- 2026-08-11 (run 2): code review completo do PR #46 — aprovado.
+- **2026-09-11 (run atual):** confirmou bloqueio. 90 PRs abertos. Código pronto para Fase 0.1→1.5 (e 2.1). NÃO criou novo PR — já existem 90. Enviou notificação. **33º dia sem ação do dono.**
+- **2026-09-10 (PR #89):** docs de estado criados — ainda sem merge.
+- **2026-09-10 (PR #90):** feat(0.3) analytics — ainda sem merge.
+- 2026-09-08 (PR #86): docs de estado — ainda sem merge.
+- 2026-09-07 (PR #85): feat(fase-0.1) email — sem merge.
+- 2026-09-07 (PR #84): feat(fase-0.1+0.2) — sem merge.
+- 2026-09-05 (PR #83): feat(0.2) referral — sem merge.
+- 2026-09-04 (PR #82): URGENTE plano de merge — sem merge.
+- 2026-09-04 (PR #81): docs 3 decisões críticas — sem merge.
+- 2026-09-03 (PR #80): fix deploy Z-API — sem merge.
+- 2026-09-02 (PR #79): docs estado real — sem merge.
+- 2026-09-02 (PR #78): fix auth — sem merge.
+- 2026-09-01 (PR #77): docs estado real — sem merge.
+- 2026-08-31 (PR #76): fix CI — sem merge.
+- 2026-08-29 (PR #75): feat(0.1) email confirmado — sem merge.
+- 2026-08-29 (PR #74): docs estado real — sem merge.
+- 2026-08-28 (PR #73): docs estado real — sem merge.
+- 2026-08-27 (run): confirmou bloqueio, NÃO criou novo PR, atualizou log. **18º dia sem ação do dono.**
+- 2026-08-26 (PR #72): docs de estado — sem merge.
+- 2026-08-23 (PR #66): docs de estado — sem merge.
+- 2026-08-22 (PR #64): docs de estado — sem merge.
+- 2026-08-20 (PR #60): docs de estado — sem merge.
 - 2026-08-09: loop detectado, PR #48 aberto com este documento.
 
 **Estado real do projeto:**
-- `main`: apenas ROADMAP.md + DECISOES.md (zero código, 0 usuários possíveis)
-- **31 PRs abertos aguardando merge**
-- Todo código de Fase 0.1 → 2.1 já implementado em branches
+- `main`: estrutura base + app dealscanner existente. Zero das novas fases implantadas.
+- **90 PRs abertos aguardando merge** — nenhum mergeado desde o início
+- Código pronto (aguardando merge + infra): Fase 0.1, 0.2, 0.3, 0.4, 1.1, 1.2, 1.3, 1.4, 1.5, 2.1
 
 ---
 
-## ✅ AÇÃO NECESSÁRIA — 3 passos AGORA
+## ✅ O QUE FAZER — 3 passos, por ordem
 
-### Passo 1 — Mergear PR #46 (Fase 0.1 — código pronto para produção)
-→ https://github.com/contaecom23-ai/ClubeUSA/pull/46
+### Passo 1 — Resolver infraestrutura (BLOQUEANTE para tudo)
 
-**Por que este primeiro:** É o único PR não-draft, base na `main`, revisado e aprovado. Contém:
-- Backend FastAPI + Supabase auth completo
-- Schema SQL com RLS
-- 24+ testes passando
-- Rate-limiting, CORS restrito, JWT com TTL correto
+Custo: ~$5/mês + $12/ano. Passos:
+1. Criar projeto no **Supabase** (gratuito): https://supabase.com
+2. Escolher hosting backend: **Railway** (~$5/mês) ou **Render** (grátis com cold start)
+3. Registrar domínio: **clubeusa.com** no Cloudflare Registrar (~$12/ano)
+4. Dar as credenciais ao Claude: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, domínio
 
-### Passo 2 — Fechar os PRs duplicados em lote
-Vá em: https://github.com/contaecom23-ai/ClubeUSA/pulls
-Filtro: `is:open is:pr` → selecione todos EXCETO #46 → Close with comment: "duplicado, PRs mais recentes substituem este"
+### Passo 2 — Fechar PRs duplicados (reduzir 90→5)
 
-### Passo 3 — Responder 2 perguntas técnicas (abaixo)
-Depois do merge do #46, o próximo run avança automaticamente para Fase 0.2 (Referral).
+https://github.com/contaecom23-ai/ClubeUSA/pulls
+
+Manter apenas os PRs das últimas versões de cada fase:
+- **Fase 0.1+0.2:** PR #87 (feat(fase-0): email + referral)
+- **Fase 0.3:** PR #90 (feat(0.3): analytics)
+- **Fase 0.4:** PR mais recente de `claude/fase-0.4-valid-registration`
+- **Fase 1.x:** PR mais recente de `claude/fase-1.5-moradia` (cumulativo)
+- **Fase 2.1:** PR #68 (feat(2.1): assinatura)
+
+Fechar todos os outros com: `duplicado, substituído por versão mais recente`
+
+### Passo 3 — Mergear em ordem
+
+1. PR Fase 0.1+0.2 (auth + referral)
+2. PR Fase 0.3 (analytics)
+3. PR Fase 0.4 (validação)
+4. PRs Fase 1.x em sequência
+5. Configurar `.env` com as credenciais do Passo 1
+6. Deploy → primeiros usuários
 
 ---
 
-## ✅ Verificação de qualidade do PR #46 (revisão 2026-08-11)
-- FastAPI com CORS restrito, docs desabilitados em produção, rate-limiting ativo ✅
-- 24+ testes cobrindo registro, login, JWT, logout, perfil ✅
-- Isolamento multi-tenant: `user_id` vem sempre do JWT, nunca do body ✅
-- Senha com validação forte (mín. 8 chars, letra + número) ✅
-- Erro genérico no login (não revela se foi email ou senha) ✅
-- Cleanup de usuário órfão se insert de perfil falhar ✅
-- **Conclusão: PR #46 está pronto para merge.**
-
----
-
-## Decisões Técnicas Pendentes (aguardam Fase 0.1 na main)
+## Decisões Técnicas Pendentes (aguardam ação do Passo 1)
 
 ### [2026-08-05] Credenciais Supabase
 
@@ -81,7 +94,7 @@ Depois do merge do #46, o próximo run avança automaticamente para Fase 0.2 (Re
 **Pergunta:** Você já tem projeto Supabase criado para o Clube USA?
 
 **Opções:**
-- **A — Já existe:** passe SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET para o `.env`. Claude configura o resto.
+- **A — Já existe:** passe SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET. Claude configura o resto.
 - **B — Criar novo:** gratuito no tier Free; Claude guia o setup.
 
 **Recomendação:** Opção A se já existe, B caso contrário. Free tier do Supabase é suficiente para os primeiros 1.000 usuários.
@@ -105,4 +118,4 @@ Depois do merge do #46, o próximo run avança automaticamente para Fase 0.2 (Re
 
 ---
 
-*Atualizado em: 2026-08-27 (18º dia sem ação do dono — projeto parado)*
+*Atualizado em: 2026-09-11 (33º dia sem ação do dono — log atualizado, nenhum novo PR criado)*
