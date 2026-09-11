@@ -32,6 +32,7 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  GET  /admin/analytics         — serie temporal de crescimento (Fase 0.3, admin)
 # ============================================================
 
 import hmac
@@ -1100,3 +1101,12 @@ async def admin_send_deals(_=Depends(require_admin)):
 async def admin_list_alerts(_=Depends(require_admin)):
     from services.admin_service import list_admin_alerts
     return list_admin_alerts()
+
+
+@app.get("/admin/analytics")
+async def admin_analytics(days: int = 30, _=Depends(require_admin)):
+    """Série temporal de crescimento — cadastros e referrals por dia (Fase 0.3)."""
+    from services.admin_service import get_analytics
+    if days < 1 or days > 90:
+        raise HTTPException(status_code=400, detail="Parâmetro 'days' deve estar entre 1 e 90.")
+    return get_analytics(days=days)
