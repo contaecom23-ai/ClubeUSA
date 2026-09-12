@@ -59,10 +59,17 @@ Qual serviço de email usar para enviar confirmações de cadastro em produção
 ```
 EMAIL_PROVIDER=resend
 RESEND_API_KEY=<chave do painel resend.com>
-EMAIL_FROM=noreply@clubeusa.com
-EMAIL_FROM_NAME=Clube USA
+ENVIRONMENT=production
+APP_URL=https://clubeusa.com
 ```
 Importante: verificar o domínio `clubeusa.com` no painel do provedor escolhido antes de ativar.
+
+**Ação necessária:**
+1. Criar conta em resend.com
+2. Verificar o domínio `clubeusa.com` (adicionar registros DNS conforme instruções do Resend)
+3. Criar uma API key
+4. Rodar a migration: `clubeusa/db/email_confirmation_migration.sql` no Supabase SQL Editor
+5. Configurar env vars no Render conforme acima
 
 **Status:** PENDENTE
 

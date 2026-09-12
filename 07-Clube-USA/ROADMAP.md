@@ -6,8 +6,17 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [x] **0.1** Cadastro + perfil mínimo + email confirmado _(infraestrutura completa: migration, serviço de email, endpoints /auth/email/confirm e /auth/email/resend, testes. Em prod: configurar EMAIL\_PROVIDER — ver DECISOES.md D-001)_
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+- [~] **0.1** Cadastro + perfil mínimo + email confirmado
+  - [x] Cadastro por telefone (OTP WhatsApp) + JWT ✅
+  - [x] Perfil mínimo (nome, email, estado, categorias, língua) ✅
+  - [x] PII criptografado em repouso (phone_enc, email_enc) ✅
+  - [x] Flow de confirmação de email: `POST /auth/email/request-confirmation`, `GET /auth/email/confirm?token=`, `PATCH /member/profile/email` ✅ *(PR feat/0.1-email-confirmation)*
+  - [ ] **Pendente:** configurar provedor de email em produção (ver DECISOES.md D-001 — aguarda dono)
+- [~] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+  - [x] Geração de `referral_code` único por membro ✅
+  - [x] Atribuição `referred_by` + tabela `referrals` + pontuação automática ✅
+  - [x] Endpoint `GET /member/referral` retorna link `?ref=CODE` ✅
+  - [ ] **Pendente:** rota `/i/{code}` (pretty URL) → redirect para `/?ref=CODE`
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 

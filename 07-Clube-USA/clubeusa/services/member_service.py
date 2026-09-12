@@ -134,19 +134,18 @@ def register_member(
     email_confirm_pending = False
     if email:
         try:
-            from services.email_service import generate_confirm_token, send_confirmation_email
-            email_token, email_token_expires = generate_confirm_token()
+            from services.email_service import generate_email_token, send_confirmation_email
+            email_token = generate_email_token()
+            from datetime import datetime, timedelta
+            expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
             sb.table("members").update({
-                "email_confirm_token":      email_token,
-                "email_confirm_expires_at": email_token_expires.isoformat(),
+                "email_token":            email_token,
+                "email_token_expires_at": expires_at,
             }).eq("id", member_id).execute()
-            app_url = os.environ.get("APP_URL", "https://clubeusa.com")
-            confirm_url = f"{app_url}/auth/email/confirm?token={email_token}"
             send_confirmation_email(
                 to_email=email,
-                member_name=name,
-                confirm_url=confirm_url,
-                language=language,
+                member_id=member_id,
+                token=email_token,
             )
             email_confirm_pending = True
         except Exception as e:
@@ -372,8 +371,8 @@ def confirm_member_email(token: str) -> bool:
     sb = _supabase()
 
     result = sb.table("members").select(
-        "id,email_confirm_expires_at,email_confirmed"
-    ).eq("email_confirm_token", token).execute()
+        "id,email_token_expires_at,email_confirmed"
+    ).eq("email_token", token).execute()
 
     if not result.data:
         return False
@@ -383,7 +382,7 @@ def confirm_member_email(token: str) -> bool:
     if member.get("email_confirmed"):
         return True  # Ja confirmado — idempotente
 
-    expires_raw = member.get("email_confirm_expires_at")
+    expires_raw = member.get("email_token_expires_at")
     if not expires_raw:
         return False
 
@@ -396,9 +395,9 @@ def confirm_member_email(token: str) -> bool:
 
     # Confirmar — remove token (one-time use)
     sb.table("members").update({
-        "email_confirmed":          True,
-        "email_confirm_token":      None,
-        "email_confirm_expires_at": None,
+        "email_confirmed":        True,
+        "email_token":            None,
+        "email_token_expires_at": None,
     }).eq("id", member["id"]).execute()
 
     _audit("member.email_confirmed", member["id"])
@@ -435,21 +434,19 @@ def resend_email_confirmation(member_id: str, email: str) -> bool:
     if member.get("email_hash") != hash_pii(email_normalized):
         return False  # Email nao corresponde — nao revelar detalhe
 
-    from services.email_service import generate_confirm_token, send_confirmation_email
-    email_token, email_token_expires = generate_confirm_token()
+    from services.email_service import generate_email_token, send_confirmation_email
+    from datetime import datetime, timedelta
+    email_token = generate_email_token()
+    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
 
     sb.table("members").update({
-        "email_confirm_token":      email_token,
-        "email_confirm_expires_at": email_token_expires.isoformat(),
+        "email_token":            email_token,
+        "email_token_expires_at": expires_at,
     }).eq("id", member_id).execute()
 
-    name = decrypt(member["name_enc"]) if member.get("name_enc") else ""
-    app_url = os.environ.get("APP_URL", "https://clubeusa.com")
-    confirm_url = f"{app_url}/auth/email/confirm?token={email_token}"
-
-    return send_confirmation_email(
+    send_confirmation_email(
         to_email=email_normalized,
-        member_name=name,
-        confirm_url=confirm_url,
-        language=member.get("language", "pt"),
+        member_id=member_id,
+        token=email_token,
     )
+    return True
