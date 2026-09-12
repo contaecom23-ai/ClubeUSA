@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from collections import Counter
 
 log = logging.getLogger("admin_service")
@@ -55,6 +55,61 @@ def get_metrics() -> dict:
         "deals":      {"pending": pending, "approved": approved, "sent_this_week": sent_week},
         "engagement": {"clicks_this_week": len(clicks_week), "top_category": top_cat},
         "alerts":     {"active": alerts_active, "triggered_this_week": alerts_week},
+    }
+
+
+# ============================================================
+#  ANALYTICS — SERIE TEMPORAL (Fase 0.3)
+# ============================================================
+
+def get_growth_analytics(days: int = 30) -> dict:
+    """
+    Retorna serie temporal de cadastros por dia + taxa de referral.
+    Util para monitorar crescimento organico vs indicacoes.
+    """
+    sb = _supabase()
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(days=days)).isoformat()
+
+    members = sb.table("members").select("created_at").gte("created_at", since).execute().data
+
+    counts: Counter = Counter()
+    for m in members:
+        day = (m.get("created_at") or "")[:10]
+        if day:
+            counts[day] += 1
+
+    referrals = (
+        sb.table("referrals")
+        .select("created_at")
+        .gte("created_at", since)
+        .execute()
+        .data
+    )
+    ref_counts: Counter = Counter()
+    for r in referrals:
+        day = (r.get("created_at") or "")[:10]
+        if day:
+            ref_counts[day] += 1
+
+    series = []
+    for i in range(days):
+        day_str = (now - timedelta(days=days - 1 - i)).strftime("%Y-%m-%d")
+        series.append({
+            "date":      day_str,
+            "signups":   counts.get(day_str, 0),
+            "referrals": ref_counts.get(day_str, 0),
+        })
+
+    total_signups   = sum(counts.values())
+    total_referrals = len(referrals)
+
+    return {
+        "series":            series,
+        "period_days":       days,
+        "total_signups":     total_signups,
+        "total_referrals":   total_referrals,
+        "referral_rate_pct": round(total_referrals / total_signups * 100, 1) if total_signups else 0,
     }
 
 

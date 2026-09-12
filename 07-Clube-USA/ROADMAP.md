@@ -1,26 +1,40 @@
 # ROADMAP — Clube USA
 
 > Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
+> **Última sincronização com main: 2026-09-12**
 
 ---
 
-## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
+## REGRAS DE SEGURANÇA (obrigatórias — ver DECISOES.md para bloqueios externos)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- Auth global: TODA rota exige token válido; rotas públicas explícitas e mínimas (home, status, login, registro com rate-limit, webhook Stripe com HMAC).
+- Multi-tenant: todo dado isolado por `user_id` vindo do servidor (do token), nunca do cliente. Acesso a recurso de outro → 404.
+- RLS Supabase como endgame; até lá, acesso somente server-side com `service_role`.
+- Segredos sempre via env var, nunca hardcoded.
+- Tokens JWT com TTL 7 dias.
+- Rate-limit em login e registro.
+- Proteção XSS, SQL injection (queries parametrizadas), IDOR.
+- Webhooks externos com verificação de assinatura + janela anti-replay.
+
+---
+
+## FASE 0 — PRÉ-LANÇAMENTO
+
+- [x] **0.1** Cadastro + perfil mínimo + verificação de identidade — `POST /auth/register`, `GET /member/profile`, `member_service.py`. *Verificação via OTP WhatsApp (mais forte que email); email é campo opcional.*
+- [x] **0.2** Sistema de REFERRAL rastreável — código único por pessoa, atribuição no cadastro, `GET /member/referral` com stats, link curto `GET /i/{code}` → `?ref={code}` implementado.
+- [x] **0.3** Analytics básico — snapshot `GET /admin/metrics` + série temporal `GET /admin/analytics?days=30` (cadastros/dia + taxa de referral). Fase 0.3 concluída em 2026-09-12.
+- [ ] **0.4** "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude. *Bloqueado por decisão de produto (D-002): o que conta como "ação real"? E exige email service (D-001).*
 
 ---
 
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
-- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
+- [x] **1.1** PROMOÇÕES/ACHADOS — sistema de deals com curadoria, filtro por categoria, admin approval workflow, envio via WhatsApp/Telegram (`/member/deals`, `dealscanner2/`, admin panel).
 - [ ] **1.2** Busca por ZIP + raio 1–5 milhas
-- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
+- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000)
 - [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
 - [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
-- [x] **1.6** Rastreador de preço de produto — membro cola o link de um produto (Amazon/Walmart/BestBuy), vê o histórico de preço e ofertas cruzadas nos outros marketplaces, cupons verificados automaticamente (Playwright) com selo confirmado/não confirmado, e recebe alerta quando o preço cai (recheck a cada 6h)
+- [x] **1.6** Rastreador de preço de produto — Amazon/Walmart/BestBuy, cupons verificados Playwright, alertas automáticos.
 
 ---
 
@@ -66,4 +80,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-12*

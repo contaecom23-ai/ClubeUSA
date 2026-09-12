@@ -23,6 +23,8 @@
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
+#  GET  /admin/analytics         — serie temporal de crescimento (Fase 0.3)
+#  GET  /i/{code}                — redirect curto de indicacao (Fase 0.2)
 #  GET  /admin/members           — lista membros (admin)
 #  GET  /admin/members/{id}      — perfil completo (admin)
 #  POST /admin/members/{id}/status — alterar status (admin)
@@ -867,6 +869,23 @@ async def group_webhook(request: Request):
 
 
 # ============================================================
+#  REFERRAL REDIRECT — /i/{code} (Fase 0.2)
+# ============================================================
+
+@app.get("/i/{referral_code}", include_in_schema=False)
+async def referral_redirect(referral_code: str):
+    """Link curto de indicacao: /i/{code} redireciona para homepage com ?ref={code}."""
+    import re
+    from fastapi.responses import RedirectResponse
+    if not re.match(r'^[A-Z0-9]{4,16}$', referral_code.upper()):
+        raise HTTPException(status_code=404)
+    return RedirectResponse(
+        url=f"{APP_URL}?ref={referral_code.upper()}",
+        status_code=302,
+    )
+
+
+# ============================================================
 #  HEALTH CHECK
 # ============================================================
 
@@ -1013,6 +1032,13 @@ async def admin_panel():
 async def admin_metrics(_=Depends(require_admin)):
     from services.admin_service import get_metrics
     return get_metrics()
+
+
+@app.get("/admin/analytics")
+async def admin_analytics(days: int = 30, _=Depends(require_admin)):
+    """Serie temporal de crescimento — Fase 0.3."""
+    from services.admin_service import get_growth_analytics
+    return get_growth_analytics(days=min(max(days, 7), 365))
 
 
 @app.get("/admin/members")
