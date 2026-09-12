@@ -184,6 +184,9 @@ class OTPVerify(BaseModel):
     phone: str
     otp:   str
 
+class ResendEmailRequest(BaseModel):
+    email: str
+
 class ClickRequest(BaseModel):
     deal_id: str
 
@@ -238,6 +241,19 @@ class AlertFromLink(BaseModel):
         if v <= 0:
             raise ValueError("target_value deve ser maior que zero.")
         return v
+
+
+class UpdateEmailRequest(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_field(cls, v):
+        from utils.security import validate_email
+        try:
+            return validate_email(v)
+        except ValueError as e:
+            raise ValueError(str(e))
 
 
 class StatusUpdate(BaseModel):
@@ -394,6 +410,75 @@ async def verify_otp(body: OTPVerify):
 
 
 # ============================================================
+#  ROTAS — EMAIL CONFIRMATION (Fase 0.1)
+# ============================================================
+
+@app.get("/auth/email/confirm", include_in_schema=False)
+async def confirm_email(token: str = ""):
+    """
+    Confirma email via link enviado no cadastro.
+    Rota publica — acessada ao clicar no link do email.
+    Token one-time-use, expira em 24h. Concede 50 pontos ao confirmar.
+    """
+    from fastapi.responses import HTMLResponse
+    from services.email_service import confirm_email_token
+
+    if not token:
+        return HTMLResponse(
+            content=(
+                "<html><head><meta charset='utf-8'><title>Clube USA</title></head><body>"
+                "<h2>Link inválido</h2>"
+                "<p>Token ausente. Solicite um novo link no painel.</p>"
+                "<p><a href='/'>← Voltar ao Clube USA</a></p>"
+                "</body></html>"
+            ),
+            status_code=400,
+        )
+
+    try:
+        result = confirm_email_token(token)
+        html = (
+            "<html><head><meta charset='utf-8'><title>Email confirmado — Clube USA</title></head><body>"
+            "<h2>✓ Email confirmado!</h2>"
+            "<p>Seu email foi verificado com sucesso. Você agora tem acesso completo ao Clube USA.</p>"
+            "<p><a href='/'>← Acessar o Clube USA</a></p>"
+            "</body></html>"
+        )
+        return HTMLResponse(content=html, status_code=200)
+    except ValueError as e:
+        log.warning(f"Confirmacao de email falhou: {e}")
+        html = (
+            "<html><head><meta charset='utf-8'><title>Link expirado — Clube USA</title></head><body>"
+            "<h2>Link inválido ou expirado</h2>"
+            "<p>O link de confirmação é inválido ou expirou (validade: 24h).</p>"
+            "<p>Acesse seu painel e solicite o reenvio do email de confirmação.</p>"
+            "<p><a href='/'>← Voltar ao Clube USA</a></p>"
+            "</body></html>"
+        )
+        return HTMLResponse(content=html, status_code=400)
+
+
+@app.post("/auth/email/resend")
+async def resend_email_confirm(
+    body: ResendEmailRequest,
+    member: dict = Depends(get_current_member),
+):
+    """
+    Reenvia email de confirmacao para o membro autenticado.
+    Rate-limited pelo middleware global (60/min por IP).
+    Resposta generica para nao vazar se email esta ou nao cadastrado.
+    """
+    from services.member_service import resend_email_confirmation
+    try:
+        resend_email_confirmation(member["sub"], body.email)
+    except Exception as e:
+        log.error(f"Erro reenvio email: {e}")
+    return {
+        "message": "Se o email estiver cadastrado, você receberá o link em instantes."
+    }
+
+
+# ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
 
@@ -417,6 +502,30 @@ class UpdateCategoriesRequest(BaseModel):
                  "beauty","tools","pets","fashion","automotive","books"}
         cleaned = [c for c in v if c in valid]
         return cleaned or ["all"]
+
+
+@app.post("/auth/email/request-confirmation", status_code=200)
+async def email_request_confirmation(member: dict = Depends(get_current_member)):
+    """Solicita confirmacao de email. Envia link por email. Requer autenticacao."""
+    from services.email_service import request_email_confirmation
+    try:
+        return request_email_confirmation(member["sub"])
+    except ValueError as e:
+        status_code = 429 if "Aguarde" in str(e) else 400
+        raise HTTPException(status_code=status_code, detail=str(e))
+
+
+@app.patch("/member/profile/email")
+async def update_profile_email(
+    body: UpdateEmailRequest, member: dict = Depends(get_current_member)
+):
+    """Adiciona ou atualiza email do membro. Reseta confirmacao."""
+    from services.email_service import update_member_email
+    try:
+        return update_member_email(member["sub"], body.email)
+    except ValueError as e:
+        status_code = 409 if "em uso" in str(e) else 422
+        raise HTTPException(status_code=status_code, detail=str(e))
 
 
 @app.patch("/member/profile")
