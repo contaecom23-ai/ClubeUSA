@@ -130,6 +130,28 @@ def register_member(
     member = result.data[0]
     member_id = member["id"]
 
+    # 4.5 Gerar e enviar token de confirmacao de email (se email fornecido)
+    email_confirm_pending = False
+    if email:
+        try:
+            from services.email_service import generate_confirm_token, send_confirmation_email
+            email_token, email_token_expires = generate_confirm_token()
+            sb.table("members").update({
+                "email_confirm_token":      email_token,
+                "email_confirm_expires_at": email_token_expires.isoformat(),
+            }).eq("id", member_id).execute()
+            app_url = os.environ.get("APP_URL", "https://clubeusa.com")
+            confirm_url = f"{app_url}/auth/email/confirm?token={email_token}"
+            send_confirmation_email(
+                to_email=email,
+                member_name=name,
+                confirm_url=confirm_url,
+                language=language,
+            )
+            email_confirm_pending = True
+        except Exception as e:
+            log.warning(f"Falha ao enviar email de confirmacao: {e}")
+
     # 5. Atribuir ao grupo WhatsApp
     try:
         group = assign_member_to_group(member_id, language)
@@ -156,14 +178,15 @@ def register_member(
     token = create_token(member_id, member.get("plan", "free"))
 
     return {
-        "action":      "registered",
-        "member_id":   member_id,
-        "token":       token,
-        "points":      100,
-        "level":       "bronze",
-        "referral_code": member["referral_code"],
-        "group_invite": group.get("invite_link") if group else None,
-        "group_name":   group.get("name") if group else None,
+        "action":               "registered",
+        "member_id":            member_id,
+        "token":                token,
+        "points":               100,
+        "level":                "bronze",
+        "referral_code":        member["referral_code"],
+        "group_invite":         group.get("invite_link") if group else None,
+        "group_name":           group.get("name") if group else None,
+        "email_confirm_pending": email_confirm_pending,
     }
 
 
@@ -327,3 +350,106 @@ def track_click(member_id: str, deal_id: str, ip: str = None) -> str:
     sb.rpc("increment_clicks", {"p_member_id": member_id}).execute()
 
     return utm
+
+
+# ============================================================
+#  CONFIRMACAO DE EMAIL (Fase 0.1)
+# ============================================================
+
+def confirm_member_email(token: str) -> bool:
+    """
+    Confirma email do membro via token one-time-use.
+
+    Seguranca:
+    - Token e buscado pelo valor (nao expoe member_id no link publico)
+    - Expirado = False, nao revelamos se o token existiu
+    - Apos uso, token e nullado (nao reutilizavel)
+    - Idempotente: se ja confirmado, retorna True sem erro
+
+    Retorna True se confirmado com sucesso, False se token invalido/expirado.
+    """
+    from datetime import datetime, timezone
+    sb = _supabase()
+
+    result = sb.table("members").select(
+        "id,email_confirm_expires_at,email_confirmed"
+    ).eq("email_confirm_token", token).execute()
+
+    if not result.data:
+        return False
+
+    member = result.data[0]
+
+    if member.get("email_confirmed"):
+        return True  # Ja confirmado — idempotente
+
+    expires_raw = member.get("email_confirm_expires_at")
+    if not expires_raw:
+        return False
+
+    expires = datetime.fromisoformat(expires_raw.replace("Z", "+00:00"))
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+
+    if datetime.now(timezone.utc) > expires:
+        return False  # Expirado
+
+    # Confirmar — remove token (one-time use)
+    sb.table("members").update({
+        "email_confirmed":          True,
+        "email_confirm_token":      None,
+        "email_confirm_expires_at": None,
+    }).eq("id", member["id"]).execute()
+
+    _audit("member.email_confirmed", member["id"])
+    log.info("Email confirmado para membro %s", member["id"])
+    return True
+
+
+def resend_email_confirmation(member_id: str, email: str) -> bool:
+    """
+    Gera novo token e reenvia email de confirmacao.
+
+    Seguranca:
+    - Verifica que o email corresponde ao cadastrado (hash comparison)
+    - Rate limit via middleware global da API (60/min por IP)
+    - Nao revela se o email esta ou nao cadastrado (retorna False sem detalhe)
+
+    Retorna True se enviado (ou logado em dev), False se falhou ou nao corresponde.
+    """
+    sb = _supabase()
+
+    result = sb.table("members").select(
+        "id,email_hash,email_enc,email_confirmed,name_enc,language"
+    ).eq("id", member_id).execute()
+
+    if not result.data:
+        return False
+
+    member = result.data[0]
+
+    if member.get("email_confirmed"):
+        return True  # Ja confirmado — nada a fazer
+
+    email_normalized = email.strip().lower()
+    if member.get("email_hash") != hash_pii(email_normalized):
+        return False  # Email nao corresponde — nao revelar detalhe
+
+    from services.email_service import generate_confirm_token, send_confirmation_email
+    email_token, email_token_expires = generate_confirm_token()
+
+    sb.table("members").update({
+        "email_confirm_token":      email_token,
+        "email_confirm_expires_at": email_token_expires.isoformat(),
+    }).eq("id", member_id).execute()
+
+    name = decrypt(member["name_enc"]) if member.get("name_enc") else ""
+    app_url = os.environ.get("APP_URL", "https://clubeusa.com")
+    confirm_url = f"{app_url}/auth/email/confirm?token={email_token}"
+
+    return send_confirmation_email(
+        to_email=email_normalized,
+        member_name=name,
+        confirm_url=confirm_url,
+        language=member.get("language", "pt"),
+    )

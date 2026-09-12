@@ -27,8 +27,45 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
-*(nenhuma ainda — o Claude preencherá aqui conforme avançar)*
+### [2026-09-12] D-001: Serviço de email para confirmação de cadastro
+
+**Contexto:**
+A infraestrutura de email de confirmação (Fase 0.1) está implementada com abstração plugável via env var `EMAIL_PROVIDER`. Em dev, os emails são apenas logados (não enviados de verdade). Para ativar em produção, basta escolher o provedor e configurar as variáveis de ambiente no Render — sem mudança de código.
+
+**Pergunta:**
+Qual serviço de email usar para enviar confirmações de cadastro em produção?
+
+**Opções:**
+
+- **Resend** (resend.com)
+  - Prós: Gratuito até 3.000 emails/mês; API REST simples; excelente deliverability; configuração em 10 min; plano pago a partir de $20/mês para 50k emails
+  - Contras: Empresa menor, menos legacy que SendGrid
+  - Config: `EMAIL_PROVIDER=resend`, `RESEND_API_KEY=re_xxxxx`
+
+- **SendGrid** (sendgrid.com — agora Twilio SendGrid)
+  - Prós: Líder de mercado, robusto
+  - Contras: Free tier limitado (100 emails/dia — insuficiente); plano Essentials $19.95/mês para 50k emails; UI mais complexa
+  - Config: `EMAIL_PROVIDER=sendgrid`, `SENDGRID_API_KEY=SG.xxxxx`
+
+- **Amazon SES**
+  - Prós: $0.10 por 1.000 emails (o mais barato em escala)
+  - Contras: Requer conta AWS, verificação de domínio mais burocrática, sandbox inicial
+  - Melhor para quando ultrapassar 50k emails/mês
+
+**Recomendação:**
+**Resend** para os primeiros 1.000 usuários. Gratuito, rápido de configurar, deliverability excelente. Migrar para SES quando ultrapassar 10.000 cadastros/mês e o custo começar a importar.
+
+**Como ativar (Render → Environment):**
+```
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=<chave do painel resend.com>
+EMAIL_FROM=noreply@clubeusa.com
+EMAIL_FROM_NAME=Clube USA
+```
+Importante: verificar o domínio `clubeusa.com` no painel do provedor escolhido antes de ativar.
+
+**Status:** PENDENTE
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-12*

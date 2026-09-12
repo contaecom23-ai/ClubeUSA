@@ -184,6 +184,9 @@ class OTPVerify(BaseModel):
     phone: str
     otp:   str
 
+class ResendEmailRequest(BaseModel):
+    email: str
+
 class ClickRequest(BaseModel):
     deal_id: str
 
@@ -391,6 +394,79 @@ async def verify_otp(body: OTPVerify):
 
     token = create_token(member["id"], member["plan"])
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
+
+
+# ============================================================
+#  ROTAS — EMAIL CONFIRMATION (Fase 0.1)
+# ============================================================
+
+@app.get("/auth/email/confirm", include_in_schema=False)
+async def confirm_email(token: str = ""):
+    """
+    Confirma email via link enviado no cadastro.
+    Rota publica — acessada ao clicar no link do email.
+    Token one-time-use, expira em 24h.
+    """
+    from fastapi.responses import HTMLResponse
+
+    if not token:
+        return HTMLResponse(
+            content=(
+                "<html><head><meta charset='utf-8'><title>Clube USA</title></head><body>"
+                "<h2>Link inválido</h2>"
+                "<p>Token ausente. Solicite um novo link no painel.</p>"
+                "<p><a href='/'>← Voltar ao Clube USA</a></p>"
+                "</body></html>"
+            ),
+            status_code=400,
+        )
+
+    from services.member_service import confirm_member_email
+    try:
+        confirmed = confirm_member_email(token)
+    except Exception as e:
+        log.error(f"Erro ao confirmar email: {e}")
+        confirmed = False
+
+    if confirmed:
+        html = (
+            "<html><head><meta charset='utf-8'><title>Email confirmado — Clube USA</title></head><body>"
+            "<h2>✓ Email confirmado!</h2>"
+            "<p>Seu email foi verificado com sucesso. Você agora tem acesso completo ao Clube USA.</p>"
+            "<p><a href='/'>← Acessar o Clube USA</a></p>"
+            "</body></html>"
+        )
+        return HTMLResponse(content=html, status_code=200)
+    else:
+        html = (
+            "<html><head><meta charset='utf-8'><title>Link expirado — Clube USA</title></head><body>"
+            "<h2>Link inválido ou expirado</h2>"
+            "<p>O link de confirmação é inválido ou expirou (validade: 24h).</p>"
+            "<p>Acesse seu painel e solicite o reenvio do email de confirmação.</p>"
+            "<p><a href='/'>← Voltar ao Clube USA</a></p>"
+            "</body></html>"
+        )
+        return HTMLResponse(content=html, status_code=400)
+
+
+@app.post("/auth/email/resend")
+async def resend_email_confirm(
+    body: ResendEmailRequest,
+    member: dict = Depends(get_current_member),
+):
+    """
+    Reenvia email de confirmacao para o membro autenticado.
+    Rate-limited pelo middleware global (60/min por IP).
+    Resposta generica para nao vazar se email esta ou nao cadastrado.
+    """
+    from services.member_service import resend_email_confirmation
+    try:
+        resend_email_confirmation(member["sub"], body.email)
+    except Exception as e:
+        log.error(f"Erro reenvio email: {e}")
+    return {
+        "message": "Se o email estiver cadastrado, você receberá o link em instantes."
+    }
 
 
 # ============================================================
