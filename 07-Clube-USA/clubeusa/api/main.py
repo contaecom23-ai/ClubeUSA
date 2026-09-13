@@ -39,6 +39,11 @@
 #  POST /jobs/admin              — criar vaga (admin) — Fase 1.4
 #  PATCH /jobs/admin/{id}        — atualizar vaga (admin) — Fase 1.4
 #  DELETE /jobs/admin/{id}       — desativar vaga (admin) — Fase 1.4
+#  GET  /housing                 — listar moradia (membro) — Fase 1.5
+#  GET  /housing/{id}            — detalhe do anuncio (membro) — Fase 1.5
+#  POST /housing/admin           — criar anuncio (admin) — Fase 1.5
+#  PATCH /housing/admin/{id}     — atualizar anuncio (admin) — Fase 1.5
+#  DELETE /housing/admin/{id}    — desativar anuncio (admin) — Fase 1.5
 # ============================================================
 
 import hmac
@@ -60,6 +65,7 @@ from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
 from routers.jobs import router as jobs_router
+from routers.housing import router as housing_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -92,6 +98,7 @@ app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
 app.include_router(jobs_router)
+app.include_router(housing_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")

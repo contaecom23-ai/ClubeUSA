@@ -1,40 +1,40 @@
 # ROADMAP — Clube USA
 
-> Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
-> **Última sincronização com main: 2026-09-12** | Branch atual: feat/fase-1.4-empregos (2026-09-13)
+> Fonte da verdade do projeto. `[x]` = merged em main. `[PR]` = implementado, PR aberto aguardando merge.
 
 ---
 
-## REGRAS DE SEGURANÇA (obrigatórias — ver DECISOES.md para bloqueios externos)
+## REGRAS DE SEGURANÇA (obrigatórias em todo código)
 
-- Auth global: TODA rota exige token válido; rotas públicas explícitas e mínimas (home, status, login, registro com rate-limit, webhook Stripe com HMAC).
-- Multi-tenant: todo dado isolado por `user_id` vindo do servidor (do token), nunca do cliente. Acesso a recurso de outro → 404.
-- RLS Supabase como endgame; até lá, acesso somente server-side com `service_role`.
-- Segredos sempre via env var, nunca hardcoded.
-- Tokens JWT com TTL 7 dias.
-- Rate-limit em login e registro.
-- Proteção XSS, SQL injection (queries parametrizadas), IDOR.
-- Webhooks externos com verificação de assinatura + janela anti-replay.
+- Toda rota exige token válido; lista pública explícita e mínima.
+- Multi-tenant: `user_id` sempre do servidor (token), nunca do input do cliente; cross-tenant → 404.
+- RLS no Supabase como endgame; acesso server-side com `service_role`; nunca expor `anon key`.
+- Segredos via env var, nunca hardcoded. Senhas geradas aleatoriamente com hash forte.
+- Tokens com TTL 7 dias. Rate-limit em login/registro. Proteção XSS, SQLi, IDOR.
+- CORS restrito; headers de segurança ativos; validação em uploads.
+- Webhooks com verificação HMAC + anti-replay.
+- Nunca expor segredos ou PII em logs.
 
 ---
 
-## FASE 0 — PRÉ-LANÇAMENTO
+## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [x] **0.1** Cadastro + perfil mínimo + verificação de identidade — `POST /auth/register`, `GET /member/profile`, `member_service.py`. *Verificação via OTP WhatsApp (mais forte que email); email é campo opcional.*
-- [x] **0.2** Sistema de REFERRAL rastreável — código único por pessoa, atribuição no cadastro, `GET /member/referral` com stats, link curto `GET /i/{code}` → `?ref={code}` implementado.
-- [x] **0.3** Analytics básico — snapshot `GET /admin/metrics` + série temporal `GET /admin/analytics?days=30` (cadastros/dia + taxa de referral). Fase 0.3 concluída em 2026-09-12.
-- [ ] **0.4** "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude. *Bloqueado por decisão de produto (D-002): o que conta como "ação real"? E exige email service (D-001).*
+- [x] **0.0** Infra base: FastAPI, Supabase, auth JWT, rate-limit, CORS, segurança headers
+- [ ] **0.1** Cadastro + perfil mínimo + email confirmado *(implementado em PR, aguardando merge e decisão sobre envio de email — ver DECISOES.md D-001)*
+- [PR] **0.2** Sistema de REFERRAL rastreável — link `/i/{code}` + atribuição *(PR #92)*
+- [PR] **0.3** Analytics básico — série temporal de crescimento *(PR #92)*
+- [ ] **0.4** Definição de "cadastro válido" (email confirmado + ≥1 ação real) + anti-fraude
 
 ---
 
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
-- [x] **1.1** PROMOÇÕES/ACHADOS — sistema de deals com curadoria, filtro por categoria, admin approval workflow, envio via WhatsApp/Telegram (`/member/deals`, `dealscanner2/`, admin panel).
+- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência) ← **próxima prioridade**
 - [ ] **1.2** Busca por ZIP + raio 1–5 milhas
-- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000)
-- [x] **1.4** Empregos (seed manual) — `GET /jobs`, `GET /jobs/{id}` (membro), `POST/PATCH/DELETE /jobs/admin` (admin). Migration `jobs_migration.sql`, `job_service.py`, `routers/jobs.py`, 13 testes. *Aguarda merge do PR #92 (base) e depois deste PR.*
-- [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
-- [x] **1.6** Rastreador de preço de produto — Amazon/Walmart/BestBuy, cupons verificados Playwright, alertas automáticos.
+- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO
+- [PR] **1.4** Empregos — seed manual pelo admin *(PR #93, stacked em PR #92)*
+- [PR] **1.5** Moradia — quartos/roommates/casas, filtro ZIP *(este PR, stacked em PR #93)*
+- [x] **1.6** Rastreador de preço de produto (Amazon/Walmart/BestBuy + cupons)
 
 ---
 
@@ -66,8 +66,8 @@
 
 ## FASE 5 — MONETIZAÇÃO PESADA
 
-- [ ] **5.1** LEADS (seguros, advogados, dentistas, contractors; lead premium verificado via concierge)
-- [ ] **5.2** Serviços financeiros = margem alta (corretagem de seguros, remessas — preferir COMISSÃO)
+- [ ] **5.1** LEADS (seguros, advogados, dentistas, contractors)
+- [ ] **5.2** Serviços financeiros = margem alta (corretagem de seguros, remessas — COMISSÃO)
 - [ ] **5.3** Produtos próprios
 
 ---
@@ -77,6 +77,18 @@
 - [ ] **6.1** Dados agregados
 - [ ] **6.2** Painel de insights por ZIP
 - [ ] **6.3** Clientes B2B (seguradoras, bancos, remessas, imobiliárias)
+
+---
+
+## ESTADO DO PIPELINE (2026-09-13)
+
+| Branch | Conteúdo | PR | Base |
+|--------|----------|----|------|
+| `feat/completa-fase-0.2-0.3` | Referral /i/{code} + Analytics série temporal | #92 → main | main |
+| `feat/fase-1.4-empregos` | Vagas de emprego seed manual | #93 → PR#92 | PR#92 |
+| `feat/fase-1.5-moradia` | Moradia seed manual | este PR | PR#93 |
+
+**Para desbloquear:** merge PR #92 em main, depois #93, depois este.
 
 ---
 
