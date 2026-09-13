@@ -1,7 +1,7 @@
 # ROADMAP — Clube USA
 
 > Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
-> **Última sincronização com main: 2026-09-12**
+> **Última sincronização com main: 2026-09-12** | Branch atual: feat/fase-1.4-empregos (2026-09-13)
 
 ---
 
@@ -32,7 +32,7 @@
 - [x] **1.1** PROMOÇÕES/ACHADOS — sistema de deals com curadoria, filtro por categoria, admin approval workflow, envio via WhatsApp/Telegram (`/member/deals`, `dealscanner2/`, admin panel).
 - [ ] **1.2** Busca por ZIP + raio 1–5 milhas
 - [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000)
-- [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
+- [x] **1.4** Empregos (seed manual) — `GET /jobs`, `GET /jobs/{id}` (membro), `POST/PATCH/DELETE /jobs/admin` (admin). Migration `jobs_migration.sql`, `job_service.py`, `routers/jobs.py`, 13 testes. *Aguarda merge do PR #92 (base) e depois deste PR.*
 - [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
 - [x] **1.6** Rastreador de preço de produto — Amazon/Walmart/BestBuy, cupons verificados Playwright, alertas automáticos.
 
@@ -80,4 +80,4 @@
 
 ---
 
-*Atualizado em: 2026-09-12*
+*Atualizado em: 2026-09-13*
