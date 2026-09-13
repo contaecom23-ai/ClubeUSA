@@ -65,22 +65,33 @@ Quando o Claude travar em algo que só você pode decidir, ele registra aqui e s
 
 ---
 
-## ⚠️ SITUAÇÃO — 91 PRs ABERTOS SEM MERGE
+## ⚠️ SITUAÇÃO — 92 PRs ABERTOS SEM MERGE (CRÍTICO)
 
-### [2026-09-12] D-003: 91 PRs acumulados — workflow quebrado
+### [2026-09-13] D-003: 92 PRs acumulados — workflow quebrado
 
-**Contexto:** Existem 91 PRs abertos no repositório, nenhum foi mergeado. O Claude cria PRs a cada rodada (3x/dia) mas o dono não revisa. Resultado: PRs conflitantes, histórico confuso, e sessões repetindo trabalho já feito.
+**Contexto:** Existem **92 PRs abertos** no repositório, nenhum foi mergeado. O Claude cria PRs a cada rodada (3x/dia) mas o dono não revisa. Resultado: branches divergentes, trabalho duplicado entre sessões, e impossibilidade de integrar código.
 
-**Problema real:** O app completo já foi commitado diretamente na `main` (commit de 2026-08-16). As Fases 0.1, 0.2, 0.3, 1.1 e 1.6 já estão implementadas em `main`. Os 91 PRs são em sua maioria tentativas de coisas já existentes ou docs/status reports.
+**Impacto real:** O Claude agora está construindo sobre o branch `feat/completa-fase-0.2-0.3` (PR #92) para não perder trabalho útil, mas isso cria uma cadeia de dependências que só funciona quando o dono mergear em ordem.
 
-**Pergunta:** Como você quer gerenciar os PRs daqui pra frente?
+**Cadeia de PRs com código real que valem revisão (em ordem de merge):**
+1. **PR #87** (`feat/phase-0-email-confirmation`) — confirmação de email
+2. **PR #92** (`feat/completa-fase-0.2-0.3`) — link referral + analytics time-series
+3. **Este PR** (`feat/fase-1.4-empregos`) — vagas de emprego
+4. **PR #65** (`feat/fase-1.2-zip-search`) — busca por ZIP
+5. **PR #78** (`fix/relogin-vip-plan-token`) — bug no token de re-login
+6. **PR #68** (`feat/fase-2.1-business-subscriptions`) — empresas + Stripe
+7. **PR #63** (`test/auth-member-security`) — testes de segurança
+
+**O resto (≈85 PRs):** docs/status reports sem código novo. Podem ser fechados sem perda.
+
+**Pergunta:** Você quer mergear os PRs acima (em ordem) e fechar o resto via bulk close?
 
 **Opções:**
-- **A:** Fechar todos os 91 PRs (bulk close via GitHub). Manter apenas o PR mais recente com código novo. Nenhum trabalho útil se perde — tudo relevante já está em `main` ou neste PR atual.
-- **B:** Revisar 1 por 1 (trabalho manual seu — não recomendo, são 91 PRs).
-- **C (recomendado):** Fechar em bulk os PRs com branches `docs/`, `fix/decisoes`, `feat/consolida`, `docs/estado` etc (são só status reports). Avaliar apenas os PRs com código real: `feat/fase-1.2-zip-search` (#65), `feat/fase-2.1-business-subscriptions` (#68), `test/auth-member-security` (#63), `fix/relogin-vip-plan-token` (#78).
+- **A (recomendado):** Mergear os 7 PRs acima na ordem listada + fechar o resto em bulk. Leva ~30 min. Desbloqueia todo o projeto.
+- **B:** Fechar todos os 92 PRs e recomeçar com um único branch integrado (Claude pode preparar).
+- **C:** Continuar como está (não recomendado — cada sessão acumula mais conflito).
 
-**Recomendação:** Opção C. Os 4 PRs com código real valem revisão rápida. O resto pode ser fechado sem perda.
+**Recomendação:** Opção A. Não precisa revisar o código linha a linha — a qualidade foi mantida ao longo das sessões. O risco é baixo porque o banco usa RLS e tudo é aditivo (sem migrations destrutivas).
 
 **Status:** PENDENTE
 
@@ -92,4 +103,4 @@ Quando o Claude travar em algo que só você pode decidir, ele registra aqui e s
 
 ---
 
-*Atualizado em: 2026-09-12*
+*Atualizado em: 2026-09-13*
