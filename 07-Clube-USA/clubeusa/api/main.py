@@ -6,6 +6,8 @@
 #  POST /auth/register        — cadastro de membro
 #  POST /auth/otp/request     — solicitar OTP por WhatsApp
 #  POST /auth/otp/verify      — verificar OTP e receber JWT
+#  POST /auth/email/confirm-request — solicitar confirmacao de email
+#  GET  /auth/email/confirm/{token} — confirmar email via link
 #  GET  /member/profile       — perfil do membro autenticado
 #  GET  /member/deals         — deals da semana por categoria
 #  GET  /member/referral      — link e stats de indicacao
@@ -15,6 +17,7 @@
 #  POST /billing/portal       — portal de gestao da assinatura
 #  POST /billing/webhook      — webhook Stripe (pagamento confirmado)
 #  GET  /public/groups        — 2 grupos WhatsApp ativos (sem auth)
+#  GET  /i/{referral_code}    — redirect de link de indicacao amigavel
 #  POST /webhook/group        — webhook Z-API entradas/saidas de grupo
 #  GET  /health               — health check
 #  POST /alerts              — criar alerta de preco (plano pago)
@@ -44,7 +47,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -394,6 +397,54 @@ async def verify_otp(body: OTPVerify):
 
 
 # ============================================================
+#  ROTAS — CONFIRMACAO DE EMAIL (Fase 0.1)
+# ============================================================
+
+@app.post("/auth/email/confirm-request")
+async def request_email_confirmation_route(member: dict = Depends(get_current_member)):
+    """
+    Envia link de confirmacao para o email cadastrado do membro.
+    Requer JWT valido. O email deve ter sido fornecido no cadastro.
+    """
+    from supabase import create_client
+    from services.email_service import request_email_confirmation as svc
+    from utils.security import decrypt
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("members").select("email_enc,email_confirmed").eq("id", member["sub"]).execute()
+
+    if not result.data or not result.data[0].get("email_enc"):
+        raise HTTPException(
+            status_code=400,
+            detail="Nenhum email cadastrado. Atualize seu perfil com um email primeiro."
+        )
+
+    m = result.data[0]
+    if m.get("email_confirmed"):
+        return {"message": "Email ja confirmado."}
+
+    email = decrypt(m["email_enc"])
+    svc(member["sub"], email)
+    return {"message": "Email de confirmacao enviado. Verifique sua caixa de entrada.", "expires_in": 86400}
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def confirm_email_route(token: str):
+    """
+    Verifica token de confirmacao de email.
+    Usuario clica no link do email — redireciona para o painel com status.
+    Rota publica (sem auth): o token e o proprio mecanismo de autenticacao.
+    """
+    from services.email_service import confirm_email_token
+    app_url = os.environ.get("APP_URL", "https://clubeusa.com")
+    try:
+        confirm_email_token(token)
+        return RedirectResponse(url=f"{app_url}/painel?email_confirmed=1")
+    except ValueError:
+        return RedirectResponse(url=f"{app_url}/painel?email_error=1")
+
+
+# ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
 
@@ -478,7 +529,7 @@ async def get_referral(member: dict = Depends(get_current_member)):
         raise HTTPException(status_code=404)
 
     m = result.data[0]
-    referral_link = f"{APP_URL}?ref={m['referral_code']}"
+    referral_link = f"{APP_URL}/i/{m['referral_code']}"
 
     # Historico de indicacoes
     refs = sb.table("referrals").select(
@@ -815,6 +866,20 @@ async def public_groups():
     except Exception as e:
         log.error(f"Erro ao buscar grupos: {e}")
         return {"groups": []}
+
+
+# ============================================================
+#  ROTAS — INDICACAO (link amigavel, Fase 0.2)
+# ============================================================
+
+@app.get("/i/{referral_code}", include_in_schema=False)
+async def referral_link_redirect(referral_code: str):
+    """
+    Redireciona /i/CODIGO para o cadastro com referral pre-preenchido.
+    Permite links no formato clubeusa.com/i/ABC123 conforme especificado na Fase 0.2.
+    """
+    app_url = os.environ.get("APP_URL", "https://clubeusa.com")
+    return RedirectResponse(url=f"{app_url}/?ref={referral_code}", status_code=302)
 
 
 # ============================================================
