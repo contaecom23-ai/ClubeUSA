@@ -15,7 +15,7 @@
 
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
-- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
+- [~] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência) — ⚠️ urgência implementada (`expires_at` + `is_urgent` + `expires_in_hours` em `GET /member/deals`; deals expirados excluídos automaticamente; urgentes sobem ao topo). Falta: curadoria editorial (seed manual das primeiras semanas) e integração no scanner para popular `expires_at`.
 - [ ] **1.2** Busca por ZIP + raio 1–5 milhas
 - [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
 - [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
@@ -66,4 +66,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-15 — Fase 1.1 urgência (PR #97); Fase 1.3 tier tracking (PR #96)*

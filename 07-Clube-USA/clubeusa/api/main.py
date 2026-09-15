@@ -436,32 +436,17 @@ async def get_deals(
     member: dict = Depends(get_current_member)
 ):
     """
-    Deals da semana filtrados por categoria.
+    Deals da semana filtrados por categoria — Fase 1.1.
+    Deals expirados são excluídos; deals urgentes (expira em <24h) sobem ao topo.
     VIP recebe mais deals e com antecedencia.
     """
-    from supabase import create_client
-    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
-
-    # VIP ve todos, free ve apenas os enviados
-    if member.get("plan") == "vip":
-        status_filter = ["approved", "sent"]
-        limit = min(limit, 50)
-    else:
-        status_filter = ["sent"]
-        limit = min(limit, 20)
-
-    query = (
-        sb.table("deals")
-        .select("id,title,price_now,price_was,discount_pct,rating,reviews,score,score_label,price_context,affiliate_url,category,sent_at")
-        .in_("status", status_filter)
-        .order("score", desc=True)
-        .limit(limit)
+    from services.deals_service import get_member_deals
+    deals = get_member_deals(
+        plan=member.get("plan", "free"),
+        category=category,
+        limit=limit,
     )
-    if category and category != "all":
-        query = query.eq("category", category)
-
-    result = query.execute()
-    return {"deals": result.data or [], "plan": member.get("plan", "free")}
+    return {"deals": deals, "plan": member.get("plan", "free")}
 
 
 @app.get("/member/referral")
