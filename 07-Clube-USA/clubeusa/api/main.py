@@ -11,6 +11,7 @@
 #  GET  /member/referral      — link e stats de indicacao
 #  POST /member/click         — registrar clique em deal
 #  GET  /member/leaderboard   — ranking de pontos
+#  GET  /member/influencer    — tier de influenciador e stats (Fase 1.3)
 #  POST /billing/subscribe    — assinar VIP via Stripe
 #  POST /billing/portal       — portal de gestao da assinatura
 #  POST /billing/webhook      — webhook Stripe (pagamento confirmado)
@@ -32,6 +33,7 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  GET  /admin/influencers       — ranking de influenciadores (Fase 1.3)
 # ============================================================
 
 import hmac
@@ -544,6 +546,20 @@ async def get_leaderboard(member: dict = Depends(get_current_member)):
         "leaderboard": result.data or [],
         "my_rank":     my_position,
     }
+
+
+@app.get("/member/influencer")
+async def get_influencer_stats(member: dict = Depends(get_current_member)):
+    """
+    Tier de influenciador do membro autenticado — Fase 1.3.
+    Tier calculado a partir de referral_count (indicacoes validas por OTP).
+    Tiers: Parceiro (50+), Embaixador (250+), Hall da Fama (1000+).
+    """
+    from services.influencer_service import get_influencer_stats as svc
+    try:
+        return svc(member["sub"])
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 # ============================================================
@@ -1100,3 +1116,25 @@ async def admin_send_deals(_=Depends(require_admin)):
 async def admin_list_alerts(_=Depends(require_admin)):
     from services.admin_service import list_admin_alerts
     return list_admin_alerts()
+
+
+@app.get("/admin/influencers")
+async def admin_list_influencers(
+    min_referrals: int = 10,
+    limit: int = 50,
+    offset: int = 0,
+    _=Depends(require_admin),
+):
+    """
+    Ranking de influenciadores ordenado por indicacoes validas — Fase 1.3.
+    Retorna membros com referral_count >= min_referrals, com tier calculado.
+    Comissoes e tetos sao definidos pelo dono (ver DECISOES.md D-006).
+    """
+    from services.influencer_service import list_influencers
+    return {
+        "influencers": list_influencers(
+            min_referrals=min_referrals,
+            limit=limit,
+            offset=offset,
+        )
+    }
