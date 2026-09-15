@@ -250,20 +250,21 @@ def get_member_profile(member_id: str) -> Optional[dict]:
 
     # Descriptografa PII apenas para exibicao
     return {
-        "id":           m["id"],
-        "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
-        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "language":     m["language"],
-        "state":        m["state"],
-        "plan":         m["plan"],
-        "points":       m["points"],
-        "level":        m["level"],
-        "categories":   m["categories"],
-        "referral_code": m["referral_code"],
+        "id":             m["id"],
+        "name":           decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":          _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
+        "email":          _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email_confirmed": m.get("email_confirmed", False),
+        "language":       m["language"],
+        "state":          m["state"],
+        "plan":           m["plan"],
+        "points":         m["points"],
+        "level":          m["level"],
+        "categories":     m["categories"],
+        "referral_code":  m["referral_code"],
         "referral_count": m["referral_count"],
-        "total_clicks": m["total_clicks"],
-        "created_at":   m["created_at"],
+        "total_clicks":   m["total_clicks"],
+        "created_at":     m["created_at"],
         "vip_expires_at": m.get("vip_expires_at"),
     }
 

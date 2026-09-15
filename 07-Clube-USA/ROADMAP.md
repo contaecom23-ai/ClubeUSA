@@ -6,10 +6,12 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+- [~] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Backend completo: coluna `email_confirmed`, tabela `email_confirmation_tokens`, rotas `POST /auth/email/confirm-request` e `GET /auth/email/confirm/{token}`, `email_confirmed` exposto no perfil. **Bloqueio de deploy:** aguardando escolha de provedor de email (ver DECISOES.md 2026-09-15).
+- [~] **0.2** Sistema de REFERRAL rastreável — código único por pessoa + atribuição
+  - Backend completo: `referral_code` único por membro, `referred_by` FK, tabela `referrals`, atribuição automática no cadastro, `GET /member/referral` retorna link e stats, **nova rota `GET /i/{code}`** para URL amigável (`clubeusa.com/i/ABC123`). Link atualizado de `?ref=` para `/i/`. Sem bloqueios.
 - [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- [ ] **0.4** 'cadastro válido' verificável (email confirmado + ≥1 ação real) + anti-fraude
 
 ---
 
@@ -66,4 +68,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-15*
