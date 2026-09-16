@@ -1,26 +1,34 @@
 # ROADMAP — Clube USA
 
 > Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
+>
+> **Estado em 2026-09-16:** App ainda não deployado em produção. Código em desenvolvimento na
+> branch `consolidado/fase-0.2-0.3`. PRs anteriores (#70–#99) foram substituídos por esta consolidação.
 
 ---
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
 - [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+  - Cadastro e perfil mínimo existem (schema + API). Falta confirmação de email.
+  - **Bloqueado por D-002** (escolha do provedor de email: Resend / SendGrid / AWS SES).
+- [x] **0.2** REFERRAL rastreável — `GET /i/{code}` redireciona para cadastro com ref pré-preenchido
+  - Link formato `clubeusa.com/i/ABC123` funcionando. Atribuição via `?ref=` no frontend.
+- [x] **0.3** Analytics básico — `GET /admin/analytics`: crescimento diário, cliques, referrals (30 dias)
+  - Lê das tabelas existentes. Sem schema novo.
+- [ ] **0.4** "Cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+  - Depende de 0.1 estar completo.
 
 ---
 
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
-- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
+- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência, campo `expires_at`)
 - [ ] **1.2** Busca por ZIP + raio 1–5 milhas
-- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
-- [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
-- [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
-- [x] **1.6** Rastreador de preço de produto — membro cola o link de um produto (Amazon/Walmart/BestBuy), vê o histórico de preço e ofertas cruzadas nos outros marketplaces, cupons verificados automaticamente (Playwright) com selo confirmado/não confirmado, e recebe alerta quando o preço cai (recheck a cada 6h)
+- [ ] **1.3** Influenciadores PAGO POR RESULTADO (selos Parceiro/Embaixador/Hall da Fama)
+- [ ] **1.4** Empregos (seed manual)
+- [ ] **1.5** Moradia (quartos/roommates, filtro ZIP — seed manual)
+- [x] **1.6** Rastreador de preço — histórico + cupons verificados (Playwright)
 
 ---
 
@@ -37,23 +45,23 @@
 
 - [ ] **3.1** Reviews/reputação
 - [ ] **3.2** Ranking comunitário
-- [ ] **3.3** Conteúdo da comunidade (Q&A, recomendações)
+- [ ] **3.3** Conteúdo da comunidade (Q&A)
 - [ ] **3.4** Gamificação (Contributor, Trusted Member, Community Guide, Verified Helper)
 
 ---
 
 ## FASE 4 — INTELIGÊNCIA
 
-- [ ] **4.1** IA CONCIERGE (entende intenção, conecta com empresas)
-- [ ] **4.2** Sistema de INTENÇÃO (mudança de cidade, seguro, emprego, moradia) = motor de lucro
+- [ ] **4.1** IA CONCIERGE
+- [ ] **4.2** Sistema de INTENÇÃO (mudança de cidade, seguro, emprego, moradia)
 - [ ] **4.3** Personalização não-sensível
 
 ---
 
 ## FASE 5 — MONETIZAÇÃO PESADA
 
-- [ ] **5.1** LEADS (seguros, advogados, dentistas, contractors; lead premium verificado via concierge)
-- [ ] **5.2** Serviços financeiros = margem alta (corretagem de seguros, remessas — preferir COMISSÃO)
+- [ ] **5.1** LEADS (seguros, advogados, dentistas, contractors)
+- [ ] **5.2** Serviços financeiros (corretagem de seguros, remessas — preferir COMISSÃO)
 - [ ] **5.3** Produtos próprios
 
 ---
@@ -66,4 +74,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-16*

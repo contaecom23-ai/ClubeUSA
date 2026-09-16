@@ -6,6 +6,7 @@
 #  POST /auth/register        — cadastro de membro
 #  POST /auth/otp/request     — solicitar OTP por WhatsApp
 #  POST /auth/otp/verify      — verificar OTP e receber JWT
+#  GET  /i/{referral_code}    — redirect de link de indicacao (Fase 0.2)
 #  GET  /member/profile       — perfil do membro autenticado
 #  GET  /member/deals         — deals da semana por categoria
 #  GET  /member/referral      — link e stats de indicacao
@@ -23,6 +24,7 @@
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
+#  GET  /admin/analytics         — analytics basico: crescimento, cliques, referrals (Fase 0.3)
 #  GET  /admin/members           — lista membros (admin)
 #  GET  /admin/members/{id}      — perfil completo (admin)
 #  POST /admin/members/{id}/status — alterar status (admin)
@@ -44,7 +46,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -92,21 +94,20 @@ app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
 async def favicon():
     return FileResponse(os.path.join(_ASSETS_DIR, "favicon.ico"))
 
-# CORS — origens autorizadas (o site e servido pelo proprio FastAPI, entao CORS e so para dominios externos)
+# CORS — origens autorizadas
 _CORS_ORIGINS = [
     "https://clubeusa.com",
     "https://www.clubeusa.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
-# Em dev, aceita qualquer ngrok/tunnel automaticamente
 if os.environ.get("ENVIRONMENT", "development") == "development":
     _CORS_ORIGINS = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_CORS_ORIGINS,
-    allow_credentials=_CORS_ORIGINS != ["*"],  # browser rejects credentials=true with wildcard origin
+    allow_credentials=_CORS_ORIGINS != ["*"],
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
@@ -133,7 +134,6 @@ async def rate_limit_middleware(request: Request, call_next):
     ip = request.client.host if request.client else "unknown"
     ip_hash = hash_ip(ip)
 
-    # Rate limit por IP: 60 req/min geral, 5 req/min para auth
     path = request.url.path
     if path.startswith("/auth"):
         allowed = check_rate_limit(f"auth:{ip_hash}", max_req=5, window_sec=60)
@@ -256,7 +256,6 @@ class StatusUpdate(BaseModel):
 # ============================================================
 
 def _otp_save(phone_hash: str, otp: str, ttl_sec: int = 600):
-    """Salva OTP no Supabase com TTL. Sobrescreve OTP anterior do mesmo numero."""
     from supabase import create_client
     from datetime import datetime, timedelta
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
@@ -269,7 +268,6 @@ def _otp_save(phone_hash: str, otp: str, ttl_sec: int = 600):
 
 
 def _otp_verify(phone_hash: str, otp: str) -> tuple:
-    """Verifica OTP — retorna (True, '') ou (False, mensagem_erro)."""
     from supabase import create_client
     from datetime import datetime, timezone
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
@@ -308,7 +306,6 @@ def _otp_verify(phone_hash: str, otp: str) -> tuple:
 
 @app.post("/auth/register", status_code=201)
 async def register(body: RegisterRequest, request: Request):
-    """Cadastro de novo membro."""
     from services.member_service import register_member
     try:
         result = register_member(
@@ -333,12 +330,7 @@ async def register(body: RegisterRequest, request: Request):
 
 @app.post("/auth/otp/request")
 async def request_otp(body: OTPRequest, request: Request):
-    """
-    Envia OTP de 6 digitos via WhatsApp para login.
-    O membro nao precisa de senha — autentica pelo numero.
-    """
     from utils.security import validate_phone, generate_otp, hash_pii
-    import time
 
     try:
         phone = validate_phone(body.phone)
@@ -348,10 +340,8 @@ async def request_otp(body: OTPRequest, request: Request):
     otp = generate_otp()
     phone_hash = hash_pii(phone)
 
-    # Persiste OTP no Supabase com TTL de 10 minutos
     _otp_save(phone_hash, otp, ttl_sec=600)
 
-    # Envia via WhatsApp (ou loga em dev)
     if os.environ.get("ENVIRONMENT") == "production":
         _send_otp_whatsapp(phone, otp)
     else:
@@ -362,7 +352,6 @@ async def request_otp(body: OTPRequest, request: Request):
 
 @app.post("/auth/otp/verify")
 async def verify_otp(body: OTPVerify):
-    """Verifica OTP e retorna JWT se valido."""
     from utils.security import validate_phone, hash_pii, create_token
 
     try:
@@ -377,7 +366,6 @@ async def verify_otp(body: OTPVerify):
         status = 429 if "tentativas" in error_msg else 400
         raise HTTPException(status_code=status, detail=error_msg)
 
-    # OTP valido — busca membro
     from supabase import create_client
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
     result = sb.table("members").select("id,plan,status").eq("phone_hash", phone_hash).execute()
@@ -399,7 +387,6 @@ async def verify_otp(body: OTPVerify):
 
 @app.get("/member/profile")
 async def get_profile(member: dict = Depends(get_current_member)):
-    """Perfil do membro autenticado."""
     from services.member_service import get_member_profile
     profile = get_member_profile(member["sub"])
     if not profile:
@@ -421,7 +408,6 @@ class UpdateCategoriesRequest(BaseModel):
 
 @app.patch("/member/profile")
 async def update_profile_categories(body: UpdateCategoriesRequest, member: dict = Depends(get_current_member)):
-    """Atualiza os nichos (categorias) de interesse do membro."""
     from services.member_service import update_member_categories
     try:
         return update_member_categories(member["sub"], body.categories)
@@ -435,14 +421,9 @@ async def get_deals(
     limit: int = 20,
     member: dict = Depends(get_current_member)
 ):
-    """
-    Deals da semana filtrados por categoria.
-    VIP recebe mais deals e com antecedencia.
-    """
     from supabase import create_client
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
-    # VIP ve todos, free ve apenas os enviados
     if member.get("plan") == "vip":
         status_filter = ["approved", "sent"]
         limit = min(limit, 50)
@@ -466,7 +447,6 @@ async def get_deals(
 
 @app.get("/member/referral")
 async def get_referral(member: dict = Depends(get_current_member)):
-    """Link de indicacao e estatisticas."""
     from supabase import create_client
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
@@ -478,9 +458,9 @@ async def get_referral(member: dict = Depends(get_current_member)):
         raise HTTPException(status_code=404)
 
     m = result.data[0]
-    referral_link = f"{APP_URL}?ref={m['referral_code']}"
+    # Fase 0.2: link amigavel /i/{code}
+    referral_link = f"{APP_URL}/i/{m['referral_code']}"
 
-    # Historico de indicacoes
     refs = sb.table("referrals").select(
         "status,points_awarded,created_at"
     ).eq("referrer_id", member["sub"]).order("created_at", desc=True).limit(10).execute()
@@ -502,11 +482,9 @@ async def register_click(
     request: Request,
     member: dict = Depends(get_current_member)
 ):
-    """Registra clique em deal e retorna URL com UTM rastreavel."""
     from services.member_service import track_click
     from supabase import create_client
 
-    # Verifica se deal existe
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
     deal = sb.table("deals").select("id,affiliate_url").eq("id", body.deal_id).execute()
     if not deal.data:
@@ -518,7 +496,6 @@ async def register_click(
         ip        = request.client.host if request.client else None,
     )
 
-    # Adiciona UTM ao link afiliado para rastrear conversao
     base_url = deal.data[0]["affiliate_url"]
     tracked_url = f"{base_url}&utm_source=clubeusa&utm_medium=whatsapp&utm_campaign={utm}"
     return {"url": tracked_url, "utm": utm}
@@ -526,13 +503,11 @@ async def register_click(
 
 @app.get("/member/leaderboard")
 async def get_leaderboard(member: dict = Depends(get_current_member)):
-    """Top 10 membros por pontos (sem expor dados pessoais)."""
     from supabase import create_client
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
     result = sb.rpc("get_leaderboard", {"p_limit": 10}).execute()
 
-    # Count members with more points to determine rank efficiently
     member_pts = sb.table("members").select("points").eq("id", member["sub"]).execute()
     my_position = None
     if member_pts.data:
@@ -552,10 +527,6 @@ async def get_leaderboard(member: dict = Depends(get_current_member)):
 
 @app.post("/billing/subscribe")
 async def subscribe_vip(member: dict = Depends(get_current_member)):
-    """
-    Cria sessao de checkout Stripe para assinar o VIP.
-    Retorna URL para redirecionar o usuario.
-    """
     if not stripe.api_key:
         raise HTTPException(status_code=503, detail="Pagamento nao configurado.")
 
@@ -584,7 +555,6 @@ async def subscribe_vip(member: dict = Depends(get_current_member)):
 
 @app.post("/billing/portal")
 async def billing_portal(member: dict = Depends(get_current_member)):
-    """Portal Stripe para gerenciar assinatura (cancelar, trocar cartao)."""
     if not stripe.api_key:
         raise HTTPException(status_code=503)
 
@@ -609,11 +579,6 @@ async def billing_portal(member: dict = Depends(get_current_member)):
 
 @app.post("/billing/webhook")
 async def stripe_webhook(request: Request):
-    """
-    Webhook Stripe — processa eventos de pagamento.
-    Ativa/desativa VIP automaticamente.
-    DEVE ser chamado pelo Stripe, nao pelo frontend.
-    """
     payload   = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
 
@@ -642,7 +607,6 @@ async def stripe_webhook(request: Request):
 # ============================================================
 
 def _handle_checkout_completed(session: dict):
-    """Ativa VIP apos pagamento confirmado."""
     member_id   = session.get("metadata", {}).get("member_id")
     customer_id = session.get("customer")
     if not member_id:
@@ -660,10 +624,8 @@ def _handle_checkout_completed(session: dict):
         "stripe_customer_id": customer_id,
     }).eq("id", member_id).execute()
 
-    # Adiciona pontos de boas-vindas VIP
     sb.rpc("increment_points", {"p_member_id": member_id, "p_points": 500}).execute()
 
-    # Audit log
     sb.table("audit_logs").insert({
         "actor_type":  "system",
         "action":      "member.vip_activated",
@@ -673,13 +635,10 @@ def _handle_checkout_completed(session: dict):
     }).execute()
 
     log.info(f"VIP ativado para membro {member_id}")
-
-    # Envia mensagem de boas-vindas VIP via WhatsApp
     _send_vip_welcome(member_id)
 
 
 def _handle_subscription_cancelled(subscription: dict):
-    """Cancela VIP quando assinatura e cancelada."""
     customer_id = subscription.get("customer")
     if not customer_id:
         return
@@ -706,13 +665,11 @@ def _handle_subscription_cancelled(subscription: dict):
 
 
 def _handle_payment_failed(invoice: dict):
-    """Loga falha de pagamento — nao cancela imediatamente (Stripe retentar)."""
     customer_id = invoice.get("customer")
     log.warning(f"Pagamento falhou para customer {customer_id}")
 
 
 def _has_used_trial(member_id: str) -> bool:
-    """Verifica se membro ja usou o trial gratuito."""
     from supabase import create_client
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
     result = sb.table("members").select("vip_trial_used").eq("id", member_id).execute()
@@ -720,7 +677,6 @@ def _has_used_trial(member_id: str) -> bool:
 
 
 def _send_vip_welcome(member_id: str):
-    """Envia mensagem de boas-vindas VIP via WhatsApp."""
     try:
         from supabase import create_client
         from utils.security import decrypt
@@ -772,11 +728,6 @@ def _send_vip_welcome(member_id: str):
 
 @app.get("/public/groups")
 async def public_groups():
-    """
-    Retorna os 2 grupos WhatsApp ativos para exibicao no site.
-    Regra: 1 grupo mais cheio com vaga + 1 por idioma (PT/ES).
-    Sem autenticacao.
-    """
     if not os.environ.get("SUPABASE_URL"):
         return {"groups": [
             {"name": "Clube USA — Grupo 1", "invite_link": "#",
@@ -818,15 +769,26 @@ async def public_groups():
 
 
 # ============================================================
+#  ROTA — INDICACAO (link amigavel, Fase 0.2)
+# ============================================================
+
+@app.get("/i/{referral_code}", include_in_schema=False)
+async def referral_link_redirect(referral_code: str):
+    """
+    Fase 0.2 — redireciona clubeusa.com/i/CODIGO para o cadastro
+    com referral pre-preenchido. Link amigavel e compartilhavel.
+    Sem autenticacao, sem DB — apenas redirect 302.
+    """
+    app_url = os.environ.get("APP_URL", "https://clubeusa.com")
+    return RedirectResponse(url=f"{app_url}/?ref={referral_code}", status_code=302)
+
+
+# ============================================================
 #  WEBHOOK — Z-API (entradas e saidas de membros no grupo)
 # ============================================================
 
 @app.post("/webhook/group", include_in_schema=False)
 async def group_webhook(request: Request):
-    """
-    Recebe eventos de entrada/saida de membros via Z-API.
-    Atualiza member_count em tempo real para manter os 2 grupos corretos no site.
-    """
     try:
         payload = await request.json()
     except Exception:
@@ -885,7 +847,6 @@ async def health():
 
 @app.post("/alerts", status_code=201)
 async def create_alert(body: AlertCreate, member: dict = Depends(require_paid_plan)):
-    """Cria alerta de preco para um ASIN."""
     from services.alert_service import create_alert as svc_create
     try:
         result = svc_create(
@@ -901,14 +862,12 @@ async def create_alert(body: AlertCreate, member: dict = Depends(require_paid_pl
 
 @app.get("/alerts")
 async def list_alerts(member: dict = Depends(require_paid_plan)):
-    """Lista alertas ativos do membro autenticado."""
     from services.alert_service import list_alerts as svc_list
     return svc_list(member["sub"])
 
 
 @app.delete("/alerts/{alert_id}", status_code=204)
 async def cancel_alert(alert_id: str, member: dict = Depends(require_paid_plan)):
-    """Cancela um alerta."""
     from services.alert_service import cancel_alert as svc_cancel
     found = svc_cancel(alert_id, member["sub"])
     if not found:
@@ -917,7 +876,6 @@ async def cancel_alert(alert_id: str, member: dict = Depends(require_paid_plan))
 
 @app.post("/alerts/from-link", status_code=201)
 async def create_alert_from_link(body: AlertFromLink, member: dict = Depends(require_paid_plan)):
-    """Recebe URL da Amazon, extrai ASIN e cria alerta."""
     from services.alert_service import extract_asin_from_url, create_alert as svc_create
     try:
         asin   = extract_asin_from_url(body.url)
@@ -934,7 +892,6 @@ async def create_alert_from_link(body: AlertFromLink, member: dict = Depends(req
 
 @app.post("/products/track", status_code=201)
 def track_product(body: TrackProductRequest, member: dict = Depends(require_paid_plan)):
-    """Rastreia um produto: identifica a fonte, busca ofertas cruzadas e dispara verificacao de cupons."""
     from services.tracked_product_service import create_tracked_product
     try:
         return create_tracked_product(member["sub"], body.url)
@@ -944,14 +901,12 @@ def track_product(body: TrackProductRequest, member: dict = Depends(require_paid
 
 @app.get("/products/track")
 async def list_tracked_products_route(member: dict = Depends(require_paid_plan)):
-    """Lista produtos rastreados do membro, com ofertas e cupons."""
     from services.tracked_product_service import list_tracked_products
     return list_tracked_products(member["sub"])
 
 
 @app.get("/products/track/{tracked_id}")
 async def get_tracked_product_route(tracked_id: str, member: dict = Depends(require_paid_plan)):
-    """Detalhe de um produto rastreado."""
     from services.tracked_product_service import get_tracked_product
     result = get_tracked_product(tracked_id, member["sub"])
     if not result:
@@ -961,7 +916,6 @@ async def get_tracked_product_route(tracked_id: str, member: dict = Depends(requ
 
 @app.delete("/products/track/{tracked_id}", status_code=204)
 async def cancel_tracked_product_route(tracked_id: str, member: dict = Depends(require_paid_plan)):
-    """Cancela o rastreamento de um produto."""
     from services.tracked_product_service import cancel_tracked_product
     found = cancel_tracked_product(tracked_id, member["sub"])
     if not found:
@@ -969,7 +923,6 @@ async def cancel_tracked_product_route(tracked_id: str, member: dict = Depends(r
 
 
 def _send_otp_whatsapp(phone: str, otp: str):
-    """Envia OTP via WhatsApp."""
     import requests as req
     msg = f"*Clube USA*\n\nSeu codigo de acesso: *{otp}*\n\nValido por 10 minutos.\nNunca compartilhe este codigo."
     try:
@@ -993,7 +946,6 @@ def _send_otp_whatsapp(phone: str, otp: str):
 @app.get("/vip/sucesso", include_in_schema=False)
 @app.get("/vip/cancelado", include_in_schema=False)
 async def serve_site():
-    """Serve o site (platform.html) em qualquer rota do frontend."""
     html_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "platform.html")
     return FileResponse(os.path.abspath(html_path))
 
@@ -1004,7 +956,6 @@ async def serve_site():
 
 @app.get("/admin", include_in_schema=False)
 async def admin_panel():
-    """Serve o painel admin HTML."""
     html_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "admin.html")
     return FileResponse(os.path.abspath(html_path))
 
@@ -1013,6 +964,84 @@ async def admin_panel():
 async def admin_metrics(_=Depends(require_admin)):
     from services.admin_service import get_metrics
     return get_metrics()
+
+
+@app.get("/admin/analytics")
+async def admin_analytics(_=Depends(require_admin)):
+    """
+    Fase 0.3 — analytics basico: crescimento de membros, cliques, referrals.
+    Le das tabelas existentes, sem schema novo.
+    """
+    from supabase import create_client
+    from datetime import datetime, timedelta, timezone
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+
+    total_res = sb.table("members").select("id", count="exact").is_("deleted_at", None).execute()
+    vip_res   = sb.table("members").select("id", count="exact").eq("plan", "vip").is_("deleted_at", None).execute()
+    total     = total_res.count or 0
+    vip       = vip_res.count or 0
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+
+    new_members_res = (
+        sb.table("members")
+        .select("created_at")
+        .gte("created_at", cutoff)
+        .is_("deleted_at", None)
+        .order("created_at")
+        .execute()
+    )
+    clicks_res = (
+        sb.table("clicks")
+        .select("clicked_at")
+        .gte("clicked_at", cutoff)
+        .execute()
+    )
+    refs_res = (
+        sb.table("referrals")
+        .select("created_at,status")
+        .gte("created_at", cutoff)
+        .execute()
+    )
+
+    daily_members: dict = {}
+    for m in (new_members_res.data or []):
+        day = m["created_at"][:10]
+        daily_members[day] = daily_members.get(day, 0) + 1
+
+    daily_clicks: dict = {}
+    for c in (clicks_res.data or []):
+        day = c["clicked_at"][:10]
+        daily_clicks[day] = daily_clicks.get(day, 0) + 1
+
+    refs = refs_res.data or []
+    refs_confirmed = sum(1 for r in refs if r.get("status") == "confirmed")
+
+    return {
+        "totals": {
+            "members": total,
+            "vip": vip,
+            "free": total - vip,
+        },
+        "last_30_days": {
+            "new_members": sum(daily_members.values()),
+            "clicks": sum(daily_clicks.values()),
+            "referrals_total": len(refs),
+            "referrals_confirmed": refs_confirmed,
+        },
+        "time_series": {
+            "new_members_daily": [
+                {"date": k, "count": v}
+                for k, v in sorted(daily_members.items())
+            ],
+            "clicks_daily": [
+                {"date": k, "count": v}
+                for k, v in sorted(daily_clicks.items())
+            ],
+        },
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @app.get("/admin/members")
@@ -1072,7 +1101,6 @@ async def admin_reject_deal(deal_id: str, _=Depends(require_admin)):
 
 @app.post("/admin/deals/scan")
 async def admin_scan_deals(_=Depends(require_admin)):
-    """Dispara varredura Amazon em background."""
     subprocess.Popen(
         [sys.executable, "scanner.py"],
         cwd=os.path.join(os.path.dirname(__file__), "..", "..", "dealscanner2"),
@@ -1083,7 +1111,6 @@ async def admin_scan_deals(_=Depends(require_admin)):
 
 @app.post("/admin/deals/send")
 async def admin_send_deals(_=Depends(require_admin)):
-    """Envia todos os deals aprovados em background."""
     _ds2 = os.path.join(os.path.dirname(__file__), "..", "..", "dealscanner2")
     _log = open(os.path.join(_ds2, "logs", "sender_bg.log"), "a")
     subprocess.Popen(
