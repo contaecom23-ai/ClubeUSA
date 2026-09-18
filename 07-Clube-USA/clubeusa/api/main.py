@@ -774,13 +774,11 @@ async def public_groups():
 
 @app.get("/i/{referral_code}", include_in_schema=False)
 async def referral_link_redirect(referral_code: str):
-    """
-    Fase 0.2 — redireciona clubeusa.com/i/CODIGO para o cadastro
-    com referral pre-preenchido. Link amigavel e compartilhavel.
-    Sem autenticacao, sem DB — apenas redirect 302.
-    """
+    import re
+    if not re.match(r'^[A-Z0-9]{4,12}$', referral_code.upper()):
+        raise HTTPException(status_code=404, detail="Link inválido.")
     app_url = os.environ.get("APP_URL", "https://clubeusa.com")
-    return RedirectResponse(url=f"{app_url}/?ref={referral_code}", status_code=302)
+    return RedirectResponse(url=f"{app_url}/?ref={referral_code.upper()}", status_code=302)
 
 
 # ============================================================
