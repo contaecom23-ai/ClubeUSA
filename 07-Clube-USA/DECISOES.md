@@ -27,7 +27,40 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
-*(nenhuma ainda — o Claude preencherá aqui conforme avançar)*
+---
+
+### [2026-09-20] Provedor de email para confirmação de cadastro (Fase 0.1)
+
+**Contexto:** O fluxo de confirmação de email está implementado (Fase 0.1). O código suporta Resend e SendGrid via variáveis de ambiente (`RESEND_API_KEY` ou `SENDGRID_API_KEY`). Sem uma chave configurada, o link é apenas logado no console — o cadastro funciona mas o email não é enviado em produção.
+
+**Pergunta:** Qual provedor de email usar e com qual domínio remetente?
+
+**Opções:**
+
+- **A — Resend** (recomendado)
+  - Pros: 3.000 emails/mês grátis, API simples, boa reputação de entrega, suporte a domínio próprio fácil.
+  - Contras: serviço mais novo (fundado 2022), menos conhecido que SendGrid.
+  - Custo: grátis até 3k/mês; $20/mês para 50k. Para os primeiros 1.000 usuários: zero custo.
+
+- **B — SendGrid**
+  - Pros: market leader, amplamente testado.
+  - Contras: free tier limitado (100/dia), configuração mais burocrática, Twilio dono.
+  - Custo: grátis até 100/dia; $19.95/mês para 50k.
+
+- **C — AWS SES**
+  - Pros: mais barato em escala ($0,10/1.000), já usado com AWS.
+  - Contras: requer conta AWS, setup mais complexo (sandbox → produção), não suportado no código atual (precisaria adicionar).
+  - Relevante a partir de ~50k usuários.
+
+**Recomendação:** Resend para os primeiros 1.000 usuários — zero custo, setup em 10 min, domínio verificado em 1 passo. Migrar para SES quando chegar perto de 50k/mês.
+
+**Ação necessária do dono:**
+1. Criar conta em resend.com
+2. Verificar domínio `clubeusa.com` (adicionar DNS TXT)
+3. Gerar API key e adicionar como `RESEND_API_KEY` no Render (Environment > Secret Files)
+4. Definir `EMAIL_FROM=noreply@clubeusa.com` no Render
+
+**Status:** PENDENTE
 
 ---
 

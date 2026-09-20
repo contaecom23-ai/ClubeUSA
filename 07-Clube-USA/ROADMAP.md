@@ -6,7 +6,13 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Migração SQL: `email_confirmed_at` em `members` + tabela `email_verify_tokens`
+  - `GET /auth/email/confirm?token=` — link de confirmação (uso único, 24h TTL)
+  - `POST /auth/email/resend` — reenvio com rate-limit de 1/hora
+  - `email_confirmed: bool` no endpoint `/member/profile`
+  - Suporte a Resend e SendGrid; modo dev loga o link
+  - **PENDENTE**: configurar provider de email em produção (ver DECISOES.md)
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude

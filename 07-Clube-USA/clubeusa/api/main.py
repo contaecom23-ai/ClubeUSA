@@ -3,9 +3,11 @@
 #  FastAPI com seguranca completa
 #
 #  Endpoints:
-#  POST /auth/register        — cadastro de membro
-#  POST /auth/otp/request     — solicitar OTP por WhatsApp
-#  POST /auth/otp/verify      — verificar OTP e receber JWT
+#  POST /auth/register              — cadastro de membro
+#  POST /auth/otp/request           — solicitar OTP por WhatsApp
+#  POST /auth/otp/verify            — verificar OTP e receber JWT
+#  GET  /auth/email/confirm         — confirmar email via token (link do email)
+#  POST /auth/email/resend          — reenviar link de confirmacao de email
 #  GET  /member/profile       — perfil do membro autenticado
 #  GET  /member/deals         — deals da semana por categoria
 #  GET  /member/referral      — link e stats de indicacao
@@ -391,6 +393,37 @@ async def verify_otp(body: OTPVerify):
 
     token = create_token(member["id"], member["plan"])
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
+
+
+@app.get("/auth/email/confirm")
+async def confirm_email(token: str):
+    """
+    Confirma email do membro via link enviado por email.
+    Rota pública — o token é de uso único e expira em 24h.
+    """
+    from services.member_service import confirm_member_email
+    try:
+        result = confirm_member_email(token)
+        return {"message": "Email confirmado com sucesso!", "member_id": result["member_id"]}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        log.error(f"Erro ao confirmar email: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
+
+
+@app.post("/auth/email/resend")
+async def resend_email_confirm(member: dict = Depends(get_current_member)):
+    """Re-envia o link de confirmação de email. Rate-limit: 1 por hora."""
+    from services.member_service import resend_email_confirmation
+    try:
+        resend_email_confirmation(member["sub"])
+        return {"message": "Link de confirmação reenviado."}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        log.error(f"Erro ao reenviar confirmacao: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno.")
 
 
 # ============================================================
