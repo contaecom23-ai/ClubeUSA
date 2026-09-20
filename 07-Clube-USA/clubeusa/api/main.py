@@ -14,6 +14,7 @@
 #  POST /billing/subscribe    — assinar VIP via Stripe
 #  POST /billing/portal       — portal de gestao da assinatura
 #  POST /billing/webhook      — webhook Stripe (pagamento confirmado)
+#  GET  /i/{code}             — pretty URL de indicacao (redirect para /?ref=CODE)
 #  GET  /public/groups        — 2 grupos WhatsApp ativos (sem auth)
 #  POST /webhook/group        — webhook Z-API entradas/saidas de grupo
 #  GET  /health               — health check
@@ -981,6 +982,28 @@ def _send_otp_whatsapp(phone: str, otp: str):
         )
     except Exception as e:
         log.error(f"Falha ao enviar OTP: {e}")
+
+
+# ============================================================
+#  ROTA — INDICACAO (pretty URL pública)
+# ============================================================
+
+@app.get("/i/{code}", include_in_schema=False)
+async def referral_redirect(code: str):
+    """
+    Pretty URL de indicação: /i/CODE → /?ref=CODE
+    Pública — sem autenticação. Códigos são 8 chars [A-Z0-9].
+    Redireciona para / sem ref se o formato for inválido (XSS guard).
+    A validação de existência fica no POST /auth/register (idempotente).
+    """
+    import re
+    from fastapi.responses import RedirectResponse
+
+    normalized = code.upper()
+    if re.match(r'^[A-Z0-9]{4,12}$', normalized):
+        return RedirectResponse(url=f"/?ref={normalized}", status_code=302)
+
+    return RedirectResponse(url="/", status_code=302)
 
 
 # ============================================================

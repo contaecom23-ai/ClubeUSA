@@ -6,8 +6,21 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+- [~] **0.1** Cadastro + perfil mínimo + email confirmado
+  - [x] Cadastro por telefone (OTP WhatsApp) + JWT
+  - [x] Perfil mínimo (nome, email, estado, categorias, língua)
+  - [x] PII criptografado em repouso (phone_enc, email_enc)
+  - [x] Flow de confirmação de email: `GET /auth/email/confirm?token=`, `POST /auth/email/resend`
+  - [x] `email_confirmed: bool` no endpoint `/member/profile`
+  - [x] Migração SQL: `email_confirmed_at` em `members` + tabela `email_verify_tokens`
+  - [x] Suporte Resend e SendGrid; modo dev loga o link
+  - [ ] **Pendente:** configurar provedor de email em produção (ver DECISOES.md D-001 — aguarda dono)
+  - (PR #54 aguardando merge)
+- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+  - [x] Geração de `referral_code` único por membro
+  - [x] Atribuição `referred_by` + tabela `referrals` + pontuação automática
+  - [x] Endpoint `GET /member/referral` retorna link `?ref=CODE`
+  - [x] Rota `GET /i/{code}` (pretty URL) → redirect 302 para `/?ref=CODE`; formato inválido → `/` (XSS guard)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
@@ -66,4 +79,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-20*
