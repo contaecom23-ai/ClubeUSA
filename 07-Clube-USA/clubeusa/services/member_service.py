@@ -166,15 +166,15 @@ def register_member(
             log.warning(f"Falha ao enviar email de confirmacao para {member_id}: {e}")
 
     return {
-        "action":      "registered",
-        "member_id":   member_id,
-        "token":       token,
-        "points":      100,
-        "level":       "bronze",
-        "referral_code": member["referral_code"],
-        "group_invite": group.get("invite_link") if group else None,
-        "group_name":   group.get("name") if group else None,
-        "email_confirmation_sent": email_confirmation_sent,
+        "action":                    "registered",
+        "member_id":                 member_id,
+        "token":                     token,
+        "points":                    100,
+        "level":                     "bronze",
+        "referral_code":             member["referral_code"],
+        "group_invite":              group.get("invite_link") if group else None,
+        "group_name":                group.get("name") if group else None,
+        "email_confirmation_sent":   email_confirmation_sent,
     }
 
 
