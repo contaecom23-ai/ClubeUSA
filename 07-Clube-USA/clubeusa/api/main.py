@@ -31,7 +31,18 @@
 #  POST /admin/deals/{id}/reject  — rejeitar deal (admin)
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
-#  GET  /admin/alerts            — listar alertas (admin)
+#  GET  /admin/alerts                            — listar alertas (admin)
+#  POST /business/register                       — cadastrar empresa (Fase 2.1)
+#  POST /business/otp/request                   — OTP de login para empresa (Fase 2.1)
+#  POST /business/otp/verify                    — verificar OTP, receber token empresa (Fase 2.1)
+#  GET  /business/profile                       — perfil da empresa autenticada (Fase 2.1)
+#  POST /business/subscribe                     — assinar plano via Stripe (Fase 2.1)
+#  POST /business/portal                        — portal Stripe da empresa (Fase 2.1)
+#  GET  /public/businesses                      — listar empresas ativas (Fase 2.1)
+#  GET  /admin/businesses                       — listar empresas (admin, Fase 2.1)
+#  POST /admin/businesses/{id}/approve          — aprovar empresa (admin, Fase 2.1)
+#  POST /admin/businesses/{id}/reject           — rejeitar empresa (admin, Fase 2.1)
+#  POST /admin/businesses/{id}/suspend          — suspender empresa (admin, Fase 2.1)
 # ============================================================
 
 import hmac
@@ -52,6 +63,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.businesses import router as businesses_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -83,6 +95,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(businesses_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -628,9 +641,17 @@ async def stripe_webhook(request: Request):
     log.info(f"Stripe webhook: {event['type']}")
 
     if event["type"] == "checkout.session.completed":
-        _handle_checkout_completed(event["data"]["object"])
+        session_obj = event["data"]["object"]
+        if session_obj.get("metadata", {}).get("role") == "business":
+            from routers.businesses import handle_business_checkout_completed
+            handle_business_checkout_completed(session_obj)
+        else:
+            _handle_checkout_completed(session_obj)
     elif event["type"] == "customer.subscription.deleted":
-        _handle_subscription_cancelled(event["data"]["object"])
+        sub_obj = event["data"]["object"]
+        from routers.businesses import handle_business_subscription_cancelled
+        _handle_subscription_cancelled(sub_obj)
+        handle_business_subscription_cancelled(sub_obj)
     elif event["type"] == "invoice.payment_failed":
         _handle_payment_failed(event["data"]["object"])
 

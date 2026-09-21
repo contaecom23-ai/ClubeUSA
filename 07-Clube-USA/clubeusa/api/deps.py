@@ -32,6 +32,17 @@ def require_paid_plan(member: dict = Depends(get_current_member)) -> dict:
     return member
 
 
+def get_current_business(authorization: str = Header(None)) -> dict:
+    from utils.security import verify_token
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token não fornecido.")
+    token = authorization.split(" ", 1)[1]
+    payload = verify_token(token)
+    if not payload or payload.get("role") != "business":
+        raise HTTPException(status_code=401, detail="Token inválido ou sem permissão de empresa.")
+    return payload
+
+
 def require_admin(authorization: str = Header(None)) -> None:
     secret = os.environ.get("ADMIN_SECRET", "")
     expected = f"Bearer {secret}"

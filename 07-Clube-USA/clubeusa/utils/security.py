@@ -47,6 +47,17 @@ def create_token(member_id: str, plan: str = "free") -> str:
     }
     return jwt.encode(payload, _get_env("JWT_SECRET"), algorithm=JWT_ALGORITHM)
 
+def create_business_token(business_id: str, plan: str = "free") -> str:
+    payload = {
+        "sub":  business_id,
+        "role": "business",
+        "plan": plan,
+        "iat":  datetime.utcnow(),
+        "exp":  datetime.utcnow() + timedelta(hours=JWT_EXPIRE_HRS),
+        "jti":  secrets.token_hex(16),
+    }
+    return jwt.encode(payload, _get_env("JWT_SECRET"), algorithm=JWT_ALGORITHM)
+
 def verify_token(token: str) -> Optional[dict]:
     try:
         return jwt.decode(token, _get_env("JWT_SECRET"), algorithms=[JWT_ALGORITHM])
