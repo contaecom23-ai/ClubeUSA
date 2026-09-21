@@ -1,26 +1,35 @@
 # ROADMAP — Clube USA
 
 > Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
+> Estado: reflete o que está em **main**. Features em PRs abertos ainda não estão aqui marcadas.
 
 ---
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- [ ] **0.1** Cadastro + perfil mínimo + email confirmado  
+  *(código em PRs #75, #85, #87, #98 — aguarda merge)*
+- [ ] **0.2** Sistema de REFERRAL rastreável (link /i/{code} + atribuição)  
+  *(código em PRs #83, #87, #92, #100, #102 — aguarda merge)*
+- [ ] **0.3** Analytics básico  
+  *(código em PRs #90, #92, #100 — aguarda merge)*
+- [~] **0.4** Definição de "cadastro válido" verificável + anti-fraude  
+  *(código neste PR — aguarda merge)*
 
 ---
 
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
-- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
+- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)  
+  *(código em PR #97 — aguarda merge)*
 - [ ] **1.2** Busca por ZIP + raio 1–5 milhas
-- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
-- [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
-- [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
-- [x] **1.6** Rastreador de preço de produto — membro cola o link de um produto (Amazon/Walmart/BestBuy), vê o histórico de preço e ofertas cruzadas nos outros marketplaces, cupons verificados automaticamente (Playwright) com selo confirmado/não confirmado, e recebe alerta quando o preço cai (recheck a cada 6h)
+- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO  
+  *(código em PR #96 — aguarda merge; depende de 0.4)*
+- [ ] **1.4** Empregos (seed manual nas 1ªs semanas)  
+  *(código em PR #93 — aguarda merge)*
+- [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)  
+  *(código em PR #94 — aguarda merge)*
+- [x] **1.6** Rastreador de preço de produto (Amazon/Walmart/BestBuy, alertas, cupons)
 
 ---
 
@@ -66,4 +75,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-21*

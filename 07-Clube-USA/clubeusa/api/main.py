@@ -11,6 +11,7 @@
 #  GET  /member/referral      — link e stats de indicacao
 #  POST /member/click         — registrar clique em deal
 #  GET  /member/leaderboard   — ranking de pontos
+#  GET  /member/valid-status  — cadastro válido? (Fase 0.4)
 #  POST /billing/subscribe    — assinar VIP via Stripe
 #  POST /billing/portal       — portal de gestao da assinatura
 #  POST /billing/webhook      — webhook Stripe (pagamento confirmado)
@@ -23,6 +24,7 @@
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
+#  GET  /admin/valid-registrations — fraud monitoring (admin, Fase 0.4)
 #  GET  /admin/members           — lista membros (admin)
 #  GET  /admin/members/{id}      — perfil completo (admin)
 #  POST /admin/members/{id}/status — alterar status (admin)
@@ -52,6 +54,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.valid_registration import router as valid_registration_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -76,13 +79,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Clube USA API",
     version="1.0.0",
-    docs_url=None,      # desabilita /docs em producao
-    redoc_url=None,     # desabilita /redoc em producao
+    docs_url=None,
+    redoc_url=None,
     lifespan=lifespan,
 )
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(valid_registration_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -92,21 +96,20 @@ app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
 async def favicon():
     return FileResponse(os.path.join(_ASSETS_DIR, "favicon.ico"))
 
-# CORS — origens autorizadas (o site e servido pelo proprio FastAPI, entao CORS e so para dominios externos)
+# CORS — origens autorizadas
 _CORS_ORIGINS = [
     "https://clubeusa.com",
     "https://www.clubeusa.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
-# Em dev, aceita qualquer ngrok/tunnel automaticamente
 if os.environ.get("ENVIRONMENT", "development") == "development":
     _CORS_ORIGINS = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_CORS_ORIGINS,
-    allow_credentials=_CORS_ORIGINS != ["*"],  # browser rejects credentials=true with wildcard origin
+    allow_credentials=_CORS_ORIGINS != ["*"],
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
@@ -133,7 +136,6 @@ async def rate_limit_middleware(request: Request, call_next):
     ip = request.client.host if request.client else "unknown"
     ip_hash = hash_ip(ip)
 
-    # Rate limit por IP: 60 req/min geral, 5 req/min para auth
     path = request.url.path
     if path.startswith("/auth"):
         allowed = check_rate_limit(f"auth:{ip_hash}", max_req=5, window_sec=60)
@@ -348,10 +350,8 @@ async def request_otp(body: OTPRequest, request: Request):
     otp = generate_otp()
     phone_hash = hash_pii(phone)
 
-    # Persiste OTP no Supabase com TTL de 10 minutos
     _otp_save(phone_hash, otp, ttl_sec=600)
 
-    # Envia via WhatsApp (ou loga em dev)
     if os.environ.get("ENVIRONMENT") == "production":
         _send_otp_whatsapp(phone, otp)
     else:
@@ -377,7 +377,6 @@ async def verify_otp(body: OTPVerify):
         status = 429 if "tentativas" in error_msg else 400
         raise HTTPException(status_code=status, detail=error_msg)
 
-    # OTP valido — busca membro
     from supabase import create_client
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
     result = sb.table("members").select("id,plan,status").eq("phone_hash", phone_hash).execute()
@@ -442,7 +441,6 @@ async def get_deals(
     from supabase import create_client
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
-    # VIP ve todos, free ve apenas os enviados
     if member.get("plan") == "vip":
         status_filter = ["approved", "sent"]
         limit = min(limit, 50)
@@ -480,7 +478,6 @@ async def get_referral(member: dict = Depends(get_current_member)):
     m = result.data[0]
     referral_link = f"{APP_URL}?ref={m['referral_code']}"
 
-    # Historico de indicacoes
     refs = sb.table("referrals").select(
         "status,points_awarded,created_at"
     ).eq("referrer_id", member["sub"]).order("created_at", desc=True).limit(10).execute()
@@ -506,7 +503,6 @@ async def register_click(
     from services.member_service import track_click
     from supabase import create_client
 
-    # Verifica se deal existe
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
     deal = sb.table("deals").select("id,affiliate_url").eq("id", body.deal_id).execute()
     if not deal.data:
@@ -518,7 +514,6 @@ async def register_click(
         ip        = request.client.host if request.client else None,
     )
 
-    # Adiciona UTM ao link afiliado para rastrear conversao
     base_url = deal.data[0]["affiliate_url"]
     tracked_url = f"{base_url}&utm_source=clubeusa&utm_medium=whatsapp&utm_campaign={utm}"
     return {"url": tracked_url, "utm": utm}
@@ -532,7 +527,6 @@ async def get_leaderboard(member: dict = Depends(get_current_member)):
 
     result = sb.rpc("get_leaderboard", {"p_limit": 10}).execute()
 
-    # Count members with more points to determine rank efficiently
     member_pts = sb.table("members").select("points").eq("id", member["sub"]).execute()
     my_position = None
     if member_pts.data:
@@ -660,10 +654,8 @@ def _handle_checkout_completed(session: dict):
         "stripe_customer_id": customer_id,
     }).eq("id", member_id).execute()
 
-    # Adiciona pontos de boas-vindas VIP
     sb.rpc("increment_points", {"p_member_id": member_id, "p_points": 500}).execute()
 
-    # Audit log
     sb.table("audit_logs").insert({
         "actor_type":  "system",
         "action":      "member.vip_activated",
@@ -674,7 +666,6 @@ def _handle_checkout_completed(session: dict):
 
     log.info(f"VIP ativado para membro {member_id}")
 
-    # Envia mensagem de boas-vindas VIP via WhatsApp
     _send_vip_welcome(member_id)
 
 
@@ -774,7 +765,6 @@ def _send_vip_welcome(member_id: str):
 async def public_groups():
     """
     Retorna os 2 grupos WhatsApp ativos para exibicao no site.
-    Regra: 1 grupo mais cheio com vaga + 1 por idioma (PT/ES).
     Sem autenticacao.
     """
     if not os.environ.get("SUPABASE_URL"):
@@ -825,7 +815,7 @@ async def public_groups():
 async def group_webhook(request: Request):
     """
     Recebe eventos de entrada/saida de membros via Z-API.
-    Atualiza member_count em tempo real para manter os 2 grupos corretos no site.
+    Atualiza member_count em tempo real.
     """
     try:
         payload = await request.json()
