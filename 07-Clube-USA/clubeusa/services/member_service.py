@@ -39,6 +39,22 @@ def _audit(action, target_id, metadata=None, actor_id=None, ip=None):
         log.warning(f"Audit log falhou: {e}")
 
 
+def _check_ip_fraud_limit(ip_hash: str, sb, max_per_day: int = 3) -> bool:
+    """Returns True if this IP exceeded the daily new-member limit (anti-fraud)."""
+    if not ip_hash:
+        return False
+    from datetime import datetime, timedelta, timezone
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    result = (
+        sb.table("members")
+        .select("id", count="exact")
+        .eq("registration_ip_hash", ip_hash)
+        .gte("created_at", cutoff)
+        .execute()
+    )
+    return (result.count or 0) >= max_per_day
+
+
 # ============================================================
 #  CADASTRO
 # ============================================================
@@ -59,6 +75,7 @@ def register_member(
     - Valida e normaliza inputs
     - Criptografa PII antes de salvar
     - Verifica duplicatas por hash (sem expor dados)
+    - Bloqueia mais de 3 cadastros do mesmo IP em 24h (anti-fraude Fase 0.4)
     - Atribui ao grupo disponivel
     - Processa indicacao se houver codigo
     - Registra no audit log
@@ -95,6 +112,11 @@ def register_member(
         _audit("member.login", member["id"], ip=ip)
         return {"action": "login", "member_id": member["id"], "token": token}
 
+    # 2b. Anti-fraude Fase 0.4: bloqueia mais de 3 cadastros do mesmo IP em 24h
+    ip_hash_for_fraud = hash_ip(ip) if ip else None
+    if ip_hash_for_fraud and _check_ip_fraud_limit(ip_hash_for_fraud, sb):
+        raise ValueError("Muitos cadastros deste dispositivo. Tente novamente em 24 horas.")
+
     # 3. Resolver indicacao
     referred_by = None
     if referral_code:
@@ -110,17 +132,18 @@ def register_member(
 
     # 4. Inserir com PII criptografado
     member_data = {
-        "phone_hash":     phone_hash,
-        "phone_enc":      encrypt(phone),           # criptografado
-        "email_hash":     hash_pii(email) if email else None,
-        "email_enc":      encrypt(email) if email else None,
-        "name_enc":       encrypt(name) if name else None,
-        "language":       language,
-        "state":          state,
-        "categories":     categories,
-        "referred_by":    referred_by,
-        "points":         100,                       # pontos de boas-vindas
-        "referral_code":  generate_referral_code(),
+        "phone_hash":           phone_hash,
+        "phone_enc":            encrypt(phone),
+        "email_hash":           hash_pii(email) if email else None,
+        "email_enc":            encrypt(email) if email else None,
+        "name_enc":             encrypt(name) if name else None,
+        "language":             language,
+        "state":                state,
+        "categories":           categories,
+        "referred_by":          referred_by,
+        "points":               100,
+        "referral_code":        generate_referral_code(),
+        "registration_ip_hash": ip_hash_for_fraud,
     }
 
     result = sb.table("members").insert(member_data).execute()
@@ -156,14 +179,14 @@ def register_member(
     token = create_token(member_id, member.get("plan", "free"))
 
     return {
-        "action":      "registered",
-        "member_id":   member_id,
-        "token":       token,
-        "points":      100,
-        "level":       "bronze",
+        "action":        "registered",
+        "member_id":     member_id,
+        "token":         token,
+        "points":        100,
+        "level":         "bronze",
         "referral_code": member["referral_code"],
-        "group_invite": group.get("invite_link") if group else None,
-        "group_name":   group.get("name") if group else None,
+        "group_invite":  group.get("invite_link") if group else None,
+        "group_name":    group.get("name") if group else None,
     }
 
 
@@ -250,20 +273,20 @@ def get_member_profile(member_id: str) -> Optional[dict]:
 
     # Descriptografa PII apenas para exibicao
     return {
-        "id":           m["id"],
-        "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
-        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "language":     m["language"],
-        "state":        m["state"],
-        "plan":         m["plan"],
-        "points":       m["points"],
-        "level":        m["level"],
-        "categories":   m["categories"],
-        "referral_code": m["referral_code"],
+        "id":             m["id"],
+        "name":           decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":          _mask_phone(decrypt(m["phone_enc"])),
+        "email":          _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "language":       m["language"],
+        "state":          m["state"],
+        "plan":           m["plan"],
+        "points":         m["points"],
+        "level":          m["level"],
+        "categories":     m["categories"],
+        "referral_code":  m["referral_code"],
         "referral_count": m["referral_count"],
-        "total_clicks": m["total_clicks"],
-        "created_at":   m["created_at"],
+        "total_clicks":   m["total_clicks"],
+        "created_at":     m["created_at"],
         "vip_expires_at": m.get("vip_expires_at"),
     }
 
@@ -312,7 +335,7 @@ def track_click(member_id: str, deal_id: str, ip: str = None) -> str:
         .execute()
     )
     if existing.data:
-        return existing.data[0]["utm_code"]  # retorna UTM existente
+        return existing.data[0]["utm_code"]
 
     # Registra clique
     sb.table("clicks").insert({
