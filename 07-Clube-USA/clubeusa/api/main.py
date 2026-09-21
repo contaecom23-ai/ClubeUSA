@@ -547,6 +547,67 @@ async def get_leaderboard(member: dict = Depends(get_current_member)):
 
 
 # ============================================================
+#  ROTAS — EMAIL CONFIRMATION (Fase 0.1)
+# ============================================================
+
+@app.post("/auth/email/send-confirmation")
+async def send_email_confirmation(member: dict = Depends(get_current_member)):
+    """
+    Envia (ou reenvía) o e-mail de confirmação para o membro autenticado.
+    Requer que o membro tenha e-mail cadastrado.
+    """
+    from supabase import create_client
+    from utils.security import decrypt
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("members").select(
+        "email_enc,email_confirmed,language"
+    ).eq("id", member["sub"]).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=404)
+
+    m = result.data[0]
+    if not m.get("email_enc"):
+        raise HTTPException(status_code=400, detail="Nenhum e-mail cadastrado. Atualize seu perfil.")
+
+    if m.get("email_confirmed"):
+        return {"message": "E-mail já confirmado.", "already_confirmed": True}
+
+    try:
+        email = decrypt(m["email_enc"])
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro interno ao processar e-mail.")
+
+    from services.email_service import send_confirmation_email
+    ok = send_confirmation_email(member["sub"], email, m.get("language", "pt"))
+
+    if not ok:
+        raise HTTPException(status_code=502, detail="Falha ao enviar e-mail. Tente novamente.")
+
+    return {"message": "E-mail de confirmação enviado.", "already_confirmed": False}
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def confirm_email(token: str):
+    """
+    Link de confirmação de e-mail (sem autenticação — clicado via e-mail).
+    Redireciona para o site após confirmar.
+    """
+    from services.email_service import confirm_email_token
+    from fastapi.responses import RedirectResponse
+
+    result = confirm_email_token(token)
+    if result["ok"]:
+        return RedirectResponse(url=f"{APP_URL}?email_confirmed=1", status_code=302)
+    else:
+        return RedirectResponse(
+            url=f"{APP_URL}?email_error={result['error'].replace(' ', '+')}",
+            status_code=302,
+        )
+
+
+# ============================================================
 #  ROTAS — BILLING (Stripe)
 # ============================================================
 

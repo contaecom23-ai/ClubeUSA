@@ -155,6 +155,15 @@ def register_member(
     # 8. Gerar token JWT
     token = create_token(member_id, member.get("plan", "free"))
 
+    # 9. Disparar e-mail de confirmação se e-mail foi fornecido
+    email_sent = False
+    if email:
+        try:
+            from services.email_service import send_confirmation_email
+            email_sent = send_confirmation_email(member_id, email, language)
+        except Exception as e:
+            log.warning(f"Falha ao enviar e-mail de confirmação no cadastro: {e}")
+
     return {
         "action":      "registered",
         "member_id":   member_id,
@@ -164,6 +173,7 @@ def register_member(
         "referral_code": member["referral_code"],
         "group_invite": group.get("invite_link") if group else None,
         "group_name":   group.get("name") if group else None,
+        "email_confirmation_sent": email_sent,
     }
 
 
@@ -254,6 +264,7 @@ def get_member_profile(member_id: str) -> Optional[dict]:
         "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
         "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
         "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email_confirmed": m.get("email_confirmed", False),
         "language":     m["language"],
         "state":        m["state"],
         "plan":         m["plan"],
