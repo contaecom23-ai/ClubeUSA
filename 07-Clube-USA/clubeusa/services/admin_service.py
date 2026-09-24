@@ -58,6 +58,57 @@ def get_metrics() -> dict:
     }
 
 
+def get_growth_analytics(days: int = 30) -> dict:
+    """Série temporal de crescimento — cadastros por dia nos últimos N dias.
+
+    Usa apenas members.created_at, sem migração de banco necessária.
+    Retorna dados prontos para exibir um gráfico de linha no painel admin.
+    """
+    sb = _supabase()
+    now = datetime.now(timezone.utc)
+    start = (now - timedelta(days=days)).isoformat()
+
+    members = sb.table("members").select(
+        "id,plan,referred_by,created_at"
+    ).gte("created_at", start).execute().data
+
+    # Agrupa por dia YYYY-MM-DD
+    from collections import defaultdict
+    daily: dict = defaultdict(int)
+    for m in members:
+        day = (m.get("created_at") or "")[:10]
+        if day:
+            daily[day] += 1
+
+    # Série completa — inclui dias com 0 cadastros para o gráfico ficar correto
+    series = []
+    for i in range(days):
+        d = (now - timedelta(days=days - 1 - i)).date()
+        day_str = d.isoformat()
+        series.append({"date": day_str, "count": daily.get(day_str, 0)})
+
+    total = len(members)
+    via_referral = sum(1 for m in members if m.get("referred_by"))
+    referral_rate = round(via_referral / total, 3) if total > 0 else 0.0
+
+    plan_breakdown: dict = {"free": 0, "vip": 0}
+    for m in members:
+        plan = m.get("plan", "free")
+        if plan in plan_breakdown:
+            plan_breakdown[plan] += 1
+
+    return {
+        "days": days,
+        "period_start": (now - timedelta(days=days)).date().isoformat(),
+        "period_end": now.date().isoformat(),
+        "total_registrations": total,
+        "via_referral": via_referral,
+        "referral_conversion_rate": referral_rate,
+        "plan_breakdown": plan_breakdown,
+        "daily_registrations": series,
+    }
+
+
 # ============================================================
 #  MEMBROS
 # ============================================================
