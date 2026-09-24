@@ -162,7 +162,6 @@ class TestEmailConfirmationRouter:
         expired_at = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
         sb_mock = MagicMock()
 
-        # Simula table().select().eq().execute()
         sb_mock.table("email_confirmation_tokens").select(
             "id,member_id,expires_at,used_at"
         ).eq().execute.return_value = MagicMock(data=[{
@@ -288,7 +287,7 @@ class TestMemberServiceEmailTrigger:
 
         mock_trigger.assert_called_once()
         args = mock_trigger.call_args[0]
-        assert args[0] == "new-id-1"      # member_id
+        assert args[0] == "new-id-1"          # member_id
         assert args[1] == "user@example.com"  # email
 
     def test_register_without_email_no_confirmation_sent(self):
