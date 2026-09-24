@@ -152,7 +152,14 @@ def register_member(
         "categories": categories,
     }, ip=ip)
 
-    # 8. Gerar token JWT
+    # 8. Disparar confirmação de email (não-bloqueante)
+    if email:
+        try:
+            _trigger_email_confirmation(member_id, email, name)
+        except Exception as e:
+            log.warning(f"Email de confirmacao nao enviado: {e}")
+
+    # 9. Gerar token JWT
     token = create_token(member_id, member.get("plan", "free"))
 
     return {
@@ -165,6 +172,30 @@ def register_member(
         "group_invite": group.get("invite_link") if group else None,
         "group_name":   group.get("name") if group else None,
     }
+
+
+def _trigger_email_confirmation(member_id: str, email: str, name: str):
+    """Gera token e envia email de confirmação após cadastro."""
+    import secrets
+    import hashlib
+    from datetime import datetime, timedelta, timezone
+
+    raw_token  = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    expires_at = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+
+    sb = _supabase()
+    sb.table("email_confirmation_tokens").insert({
+        "member_id":  member_id,
+        "token_hash": token_hash,
+        "expires_at": expires_at,
+    }).execute()
+
+    app_url     = os.environ.get("APP_URL", "https://clubeusa.com")
+    confirm_url = f"{app_url}/auth/email/confirm/{raw_token}"
+
+    from services.email_service import send_confirmation_email
+    send_confirmation_email(email, name, confirm_url)
 
 
 def _process_referral(referrer_id: str, referred_id: str):
