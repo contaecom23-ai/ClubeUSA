@@ -23,6 +23,7 @@
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
+#  GET  /admin/analytics/growth  — série temporal de cadastros (admin)
 #  GET  /admin/members           — lista membros (admin)
 #  GET  /admin/members/{id}      — perfil completo (admin)
 #  POST /admin/members/{id}/status — alterar status (admin)
@@ -1013,6 +1014,18 @@ async def admin_panel():
 async def admin_metrics(_=Depends(require_admin)):
     from services.admin_service import get_metrics
     return get_metrics()
+
+
+@app.get("/admin/analytics/growth")
+async def admin_analytics_growth(days: int = 30, _=Depends(require_admin)):
+    """Série temporal de crescimento — cadastros diários nos últimos N dias.
+
+    ?days=30 (padrão) — aceita entre 7 e 90.
+    Sem migração necessária: usa members.created_at existente.
+    """
+    days = max(7, min(days, 90))
+    from services.admin_service import get_growth_analytics
+    return get_growth_analytics(days)
 
 
 @app.get("/admin/members")
