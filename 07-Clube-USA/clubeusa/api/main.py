@@ -42,7 +42,7 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, Depends, HTTPException, Request, Header
+from fastapi import FastAPI, Depends, HTTPException, Request, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -432,7 +432,7 @@ async def update_profile_categories(body: UpdateCategoriesRequest, member: dict 
 @app.get("/member/deals")
 async def get_deals(
     category: Optional[str] = None,
-    limit: int = 20,
+    limit: int = Query(20, ge=1, le=50),
     member: dict = Depends(get_current_member)
 ):
     """
@@ -827,6 +827,15 @@ async def group_webhook(request: Request):
     Recebe eventos de entrada/saida de membros via Z-API.
     Atualiza member_count em tempo real para manter os 2 grupos corretos no site.
     """
+    # Verificacao de segredo compartilhado (configure ZAPI_WEBHOOK_SECRET no deploy).
+    # Em dev (sem a var), o check e ignorado para nao bloquear testes locais.
+    webhook_secret = os.environ.get("ZAPI_WEBHOOK_SECRET", "")
+    if webhook_secret:
+        client_token = request.headers.get("Client-Token", "")
+        if not hmac.compare_digest(client_token.encode(), webhook_secret.encode()):
+            log.warning("Webhook Z-API recusado: Client-Token invalido.")
+            return {"ok": True}  # 200 para nao vazar existencia do endpoint
+
     try:
         payload = await request.json()
     except Exception:
@@ -1084,15 +1093,18 @@ async def admin_scan_deals(_=Depends(require_admin)):
 @app.post("/admin/deals/send")
 async def admin_send_deals(_=Depends(require_admin)):
     """Envia todos os deals aprovados em background."""
-    _ds2 = os.path.join(os.path.dirname(__file__), "..", "..", "dealscanner2")
-    _log = open(os.path.join(_ds2, "logs", "sender_bg.log"), "a")
-    subprocess.Popen(
-        [sys.executable, "run_sender.py"],
-        cwd=os.path.abspath(_ds2),
-        start_new_session=True,
-        stdout=_log,
-        stderr=_log,
-    )
+    _ds2 = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "dealscanner2"))
+    log_path = os.path.join(_ds2, "logs", "sender_bg.log")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    # Abre, lança o processo e fecha imediatamente no pai — o filho herda o fd.
+    with open(log_path, "a") as _log:
+        subprocess.Popen(
+            [sys.executable, "run_sender.py"],
+            cwd=_ds2,
+            start_new_session=True,
+            stdout=_log,
+            stderr=_log,
+        )
     return {"ok": True, "message": "Envio iniciado em background."}
 
 
