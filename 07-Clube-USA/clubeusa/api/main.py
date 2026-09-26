@@ -870,6 +870,16 @@ async def group_webhook(request: Request):
 #  HEALTH CHECK
 # ============================================================
 
+@app.get("/i/{code}", include_in_schema=False)
+async def referral_redirect(code: str):
+    """Link curto de indicação: /i/CODIGO → /?ref=CODIGO"""
+    import re
+    from fastapi.responses import RedirectResponse
+    if not re.match(r'^[A-Z0-9]{4,12}$', code.upper()):
+        raise HTTPException(status_code=404)
+    return RedirectResponse(url=f"/?ref={code.upper()}", status_code=302)
+
+
 @app.get("/health")
 async def health():
     return {
