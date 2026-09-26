@@ -21,6 +21,12 @@
 #  GET  /alerts              — listar alertas ativos (plano pago)
 #  DELETE /alerts/{id}       — cancelar alerta (plano pago)
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
+#  POST /promotions          — submeter promoção comunitária
+#  GET  /promotions          — listar promoções aprovadas
+#  GET  /promotions/mine     — minhas promoções
+#  GET  /promotions/{id}     — detalhe de promoção
+#  POST /promotions/{id}/upvote  — votar em promoção
+#  DELETE /promotions/{id}   — cancelar promoção pendente
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
 #  GET  /admin/members           — lista membros (admin)
@@ -31,6 +37,9 @@
 #  POST /admin/deals/{id}/reject  — rejeitar deal (admin)
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
+#  GET  /admin/promotions                 — lista promoções (admin)
+#  POST /admin/promotions/{id}/approve    — aprovar promoção (admin)
+#  POST /admin/promotions/{id}/reject     — rejeitar promoção (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
 # ============================================================
 
@@ -52,6 +61,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.promotions import router as promotions_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -83,6 +93,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(promotions_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -1094,6 +1105,51 @@ async def admin_send_deals(_=Depends(require_admin)):
         stderr=_log,
     )
     return {"ok": True, "message": "Envio iniciado em background."}
+
+
+@app.get("/admin/promotions")
+async def admin_list_promotions(
+    status: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    _=Depends(require_admin),
+):
+    """Admin: lista promoções comunitárias por status."""
+    from supabase import create_client
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    query = (
+        sb.table("promotions")
+        .select("id,submitted_by,title,store_name,category,status,upvotes,zip_code,created_at")
+        .order("created_at", desc=True)
+        .range(offset, offset + limit - 1)
+    )
+    if status:
+        query = query.eq("status", status)
+    return {"promotions": query.execute().data or [], "limit": limit, "offset": offset}
+
+
+@app.post("/admin/promotions/{promotion_id}/approve")
+async def admin_approve_promotion_route(promotion_id: str, _=Depends(require_admin)):
+    """Admin: aprova uma promoção comunitária."""
+    from supabase import create_client
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("promotions").select("id").eq("id", promotion_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Promoção não encontrada.")
+    sb.table("promotions").update({"status": "approved"}).eq("id", promotion_id).execute()
+    return {"ok": True}
+
+
+@app.post("/admin/promotions/{promotion_id}/reject")
+async def admin_reject_promotion_route(promotion_id: str, _=Depends(require_admin)):
+    """Admin: rejeita uma promoção comunitária."""
+    from supabase import create_client
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("promotions").select("id").eq("id", promotion_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Promoção não encontrada.")
+    sb.table("promotions").update({"status": "rejected"}).eq("id", promotion_id).execute()
+    return {"ok": True}
 
 
 @app.get("/admin/alerts")
