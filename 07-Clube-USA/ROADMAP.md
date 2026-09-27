@@ -6,8 +6,17 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - PR: `feat/fase-0.1-email-confirmacao`
+  - Endpoint `POST /auth/email/confirm/request` (gera token 24h, envia via Resend/SMTP/log-dev)
+  - Endpoint `GET /auth/email/confirm/{token}` (single-use, marca `email_confirmed_at`)
+  - Campo `email_confirmed` no perfil (`GET /member/profile`)
+  - Migração: `db/email_confirm_migration.sql` (coluna + tabela `email_confirm_tokens`)
+  - Provider de email: ver DECISOES.md #001
+- [x] **0.2** Sistema de REFERRAL rastreável — link `/i/{CODE}` → `/?ref={CODE}` (redirect com validação de código)
+  - PR: mesmo `feat/fase-0.1-email-confirmacao`
+  - Endpoint `GET /i/{code}` (redirect rastreável, anti-spam: código validado no DB)
+  - Slug customizado (/i/joao): ver DECISOES.md #002
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
@@ -66,4 +75,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-27*

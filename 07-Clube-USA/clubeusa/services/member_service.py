@@ -250,22 +250,115 @@ def get_member_profile(member_id: str) -> Optional[dict]:
 
     # Descriptografa PII apenas para exibicao
     return {
-        "id":           m["id"],
-        "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
-        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "language":     m["language"],
-        "state":        m["state"],
-        "plan":         m["plan"],
-        "points":       m["points"],
-        "level":        m["level"],
-        "categories":   m["categories"],
-        "referral_code": m["referral_code"],
-        "referral_count": m["referral_count"],
-        "total_clicks": m["total_clicks"],
-        "created_at":   m["created_at"],
-        "vip_expires_at": m.get("vip_expires_at"),
+        "id":              m["id"],
+        "name":            decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":           _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
+        "email":           _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email_confirmed": bool(m.get("email_confirmed_at")),
+        "language":        m["language"],
+        "state":           m["state"],
+        "plan":            m["plan"],
+        "points":          m["points"],
+        "level":           m["level"],
+        "categories":      m["categories"],
+        "referral_code":   m["referral_code"],
+        "referral_count":  m["referral_count"],
+        "total_clicks":    m["total_clicks"],
+        "created_at":      m["created_at"],
+        "vip_expires_at":  m.get("vip_expires_at"),
     }
+
+
+# ============================================================
+#  EMAIL CONFIRMATION
+# ============================================================
+
+def request_email_confirmation(member_id: str) -> tuple[str, str]:
+    """
+    Gera token de confirmação de email para o membro.
+    Retorna (raw_token, decrypted_email) para o caller enviar o email.
+    Raises ValueError se membro não tem email ou já confirmou.
+    """
+    import secrets, hashlib
+    from datetime import datetime, timedelta
+
+    sb = _supabase()
+    result = sb.table("members").select(
+        "email_enc,email_confirmed_at"
+    ).eq("id", member_id).execute()
+
+    if not result.data:
+        raise ValueError("Membro não encontrado.")
+
+    m = result.data[0]
+    if not m.get("email_enc"):
+        raise ValueError("Nenhum email cadastrado. Atualize seu perfil.")
+
+    if m.get("email_confirmed_at"):
+        raise ValueError("Email já confirmado.")
+
+    # Invalida tokens anteriores do mesmo membro
+    sb.table("email_confirm_tokens").delete().eq("member_id", member_id).execute()
+
+    raw_token  = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+
+    sb.table("email_confirm_tokens").insert({
+        "member_id":  member_id,
+        "token_hash": token_hash,
+        "expires_at": (datetime.utcnow() + timedelta(hours=24)).isoformat(),
+    }).execute()
+
+    email = decrypt(m["email_enc"])
+    _audit("email_confirm.requested", member_id)
+    return raw_token, email
+
+
+def verify_email_token(raw_token: str) -> str:
+    """
+    Verifica token de confirmação e marca email como confirmado.
+    Retorna member_id se sucesso.
+    Raises ValueError em caso de token inválido/expirado/usado.
+    """
+    import hashlib
+    from datetime import datetime, timezone
+
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    sb = _supabase()
+
+    result = sb.table("email_confirm_tokens").select(
+        "id,member_id,expires_at,used_at"
+    ).eq("token_hash", token_hash).execute()
+
+    if not result.data:
+        raise ValueError("Link inválido.")
+
+    rec = result.data[0]
+
+    if rec.get("used_at"):
+        raise ValueError("Link já utilizado.")
+
+    expires = datetime.fromisoformat(rec["expires_at"].replace("Z", "+00:00"))
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires:
+        raise ValueError("Link expirado. Solicite um novo.")
+
+    member_id = rec["member_id"]
+
+    # Marca token como usado
+    sb.table("email_confirm_tokens").update({
+        "used_at": datetime.utcnow().isoformat()
+    }).eq("id", rec["id"]).execute()
+
+    # Confirma email do membro
+    sb.table("members").update({
+        "email_confirmed_at": datetime.utcnow().isoformat()
+    }).eq("id", member_id).execute()
+
+    _audit("email_confirm.verified", member_id)
+    log.info("Email confirmado para membro %s", member_id)
+    return member_id
 
 
 def update_member_categories(member_id: str, categories: list) -> dict:
