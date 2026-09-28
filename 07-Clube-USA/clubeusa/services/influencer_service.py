@@ -1,54 +1,37 @@
 """
-services/influencer_service.py — Fase 1.3: Programa de Influenciadores
+Influencer tier tracking — Fase 1.3
 
-Calcula tiers com base no referral_count existente na tabela members.
-Sem schema changes — usa o campo já presente.
+Tiers (based on valid OTP-verified referrals stored in members.referral_count):
+  Parceiro     >=  50
+  Embaixador   >= 250
+  Hall da Fama >= 1000
 
-Tiers:
-  Parceiro     ≥  50 indicações válidas
-  Embaixador   ≥ 250 indicações válidas
-  Hall da Fama ≥ 1000 indicações válidas
-
-Comissões (pagamento por resultado) aguardam decisão D-006 em DECISOES.md.
+Commission amounts per valid referral and monthly bonuses are a business decision.
+See DECISOES.md D-006. This module only handles tracking and tier computation.
 """
-
 import os
 import logging
 
 log = logging.getLogger("influencer_service")
 
-# Tiers em ordem crescente de requisito
-TIERS = [
-    {"key": "hall_da_fama", "label": "Hall da Fama", "min_referrals": 1000},
-    {"key": "embaixador",   "label": "Embaixador",   "min_referrals": 250},
-    {"key": "parceiro",     "label": "Parceiro",     "min_referrals": 50},
+_TIERS = [
+    ("hall_da_fama", 1000),
+    ("embaixador",   250),
+    ("parceiro",     50),
 ]
 
+TIER_LABELS = {
+    "hall_da_fama": "Hall da Fama",
+    "embaixador":   "Embaixador",
+    "parceiro":     "Parceiro",
+}
 
-def get_tier(referral_count: int) -> dict:
-    """Retorna o tier atual e informações de progressão para um dado referral_count."""
-    current_tier = None
-    for tier in TIERS:
-        if referral_count >= tier["min_referrals"]:
-            current_tier = tier
-            break
-
-    # Próximo tier a atingir (o mais próximo, não o mais alto)
-    next_tier = None
-    for tier in reversed(TIERS):
-        if referral_count < tier["min_referrals"]:
-            next_tier = tier
-            break
-
-    needed = (next_tier["min_referrals"] - referral_count) if next_tier else 0
-
-    return {
-        "tier":         current_tier["key"] if current_tier else None,
-        "tier_label":   current_tier["label"] if current_tier else "Sem selo",
-        "next_tier":    next_tier["key"] if next_tier else None,
-        "next_tier_label": next_tier["label"] if next_tier else None,
-        "referrals_needed": needed,
-    }
+_NEXT_TIER = {
+    None:           ("parceiro",     50),
+    "parceiro":     ("embaixador",   250),
+    "embaixador":   ("hall_da_fama", 1000),
+    "hall_da_fama": None,
+}
 
 
 def _supabase():
@@ -56,45 +39,82 @@ def _supabase():
     return create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
 
-def get_member_influencer_stats(member_id: str) -> dict:
-    """Retorna tier e estatísticas de influência do membro autenticado."""
+def compute_tier(referral_count: int) -> str | None:
+    """Pure function: return tier slug for the given referral_count."""
+    for slug, threshold in _TIERS:
+        if referral_count >= threshold:
+            return slug
+    return None
+
+
+def get_influencer_stats(member_id: str) -> dict:
+    """Return influencer tier stats for a given member_id."""
     sb = _supabase()
+
     result = sb.table("members").select(
-        "referral_code,referral_count"
+        "id,referral_code,referral_count,points,level"
     ).eq("id", member_id).execute()
 
     if not result.data:
-        return None
+        raise ValueError("Membro não encontrado.")
 
     m = result.data[0]
-    tier_info = get_tier(m["referral_count"])
+    count = m["referral_count"] or 0
+    tier  = compute_tier(count)
+    next_entry = _NEXT_TIER.get(tier)
+
+    # rank among all members with referrals (higher = better)
+    above_result = sb.table("members").select("id", count="exact").gt(
+        "referral_count", count
+    ).execute()
+    rank = (above_result.count or 0) + 1 if above_result.count is not None else None
 
     return {
-        "referral_code":   m["referral_code"],
-        "valid_referrals": m["referral_count"],
-        **tier_info,
+        "referral_code":    m["referral_code"],
+        "valid_referrals":  count,
+        "tier":             tier,
+        "tier_label":       TIER_LABELS.get(tier, "Sem selo"),
+        "rank":             rank,
+        "next_tier":        next_entry[0] if next_entry else None,
+        "next_tier_label":  TIER_LABELS.get(next_entry[0]) if next_entry else None,
+        "next_tier_at":     next_entry[1] if next_entry else None,
+        "referrals_needed": (next_entry[1] - count) if next_entry else 0,
     }
 
 
-def list_influencers(min_referrals: int = 1) -> list[dict]:
-    """Lista membros com ≥ min_referrals indicações válidas, com tier calculado.
-    Destinado ao admin. Não expõe PII (referral_code é o identificador).
-    """
-    sb = _supabase()
-    result = sb.table("members").select(
-        "id,referral_code,referral_count,created_at"
-    ).gte("referral_count", min_referrals).order(
-        "referral_count", desc=True
-    ).limit(200).execute()
+def list_influencers(min_referrals: int = 10, limit: int = 50, offset: int = 0) -> list[dict]:
+    """Return members sorted by referral_count desc — admin view only.
 
-    rows = result.data or []
-    return [
-        {
-            "id":              r["id"],
-            "referral_code":   r["referral_code"],
-            "valid_referrals": r["referral_count"],
-            "joined_at":       r["created_at"],
-            **get_tier(r["referral_count"]),
-        }
-        for r in rows
-    ]
+    Names are not included to avoid unnecessary PII decryption;
+    referral_code is the opaque identifier.
+    """
+    limit  = min(max(limit, 1), 200)
+    offset = max(offset, 0)
+    min_referrals = max(min_referrals, 1)
+
+    sb = _supabase()
+    result = (
+        sb.table("members")
+        .select("id,referral_code,referral_count,points,plan,status,created_at")
+        .gte("referral_count", min_referrals)
+        .order("referral_count", desc=True)
+        .range(offset, offset + limit - 1)
+        .execute()
+    )
+
+    rows = []
+    for m in (result.data or []):
+        count = m["referral_count"] or 0
+        tier  = compute_tier(count)
+        rows.append({
+            "member_id":       m["id"],
+            "referral_code":   m["referral_code"],
+            "valid_referrals": count,
+            "tier":            tier,
+            "tier_label":      TIER_LABELS.get(tier, "Sem selo"),
+            "points":          m["points"],
+            "plan":            m["plan"],
+            "status":          m["status"],
+            "joined_at":       m["created_at"],
+        })
+    return rows

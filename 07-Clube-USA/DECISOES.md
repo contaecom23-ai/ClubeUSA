@@ -18,88 +18,99 @@ Quando o Claude travar em algo que só você pode decidir (orçamento, preços, 
 
 ### [2026-09-28] D-001 — PARALISIA DE MERGE (bloqueio crítico do projeto)
 
-**Contexto:** O builder autônomo abriu 30+ PRs desde junho/2026. Nenhum foi mergeado. Cada sessão cria novos PRs (frequentemente duplicados) porque o código da main não reflete as features desenvolvidas. O projeto está funcionalmente bloqueado: features de Fase 0 (cadastro com email, referral redirect) ainda não chegaram à produção.
+**Contexto:** O builder autônomo abriu 30+ PRs desde junho/2026. Nenhum foi mergeado. Cada sessão cria novos PRs porque o código da main não reflete as features desenvolvidas. O projeto está bloqueado: features de Fase 0 (cadastro com email, referral redirect) ainda não chegaram à produção.
 
-**Pergunta:** Como desbloqueamos o fluxo de merge para que o trabalho acumulado chegue à produção?
+**Pergunta:** Como desbloqueamos o fluxo de merge?
 
-**PRs prioritários para merge (em ordem, menor risco primeiro):**
+**PRs prioritários para merge (menor risco primeiro):**
 
-| # | Título | Risco | Motivo |
-|---|--------|-------|--------|
-| #115 | Email confirm + referral redirect | Baixo | 0.1 + 0.2 — base de tudo |
-| feat/fase-1.3-influencer-tiers | Tiers de influenciadores | Mínimo | Zero migration, calcula sobre campo existente |
-| #109 | Analytics GET /admin/analytics/growth | Baixo | Só leitura, sem migration |
-| #104 | Cadastro válido + anti-fraude IP | Médio | Verifica rate-limit, requer env var |
+| PR/Branch | O que tem | Risco |
+|-----------|-----------|-------|
+| #115 | Email confirm (0.1) + referral redirect (0.2) | Baixo |
+| feat/fase-1.3-influencer-tiers | Tiers influenciadores | Mínimo (zero migration) |
+| #109 | Analytics /admin/analytics/growth (0.3) | Baixo (só leitura) |
+| #104 | Cadastro válido + anti-fraude IP (0.4) | Médio |
 
 **Opções:**
-- **A. Você mergeia os 4 PRs acima agora** (~30min): resultado imediato, projeto desbloqueia
-- **B. Dar ao Claude permissão para mergear PRs de baixo risco** (zero migration, não-destrutivos): acelera, requer sua aprovação uma vez
-- **C. Continuar como está**: o builder continua criando PRs, nada chega à produção. Não recomendado.
+- **A. Você mergeia os 4 acima agora** (~30min): desbloqueia o projeto imediatamente
+- **B. Dar permissão ao Claude para mergear PRs zero-risk** (sem migration, não-destrutivo): acelera com sua aprovação uma vez
+- **C. Continuar como está**: builder cria PRs, nada chega à produção — não recomendado
 
-**Recomendação:** Opção A. Os 4 PRs são seguros, bem testados e fundamentais. Levam ~30 minutos no total.
+**Recomendação:** Opção A. Todos são seguros e fundamentais.
 
 **Status:** PENDENTE
 
 ---
 
-### [2026-09-28] D-002 — Comissões do programa de influenciadores (Fase 1.3)
+### [2026-09-28] D-006 — Comissões e teto de orçamento para influenciadores (Fase 1.3)
 
-**Contexto:** O tracking de tiers está implementado (Parceiro ≥50, Embaixador ≥250, Hall da Fama ≥1000). O que falta é definir QUANTO pagar por cada indicação válida.
+**Contexto:**
+O sistema de tier de influenciadores está implementado (`/member/influencer`, `/admin/influencers`).
+Tiers: Parceiro (>=50), Embaixador (>=250), Hall da Fama (>=1000).
+O que falta: quanto pagar por cada indicacao valida.
 
-**Pergunta:** Qual o modelo de comissão para influenciadores?
+**Pergunta:**
+Qual o valor de comissão por cadastro válido e qual o teto mensal por influenciador?
 
 **Opções:**
-- **A. Pagar por cadastro válido**: ex. $1 por cadastro confirmado (email + 1 ação)
-  - Prós: simples, direto, fácil de comunicar
-  - Contras: exige sistema de pagamento (Stripe payout ou manual)
-- **B. Créditos/pontos resgatáveis**: sem dinheiro saindo agora; influencer acumula créditos para descontos em serviços futuros
-  - Prós: zero custo imediato, mantém engajamento
-  - Contras: percepção de valor menor para influencer
-- **C. Teto de orçamento + pagamento manual**: você define um budget mensal (ex. $200/mês); os top influencers recebem via Venmo/Zelle manualmente
-  - Prós: controle total do custo, sem infra de pagamento automático
-  - Contras: trabalho manual, não escala
 
-**Recomendação:** Começar com **Opção C** (manual, orçamento fixo). Define um budget de $100-$200/mês, paga manualmente os top 5 toda semana. Quando tiver 50+ influenciadores ativos, automatiza com Stripe payout.
+**Opção A — Comissão fixa baixa, sem teto:**
+- $0.50-$1.00 por cadastro válido
+- Pros: simples, escala automaticamente
+- Contras: sem controle de custo
 
-**Precisa definir:** (a) valor por indicação válida, (b) teto mensal de orçamento, (c) canal de pagamento (Venmo/Zelle/PayPal).
+**Opção B — Comissão em escala por tier, com teto mensal:**
+- Parceiro: $0.50/cadastro, teto $50/mes
+- Embaixador: $0.75/cadastro, teto $200/mes
+- Hall da Fama: $1.00/cadastro, sem teto
+- Bonus mensal opcional: $50 para o 1o do ranking
+- Pros: controle de custo, incentivo a crescer de tier
+- Contras: mais complexo de comunicar
+
+**Opção C — Crédito em plataforma (não dinheiro):**
+- Pontos que dao VIP gratuito ou descontos
+- Pros: custo zero real; bom para fase inicial
+- Contras: menos motivador para influenciadores serios
+
+**Recomendação:** Comecar com Opcao C (VIP gratuito) para os primeiros 50 influenciadores. Testar engajamento. Migrar para Opcao B quando tiver receita recorrente.
+
+**Para ativar a Fase 1.3 completa, responda:**
+1. Modelo de recompensa (A, B ou C)?
+2. Teto de gastos mensais com influenciadores?
+3. Canal de pagamento (Venmo/Zelle/PayPal/Stripe) se for A ou B?
+
+**Status:** PENDENTE -- resposta do dono necessaria para completar Fase 1.3.
+
+---
+
+### [2026-09-28] D-007 — Provider de email para confirmacao (Fase 0.1)
+
+**Contexto:** A Fase 0.1 implementa confirmacao de email. O codigo abstrai o envio (Resend > SMTP > log-dev). Em producao, um provider e obrigatorio.
+
+**Pergunta:** Qual provider de email usar?
+
+**Opcoes:**
+- **Resend** (recomendado): gratis ate 3.000 emails/mes; API simples; requer dominio verificado
+- **Sendgrid**: gratis ate 100/dia -- limite apertado para lancamento
+- **SMTP Gmail**: gratuito mas com riscos de spam e limite 500/dia
+
+**Recomendacao:** Resend. Criar conta em resend.com -> verificar dominio clubeusa.com -> setar RESEND_API_KEY e EMAIL_FROM=noreply@clubeusa.com no Render (~30 min).
 
 **Status:** PENDENTE
 
 ---
 
-### [2026-09-27] D-003 — Provider de email para confirmação (Fase 0.1)
+### [2026-09-15] D-003 — O app esta deployado? (critico)
 
-**Contexto:** A Fase 0.1 implementa confirmação de email. O código abstrai o envio (Resend > SMTP > log-dev). Em produção, um provider é obrigatório para os emails chegarem ao usuário.
+**Contexto:**
+Todo o codigo e inutil sem deployment. render.yaml existe mas nao ha confirmacao de que o app esta rodando em producao.
 
-**Pergunta:** Qual provider de email usar em produção?
+**Para responder:**
+1. URL de producao? (ex: https://clubeusa.onrender.com)
+2. Variaveis de ambiente configuradas? (SUPABASE_URL, SECRET_KEY, ZAPI_INSTANCE, etc.)
+3. Schema SQL aplicado no Supabase?
 
-**Opções:**
-- **Resend** (recomendado): grátis até 3.000 emails/mês; API simples; domínio próprio necessário
-  - Prós: fácil, boa deliverability, plano grátis suficiente para 1k usuários
-  - Contras: requer verificação de domínio (clubeusa.com)
-- **Sendgrid**: grátis até 100 emails/dia — limite apertado
-- **SMTP Gmail/Zoho**: gratuito mas com limites e risco de spam
-
-**Recomendação:** Resend. Criar conta em resend.com → verificar domínio `clubeusa.com` → setar `RESEND_API_KEY` e `EMAIL_FROM=noreply@clubeusa.com` no Render (~30min).
-
-**Status:** PENDENTE
-
----
-
-### [2026-09-27] D-004 — Slug customizado para influenciadores (/i/joao)
-
-**Contexto:** O referral link atual usa código aleatório (`/i/AB3D5F7G`). O roadmap menciona slugs por nome (`/i/joao`).
-
-**Pergunta:** Vale implementar slug customizado agora?
-
-**Opções:**
-- **A. Manter código aleatório** (atual): funciona, rastreável, sem esforço extra
-- **B. Adicionar campo `referral_slug`**: links bonitos para influencers divulgarem (ex: `/i/joao`)
-  - Exige: coluna `referral_slug TEXT UNIQUE` em members + endpoint de atualização
-
-**Recomendação:** Fazer a Opção B quando iniciar Fase 1.3 de pagamento. O `/i/{CODE}` já funciona e não é bloqueante.
-
-**Status:** PENDENTE (adiar para pós D-001 + D-002 resolvidos)
+**Status:** PENDENTE -- bloqueador critico.
 
 ---
 
