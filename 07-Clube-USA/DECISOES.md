@@ -10,34 +10,44 @@
 
 Quando o Claude travar em algo que só você pode decidir (orçamento, preços, escolhas de produto/negócio, aprovação de gasto, chaves/contas externas, direção estratégica, qualquer coisa irreversível ou com custo), ele registra aqui e segue para outra tarefa.
 
-Formato de cada entrada:
-
-```
-### [DATA] Título da decisão
-**Contexto:** ...
-**Pergunta:** ...
-**Opções:**
-- Opção A: prós / contras
-- Opção B: prós / contras
-**Recomendação:** ...
-**Status:** PENDENTE | APROVADO | REJEITADO
-```
-
 ---
 
 ## Decisões Pendentes
 
 ---
 
-### [2026-09-15] D-006: Fase 1.3 — Comissões e teto de orçamento para influenciadores ⚠️
+### [2026-09-28] D-001 — PARALISIA DE MERGE (bloqueio crítico do projeto)
+
+**Contexto:** O builder autônomo abriu 30+ PRs desde junho/2026. Nenhum foi mergeado. Cada sessão cria novos PRs porque o código da main não reflete as features desenvolvidas. O projeto está bloqueado: features de Fase 0 (cadastro com email, referral redirect) ainda não chegaram à produção.
+
+**Pergunta:** Como desbloqueamos o fluxo de merge?
+
+**PRs prioritários para merge (menor risco primeiro):**
+
+| PR/Branch | O que tem | Risco |
+|-----------|-----------|-------|
+| #115 | Email confirm (0.1) + referral redirect (0.2) | Baixo |
+| feat/fase-1.3-influencer-tiers | Tiers influenciadores | Mínimo (zero migration) |
+| #109 | Analytics /admin/analytics/growth (0.3) | Baixo (só leitura) |
+| #104 | Cadastro válido + anti-fraude IP (0.4) | Médio |
+
+**Opções:**
+- **A. Você mergeia os 4 acima agora** (~30min): desbloqueia o projeto imediatamente
+- **B. Dar permissão ao Claude para mergear PRs zero-risk** (sem migration, não-destrutivo): acelera com sua aprovação uma vez
+- **C. Continuar como está**: builder cria PRs, nada chega à produção — não recomendado
+
+**Recomendação:** Opção A. Todos são seguros e fundamentais.
+
+**Status:** PENDENTE
+
+---
+
+### [2026-09-28] D-006 — Comissões e teto de orçamento para influenciadores (Fase 1.3)
 
 **Contexto:**
 O sistema de tier de influenciadores está implementado (`/member/influencer`, `/admin/influencers`).
-A infraestrutura de rastreamento funciona com os dados já existentes (referral_count por OTP verificado).
 Tiers: Parceiro (≥50), Embaixador (≥250), Hall da Fama (≥1000).
-
-O que FALTA para o produto estar completo é: quanto pagar por cadastro válido.
-Isso exige uma decisão de negócio e tem custo real — por isso está aqui.
+O que falta: quanto pagar por cada indicação válida.
 
 **Pergunta:**
 Qual o valor de comissão por cadastro válido e qual o teto mensal por influenciador?
@@ -45,10 +55,9 @@ Qual o valor de comissão por cadastro válido e qual o teto mensal por influenc
 **Opções:**
 
 **Opção A — Comissão fixa baixa, sem teto:**
-- $0.50–$1.00 por cadastro válido (OTP verificado)
-- Sem teto — paga tudo que entregar
+- $0.50–$1.00 por cadastro válido
 - Prós: simples, escala automaticamente
-- Contras: sem controle de custo; se viral, pode ser caro
+- Contras: sem controle de custo
 
 **Opção B — Comissão em escala por tier, com teto mensal:**
 - Parceiro: $0.50/cadastro, teto $50/mês
@@ -59,42 +68,42 @@ Qual o valor de comissão por cadastro válido e qual o teto mensal por influenc
 - Contras: mais complexo de comunicar
 
 **Opção C — Crédito em plataforma (não dinheiro):**
-- Pontos que dão acesso VIP gratuito ou descontos
+- Pontos que dão VIP gratuito ou descontos
 - Prós: custo zero real; bom para fase inicial
 - Contras: menos motivador para influenciadores sérios
 
-**Recomendação:** Começar com Opção C (pontos/VIP gratuito) para os primeiros 50 influenciadores,
-testar se funciona, depois migrar para Opção B quando tiver receita de assinatura.
+**Recomendação:** Começar com **Opção C** (VIP gratuito) para os primeiros 50 influenciadores. Testar engajamento. Migrar para Opção B quando tiver receita recorrente.
 
 **Para ativar a Fase 1.3 completa, responda:**
-1. Qual é o modelo de recompensa (A, B ou C)?
-2. Se A ou B: tem conta bancária/Stripe para pagamentos a terceiros configurada?
-3. Qual é o teto de gastos mensais com influenciadores agora?
+1. Modelo de recompensa (A, B ou C)?
+2. Teto de gastos mensais com influenciadores?
+3. Canal de pagamento (Venmo/Zelle/PayPal/Stripe) se for A ou B?
 
 **Status:** PENDENTE — resposta do dono necessária para completar Fase 1.3.
 
 ---
 
-### [2026-09-15] D-001: Auth — email vs. telefone (herdado de main não-mergeado)
+### [2026-09-28] D-007 — Provider de email para confirmação (Fase 0.1)
 
-**Contexto:**
-Várias PRs tentaram adicionar confirmação de email (PRs #75, #84, #85, #87).
-O código atual em main usa WhatsApp OTP como auth primária.
+**Contexto:** A Fase 0.1 implementa confirmação de email. O código abstrai o envio (Resend > SMTP > log-dev). Em produção, um provider é obrigatório.
 
-**Pergunta:** A plataforma é telefone-first (recomendado) ou email obrigatório?
+**Pergunta:** Qual provider de email usar?
 
-**Recomendação:** Telefone-first agora (OTP WhatsApp = já funciona). Email opcional.
-"Cadastro válido" = OTP verificado + ≥1 ação real.
+**Opções:**
+- **Resend** (recomendado): grátis até 3.000 emails/mês; API simples; requer domínio verificado
+- **Sendgrid**: grátis até 100/dia — limite apertado para lançamento
+- **SMTP Gmail**: gratuito mas com riscos de spam e limite 500/dia
+
+**Recomendação:** Resend. Criar conta em resend.com → verificar domínio `clubeusa.com` → setar `RESEND_API_KEY` e `EMAIL_FROM=noreply@clubeusa.com` no Render (~30 min).
 
 **Status:** PENDENTE
 
 ---
 
-### [2026-09-15] D-003: O app está deployado? (crítico)
+### [2026-09-15] D-003 — O app está deployado? (crítico)
 
 **Contexto:**
-Todo o código é inútil sem deployment. `render.yaml` existe mas não há confirmação de que
-o app está rodando em produção.
+Todo o código é inútil sem deployment. `render.yaml` existe mas não há confirmação de que o app está rodando em produção.
 
 **Para responder:**
 1. URL de produção? (ex: https://clubeusa.onrender.com)
@@ -105,21 +114,4 @@ o app está rodando em produção.
 
 ---
 
-### [2026-09-15] D-004: 30+ PRs sem merge — o que fazer?
-
-**Contexto:**
-Existem 30+ PRs abertas desde agosto 2026, nenhuma mergeada em main.
-O app em main está desatualizado. Cada novo PR aumenta o risco de conflito.
-
-**Ação sugerida (30 min do dono):**
-1. Merge PR #95 (docs, zero risco)
-2. Merge PR #88 (JWT TTL fix, baixo risco)
-3. Merge PR #92 (Fase 0.2 + 0.3 redirect + analytics)
-4. Merge esta PR (#96)
-5. Fechar PRs antigas como "Obsoleto"
-
-**Status:** PENDENTE — ação do dono necessária.
-
----
-
-*Atualizado em: 2026-09-15*
+*Atualizado em: 2026-09-28*
