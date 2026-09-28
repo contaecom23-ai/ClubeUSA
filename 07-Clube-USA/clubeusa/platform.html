@@ -945,7 +945,7 @@ footer a:hover{color:var(--accent-l)}
           <h3>Seu link de indicação</h3>
           <p>Compartilhe e ganhe <strong>+200 pontos</strong> por cada amigo que entrar. Pontos viram descontos e sorteios.</p>
           <div class="ref-link-box">
-            <div class="ref-link-text" id="ref-link-text">clubeusa.com?ref=...</div>
+            <div class="ref-link-text" id="ref-link-text">clubeusa.com/i/...</div>
             <button class="ref-copy-btn" onclick="copyRefLink()">Copiar</button>
           </div>
           <button class="ref-wa-btn" onclick="shareRefOnWhatsApp()">
@@ -1160,10 +1160,11 @@ const APP_URL = window.location.origin;
 // ============================================================
 //  STATE
 // ============================================================
-let _token   = localStorage.getItem('cu_token') || null;
-let _member  = JSON.parse(localStorage.getItem('cu_member') || 'null');
-let _phone   = '';
-let _isLogin = false;
+let _token        = localStorage.getItem('cu_token') || null;
+let _member       = JSON.parse(localStorage.getItem('cu_member') || 'null');
+let _phone        = '';
+let _isLogin      = false;
+let _referralCode = new URLSearchParams(window.location.search).get('ref') || '';
 
 // Categorias válidas para nichos (mesma lista validada no backend)
 const NICHE_CATEGORIES = [
@@ -1188,6 +1189,9 @@ document.addEventListener('DOMContentLoaded', () => {
   loadGroups();
   if (_token && _member) {
     showDashboard();
+  } else if (_referralCode) {
+    // Abre o modal de cadastro automaticamente quando vem de um link de indicação
+    setTimeout(() => openModal(), 400);
   }
   handleVipReturn();
   initScrollReveal();
@@ -1512,7 +1516,12 @@ async function handlePhoneSubmit() {
   setLoading('btn-phone', true, '📲 Receber código no WhatsApp');
   try {
     if (!_isLogin) {
-      await api('POST', '/auth/register', { phone, name: name || undefined, language: 'pt' });
+      await api('POST', '/auth/register', {
+        phone,
+        name: name || undefined,
+        language: 'pt',
+        referral_code: _referralCode || undefined,
+      });
     }
     await api('POST', '/auth/otp/request', { phone });
     showStep('step-otp');

@@ -478,7 +478,7 @@ async def get_referral(member: dict = Depends(get_current_member)):
         raise HTTPException(status_code=404)
 
     m = result.data[0]
-    referral_link = f"{APP_URL}?ref={m['referral_code']}"
+    referral_link = f"{APP_URL}/i/{m['referral_code']}"
 
     # Historico de indicacoes
     refs = sb.table("referrals").select(
@@ -981,6 +981,44 @@ def _send_otp_whatsapp(phone: str, otp: str):
         )
     except Exception as e:
         log.error(f"Falha ao enviar OTP: {e}")
+
+
+# ============================================================
+#  ROTA — LINK DE REFERRAL RASTREAVEL
+# ============================================================
+
+@app.get("/i/{referral_code}", include_in_schema=False)
+async def referral_link_redirect(referral_code: str, request: Request):
+    """
+    Link de referral rastreavel ex: clubeusa.com/i/ABC123
+    Valida o codigo, registra o clique e redireciona para /?ref={code}.
+    """
+    import re
+    from fastapi.responses import RedirectResponse
+    from utils.security import hash_ip
+
+    code = referral_code.upper().strip()
+    if not re.match(r'^[A-Z0-9]{4,12}$', code):
+        return RedirectResponse(url="/", status_code=302)
+
+    try:
+        from supabase import create_client
+        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+        result = sb.table("members").select("id").eq("referral_code", code).eq("status", "active").execute()
+        if result.data:
+            ip_hash = hash_ip(request.client.host) if request.client else None
+            sb.table("audit_logs").insert({
+                "actor_type":  "system",
+                "action":      "referral.link_clicked",
+                "target_type": "member",
+                "target_id":   result.data[0]["id"],
+                "ip_hash":     ip_hash,
+                "metadata":    {"referral_code": code},
+            }).execute()
+    except Exception as e:
+        log.warning(f"Falha ao registrar clique referral {code}: {e}")
+
+    return RedirectResponse(url=f"/?ref={code}", status_code=302)
 
 
 # ============================================================
