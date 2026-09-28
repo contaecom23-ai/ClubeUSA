@@ -17,7 +17,7 @@
 
 - [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
 - [ ] **1.2** Busca por ZIP + raio 1–5 milhas
-- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
+- [~] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar) — **tracking de tiers implementado** (PR feat/fase-1.3-influencer-tiers); lógica de comissão/pagamento aguarda D-001 em DECISOES.md
 - [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
 - [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
 - [x] **1.6** Rastreador de preço de produto — membro cola o link de um produto (Amazon/Walmart/BestBuy), vê o histórico de preço e ofertas cruzadas nos outros marketplaces, cupons verificados automaticamente (Playwright) com selo confirmado/não confirmado, e recebe alerta quando o preço cai (recheck a cada 6h)
@@ -66,4 +66,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-28*

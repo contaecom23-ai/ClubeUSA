@@ -11,6 +11,7 @@
 #  GET  /member/referral      — link e stats de indicacao
 #  POST /member/click         — registrar clique em deal
 #  GET  /member/leaderboard   — ranking de pontos
+#  GET  /member/influencer    — tier e progresso no programa de influenciadores (Fase 1.3)
 #  POST /billing/subscribe    — assinar VIP via Stripe
 #  POST /billing/portal       — portal de gestao da assinatura
 #  POST /billing/webhook      — webhook Stripe (pagamento confirmado)
@@ -32,6 +33,7 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  GET  /admin/influencers       — ranking de influenciadores com tiers (admin, Fase 1.3)
 # ============================================================
 
 import hmac
@@ -546,6 +548,16 @@ async def get_leaderboard(member: dict = Depends(get_current_member)):
     }
 
 
+@app.get("/member/influencer")
+async def get_influencer_stats(member: dict = Depends(get_current_member)):
+    """Tier e progresso do programa de influenciadores (Fase 1.3)."""
+    from services.influencer_service import get_member_influencer_stats
+    stats = get_member_influencer_stats(member["sub"])
+    if stats is None:
+        raise HTTPException(status_code=404)
+    return stats
+
+
 # ============================================================
 #  ROTAS — BILLING (Stripe)
 # ============================================================
@@ -1046,6 +1058,19 @@ async def admin_set_member_status(
         return {"ok": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/admin/influencers")
+async def admin_list_influencers(
+    min_referrals: int = 1,
+    _=Depends(require_admin),
+):
+    """Ranking de influenciadores com tiers (Fase 1.3)."""
+    from services.influencer_service import list_influencers
+    if min_referrals < 0:
+        raise HTTPException(status_code=400, detail="min_referrals deve ser >= 0.")
+    rows = list_influencers(min_referrals=min_referrals)
+    return {"total": len(rows), "influencers": rows}
 
 
 @app.get("/admin/deals")
