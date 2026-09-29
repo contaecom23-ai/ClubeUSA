@@ -32,6 +32,8 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  GET  /admin/analytics/growth  — cadastros diários N dias (admin, fase 0.3)
+#  GET  /admin/analytics/funnel  — funil de cadastro (admin, fase 0.3)
 # ============================================================
 
 import hmac
@@ -1100,3 +1102,19 @@ async def admin_send_deals(_=Depends(require_admin)):
 async def admin_list_alerts(_=Depends(require_admin)):
     from services.admin_service import list_admin_alerts
     return list_admin_alerts()
+
+
+@app.get("/admin/analytics/growth")
+async def admin_analytics_growth(days: int = 30, _=Depends(require_admin)):
+    """Cadastros diários dos últimos N dias (padrão 30). Fase 0.3."""
+    if not (1 <= days <= 365):
+        raise HTTPException(status_code=400, detail="days deve ser entre 1 e 365.")
+    from services.admin_service import get_growth
+    return {"days": days, "data": get_growth(days)}
+
+
+@app.get("/admin/analytics/funnel")
+async def admin_analytics_funnel(_=Depends(require_admin)):
+    """Funil de cadastro: registrado → email confirmado → engajado. Fase 0.3."""
+    from services.admin_service import get_funnel
+    return get_funnel()
