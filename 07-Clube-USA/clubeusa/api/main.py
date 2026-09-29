@@ -394,6 +394,139 @@ async def verify_otp(body: OTPVerify):
 
 
 # ============================================================
+#  ROTAS — EMAIL CONFIRMACAO
+# ============================================================
+
+@app.post("/auth/email/resend-confirmation")
+async def resend_email_confirmation(member: dict = Depends(get_current_member)):
+    """
+    Reenvia email de confirmacao para o membro autenticado.
+    Requer que o membro tenha email cadastrado.
+    """
+    from supabase import create_client
+    from utils.email_sender import generate_email_token, send_confirmation_email
+    from datetime import datetime, timedelta
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("members").select(
+        "id,email_enc,email_confirmed,name_enc,language"
+    ).eq("id", member["sub"]).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Membro nao encontrado.")
+
+    m = result.data[0]
+
+    if not m.get("email_enc"):
+        raise HTTPException(status_code=400, detail="Nenhum email cadastrado. Atualize seu perfil primeiro.")
+
+    if m.get("email_confirmed"):
+        return {"message": "Email ja confirmado.", "confirmed": True}
+
+    from utils.security import decrypt
+    email    = decrypt(m["email_enc"])
+    name     = decrypt(m["name_enc"]) if m.get("name_enc") else ""
+    language = m.get("language", "pt")
+
+    # Remove tokens antigos do mesmo membro
+    sb.table("email_confirmation_tokens").delete().eq("member_id", member["sub"]).execute()
+
+    token_raw, token_hash = generate_email_token()
+    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+
+    sb.table("email_confirmation_tokens").insert({
+        "member_id":  member["sub"],
+        "token_hash": token_hash,
+        "expires_at": expires_at,
+    }).execute()
+
+    send_confirmation_email(email, token_raw, name=name, language=language)
+
+    return {
+        "message":  "Email de confirmacao enviado. Verifique sua caixa de entrada.",
+        "confirmed": False,
+    }
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def confirm_email(token: str):
+    """
+    Confirmacao de email via link enviado ao usuario.
+    Rota publica — o token e o unico segredo.
+    """
+    from supabase import create_client
+    from utils.email_sender import hash_token
+    from datetime import datetime, timezone
+
+    token_hash = hash_token(token)
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+
+    result = sb.table("email_confirmation_tokens").select(
+        "id,member_id,expires_at"
+    ).eq("token_hash", token_hash).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=400, detail="Link invalido ou expirado.")
+
+    record = result.data[0]
+    expires = datetime.fromisoformat(record["expires_at"].replace("Z", "+00:00"))
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+
+    if datetime.now(timezone.utc) > expires:
+        sb.table("email_confirmation_tokens").delete().eq("id", record["id"]).execute()
+        raise HTTPException(status_code=400, detail="Link expirado. Solicite um novo.")
+
+    member_id = record["member_id"]
+
+    # Confirma o email e remove o token (single-use)
+    sb.table("members").update({"email_confirmed": True}).eq("id", member_id).execute()
+    sb.table("email_confirmation_tokens").delete().eq("id", record["id"]).execute()
+
+    # Audit log
+    sb.table("audit_logs").insert({
+        "actor_type":  "member",
+        "actor_id":    member_id,
+        "action":      "member.email_confirmed",
+        "target_type": "member",
+        "target_id":   member_id,
+    }).execute()
+
+    log.info(f"Email confirmado para membro {member_id}")
+
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content=_email_confirmed_page(), status_code=200)
+
+
+def _email_confirmed_page() -> str:
+    return """<!DOCTYPE html>
+<html lang="pt">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Email confirmado — Clube USA</title>
+<style>
+  body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
+       min-height:100vh;margin:0;background:#f0f4f8}
+  .card{background:#fff;border-radius:12px;padding:40px 32px;max-width:420px;
+        text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+  h2{color:#1a6fc4;margin-top:0} p{color:#555;line-height:1.6}
+  .check{font-size:64px;margin-bottom:16px}
+  a{display:inline-block;margin-top:24px;background:#1a6fc4;color:#fff;
+    padding:12px 28px;border-radius:6px;text-decoration:none;font-size:15px}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="check">✅</div>
+    <h2>Email confirmado!</h2>
+    <p>Seu endereço de email foi verificado com sucesso.<br>
+       Sua conta está completa.</p>
+    <a href="/">Ir para o painel</a>
+  </div>
+</body>
+</html>"""
+
+
+# ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
 

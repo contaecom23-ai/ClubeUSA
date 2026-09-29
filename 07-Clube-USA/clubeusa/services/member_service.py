@@ -152,18 +152,37 @@ def register_member(
         "categories": categories,
     }, ip=ip)
 
-    # 8. Gerar token JWT
+    # 8. Dispara confirmacao de email (nao-bloqueante: falha nao impede cadastro)
+    email_confirmation_sent = False
+    if email:
+        try:
+            from datetime import timedelta
+            from utils.email_sender import generate_email_token, send_confirmation_email
+            token_raw, token_hash = generate_email_token()
+            expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+            sb.table("email_confirmation_tokens").insert({
+                "member_id":  member_id,
+                "token_hash": token_hash,
+                "expires_at": expires_at,
+            }).execute()
+            send_confirmation_email(email, token_raw, name=name, language=language)
+            email_confirmation_sent = True
+        except Exception as e:
+            log.warning(f"Falha ao enviar confirmacao de email no cadastro: {e}")
+
+    # 9. Gerar token JWT
     token = create_token(member_id, member.get("plan", "free"))
 
     return {
-        "action":      "registered",
-        "member_id":   member_id,
-        "token":       token,
-        "points":      100,
-        "level":       "bronze",
-        "referral_code": member["referral_code"],
-        "group_invite": group.get("invite_link") if group else None,
-        "group_name":   group.get("name") if group else None,
+        "action":                   "registered",
+        "member_id":                member_id,
+        "token":                    token,
+        "points":                   100,
+        "level":                    "bronze",
+        "referral_code":            member["referral_code"],
+        "group_invite":             group.get("invite_link") if group else None,
+        "group_name":               group.get("name") if group else None,
+        "email_confirmation_sent":  email_confirmation_sent,
     }
 
 
@@ -250,21 +269,22 @@ def get_member_profile(member_id: str) -> Optional[dict]:
 
     # Descriptografa PII apenas para exibicao
     return {
-        "id":           m["id"],
-        "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
-        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "language":     m["language"],
-        "state":        m["state"],
-        "plan":         m["plan"],
-        "points":       m["points"],
-        "level":        m["level"],
-        "categories":   m["categories"],
-        "referral_code": m["referral_code"],
-        "referral_count": m["referral_count"],
-        "total_clicks": m["total_clicks"],
-        "created_at":   m["created_at"],
-        "vip_expires_at": m.get("vip_expires_at"),
+        "id":              m["id"],
+        "name":            decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":           _mask_phone(decrypt(m["phone_enc"])),
+        "email":           _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email_confirmed": m.get("email_confirmed", False),
+        "language":        m["language"],
+        "state":           m["state"],
+        "plan":            m["plan"],
+        "points":          m["points"],
+        "level":           m["level"],
+        "categories":      m["categories"],
+        "referral_code":   m["referral_code"],
+        "referral_count":  m["referral_count"],
+        "total_clicks":    m["total_clicks"],
+        "created_at":      m["created_at"],
+        "vip_expires_at":  m.get("vip_expires_at"),
     }
 
 
