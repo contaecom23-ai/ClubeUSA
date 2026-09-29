@@ -27,11 +27,16 @@ def get_metrics() -> dict:
     now = datetime.now(timezone.utc)
     week_ago = (now - timedelta(days=7)).isoformat()
 
-    members = sb.table("members").select("plan,status,created_at").execute().data
+    members = sb.table("members").select(
+        "plan,status,created_at,email_enc,email_confirmed_at"
+    ).execute().data
     total       = len(members)
     active      = sum(1 for m in members if m["status"] == "active")
     vip         = sum(1 for m in members if m["plan"] == "vip")
     new_week    = sum(1 for m in members if m.get("created_at", "") >= week_ago)
+    with_email  = sum(1 for m in members if m.get("email_enc"))
+    confirmed   = sum(1 for m in members if m.get("email_confirmed_at"))
+    confirm_rate = round(confirmed / with_email * 100, 1) if with_email > 0 else 0.0
 
     clicks_week = sb.table("clicks").select("id").gte("clicked_at", week_ago).execute().data
 
@@ -51,10 +56,68 @@ def get_metrics() -> dict:
             top_cat = Counter(cats).most_common(1)[0][0]
 
     return {
-        "members":    {"total": total, "active": active, "vip": vip, "new_this_week": new_week},
+        "members": {
+            "total": total, "active": active, "vip": vip, "new_this_week": new_week,
+            "email_confirmed": confirmed, "confirmation_rate": confirm_rate,
+        },
         "deals":      {"pending": pending, "approved": approved, "sent_this_week": sent_week},
         "engagement": {"clicks_this_week": len(clicks_week), "top_category": top_cat},
         "alerts":     {"active": alerts_active, "triggered_this_week": alerts_week},
+    }
+
+
+# ============================================================
+#  ANALYTICS — CRESCIMENTO E FUNIL
+# ============================================================
+
+def get_growth(days: int = 30) -> list:
+    """
+    Retorna contagem diária de cadastros dos últimos N dias.
+    Resultado: [{"date": "YYYY-MM-DD", "count": N}, ...]
+    """
+    sb = _supabase()
+    from_date = (datetime.now(timezone.utc).date() - timedelta(days=days - 1)).isoformat()
+    rows = sb.table("members").select("created_at").gte("created_at", from_date).execute().data
+
+    counts: dict = {}
+    for r in rows:
+        d = (r.get("created_at") or "")[:10]
+        if d:
+            counts[d] = counts.get(d, 0) + 1
+
+    today = datetime.now(timezone.utc).date()
+    result = []
+    for i in range(days):
+        d = (today - timedelta(days=days - 1 - i)).isoformat()
+        result.append({"date": d, "count": counts.get(d, 0)})
+    return result
+
+
+def get_funnel() -> dict:
+    """
+    Funil de cadastro: registrado → email fornecido → confirmado → engajado.
+    Retorna contagens absolutas e taxas de conversão.
+    """
+    sb = _supabase()
+    members = sb.table("members").select(
+        "email_enc,email_confirmed_at,total_clicks,referred_by"
+    ).execute().data
+
+    total         = len(members)
+    with_email    = sum(1 for m in members if m.get("email_enc"))
+    email_conf    = sum(1 for m in members if m.get("email_confirmed_at"))
+    engaged       = sum(1 for m in members if (m.get("total_clicks") or 0) > 0)
+    via_referral  = sum(1 for m in members if m.get("referred_by"))
+
+    return {
+        "registered":        total,
+        "email_provided":    with_email,
+        "email_confirmed":   email_conf,
+        "engaged":           engaged,
+        "via_referral":      via_referral,
+        "confirmation_rate": round(email_conf  / with_email * 100, 1) if with_email  > 0 else 0.0,
+        "engagement_rate":   round(engaged     / total      * 100, 1) if total       > 0 else 0.0,
+        "referral_rate":     round(via_referral / total     * 100, 1) if total       > 0 else 0.0,
     }
 
 

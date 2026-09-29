@@ -8,7 +8,11 @@
 
 - [ ] **0.1** Cadastro + perfil mínimo + email confirmado
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
+- [x] **0.3** Analytics básico
+  - PR: `feat/fase-0.3-analytics-basico`
+  - `GET /admin/analytics/growth?days=30` — cadastros diários dos últimos N dias
+  - `GET /admin/analytics/funnel` — funil: registrado → email fornecido → confirmado → engajado → via referral
+  - `GET /admin/metrics` estendido: `email_confirmed` + `confirmation_rate` na seção `members`
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
 ---
@@ -66,4 +70,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-29*
