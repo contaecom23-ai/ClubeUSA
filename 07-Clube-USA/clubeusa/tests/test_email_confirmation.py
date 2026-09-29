@@ -1,209 +1,210 @@
-# tests/test_email_confirmation.py
-"""
-Testes para o fluxo de confirmação de email (Fase 0.1).
-
-Cobertos:
-- Geração e hash de token
-- Envio em dev mode (sem RESEND_API_KEY)
-- Endpoint resend-confirmation: membro sem email retorna 400
-- Endpoint resend-confirmation: email já confirmado retorna 200 com confirmed=True
-- Endpoint confirm: token válido confirma email
-- Endpoint confirm: token inválido retorna 400
-- Endpoint confirm: token expirado retorna 400
-- Perfil expõe email_confirmed
-"""
-
+# tests/test_email_confirmation.py — Fase 0.1: email confirmation
+import hashlib
 import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta, timezone
 
 
-# ---- utils/email_sender ----
+# ============================================================
+#  request_email_confirmation
+# ============================================================
 
-def test_generate_email_token_produces_distinct_tokens():
-    from utils.email_sender import generate_email_token
-    r1, h1 = generate_email_token()
-    r2, h2 = generate_email_token()
-    assert r1 != r2
-    assert h1 != h2
-    assert r1 not in (h1, h2)  # raw nunca igual ao hash
-
-
-def test_hash_token_deterministic():
-    from utils.email_sender import hash_token, generate_email_token
-    raw, _ = generate_email_token()
-    assert hash_token(raw) == hash_token(raw)
-
-
-def test_send_confirmation_email_dev_mode_returns_true(caplog):
-    import logging
-    from utils.email_sender import send_confirmation_email
-    with patch.dict("os.environ", {}, clear=False):
-        # garante que RESEND_API_KEY nao esta definida
-        import os; os.environ.pop("RESEND_API_KEY", None)
-        with caplog.at_level(logging.INFO, logger="email_sender"):
-            result = send_confirmation_email("test@example.com", "rawtoken123", name="João")
-    assert result is True
-    assert "rawtoken123" in caplog.text
-
-
-# ---- endpoint: resend-confirmation ----
-
-def _make_member_payload(member_id="m1", plan="free"):
-    return {"sub": member_id, "plan": plan}
-
-
-def _app_with_auth_override(member_payload):
-    """Retorna TestClient com get_current_member mockado via dependency_overrides."""
-    from fastapi.testclient import TestClient
-    import api.main as app_module
-    from deps import get_current_member as real_dep
-
-    app_module.app.dependency_overrides[real_dep] = lambda: member_payload
-    client = TestClient(app_module.app, raise_server_exceptions=False)
-    return client, app_module.app
-
-
-_TEST_ENV = {"SUPABASE_URL": "http://test", "SUPABASE_SERVICE_KEY": "test-key",
-             "ENCRYPTION_KEY": "test-encryption-key-32chars-padding",
-             "JWT_SECRET": "test-jwt-secret"}
-
-
-def test_resend_confirmation_no_email(mocker):
-    """Membro sem email cadastrado → 400."""
+def _mock_sb_for_request(email_enc="enc_email", confirmed_at=None):
     mock_sb = MagicMock()
     mock_sb.table().select().eq().execute.return_value.data = [{
-        "id": "m1", "email_enc": None, "email_confirmed": False,
-        "name_enc": None, "language": "pt",
+        "email_enc":          email_enc,
+        "email_confirmed_at": confirmed_at,
     }]
-
-    with patch.dict("os.environ", _TEST_ENV), \
-         patch("supabase.create_client", return_value=mock_sb):
-        client, app = _app_with_auth_override(_make_member_payload())
-        try:
-            resp = client.post("/auth/email/resend-confirmation")
-        finally:
-            from deps import get_current_member as real_dep
-            app.dependency_overrides.pop(real_dep, None)
-
-    assert resp.status_code == 400
+    mock_sb.table().delete().eq().execute.return_value = None
+    mock_sb.table().insert().execute.return_value.data = [{"id": "tok-1"}]
+    return mock_sb
 
 
-def test_resend_confirmation_already_confirmed(mocker):
-    """Email já confirmado → 200 com confirmed=True."""
-    mock_sb = MagicMock()
-    mock_sb.table().select().eq().execute.return_value.data = [{
-        "id": "m1", "email_enc": "enc", "email_confirmed": True,
-        "name_enc": None, "language": "pt",
-    }]
+def test_request_email_confirmation_success(mocker):
+    from services.member_service import request_email_confirmation
 
-    with patch.dict("os.environ", _TEST_ENV), \
-         patch("supabase.create_client", return_value=mock_sb):
-        client, app = _app_with_auth_override(_make_member_payload())
-        try:
-            resp = client.post("/auth/email/resend-confirmation")
-        finally:
-            from deps import get_current_member as real_dep
-            app.dependency_overrides.pop(real_dep, None)
+    mock_sb = _mock_sb_for_request()
+    mocker.patch("services.member_service._supabase", return_value=mock_sb)
+    mocker.patch("services.member_service.decrypt", return_value="user@example.com")
+    mocker.patch("services.member_service._audit")
 
-    assert resp.status_code == 200
-    assert resp.json()["confirmed"] is True
+    raw_token, email = request_email_confirmation("member-123")
+    assert len(raw_token) > 20
+    assert email == "user@example.com"
 
 
-# ---- endpoint: confirm/{token} ----
+def test_request_email_confirmation_no_email(mocker):
+    from services.member_service import request_email_confirmation
 
-def test_confirm_email_valid_token(mocker):
-    """Token válido → email confirmado, token deletado."""
-    from utils.email_sender import generate_email_token
-    from fastapi.testclient import TestClient
-    import api.main as app_module
+    mock_sb = _mock_sb_for_request(email_enc=None)
+    mocker.patch("services.member_service._supabase", return_value=mock_sb)
+    mocker.patch("services.member_service._audit")
 
-    raw, token_hash = generate_email_token()
-    expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
-
-    mock_sb = MagicMock()
-    mock_sb.table().select().eq().execute.return_value.data = [{
-        "id": "tok1", "member_id": "m1",
-        "expires_at": expires_at,
-    }]
-
-    with patch.dict("os.environ", _TEST_ENV), \
-         patch("supabase.create_client", return_value=mock_sb):
-        client = TestClient(app_module.app, raise_server_exceptions=False)
-        resp = client.get(f"/auth/email/confirm/{raw}")
-
-    assert resp.status_code == 200
-    assert "confirmado" in resp.text.lower()
+    with pytest.raises(ValueError, match="email cadastrado"):
+        request_email_confirmation("member-123")
 
 
-def test_confirm_email_invalid_token(mocker):
-    """Token não encontrado → 400."""
-    from fastapi.testclient import TestClient
-    import api.main as app_module
+def test_request_email_confirmation_already_confirmed(mocker):
+    from services.member_service import request_email_confirmation
+
+    mock_sb = _mock_sb_for_request(confirmed_at="2026-01-01T00:00:00")
+    mocker.patch("services.member_service._supabase", return_value=mock_sb)
+    mocker.patch("services.member_service._audit")
+
+    with pytest.raises(ValueError, match="já confirmado"):
+        request_email_confirmation("member-123")
+
+
+def test_request_email_confirmation_member_not_found(mocker):
+    from services.member_service import request_email_confirmation
 
     mock_sb = MagicMock()
     mock_sb.table().select().eq().execute.return_value.data = []
+    mocker.patch("services.member_service._supabase", return_value=mock_sb)
 
-    with patch.dict("os.environ", _TEST_ENV), \
-         patch("supabase.create_client", return_value=mock_sb):
-        client = TestClient(app_module.app, raise_server_exceptions=False)
-        resp = client.get("/auth/email/confirm/tokeninvalido123")
-
-    assert resp.status_code == 400
+    with pytest.raises(ValueError, match="Membro não encontrado"):
+        request_email_confirmation("ghost-id")
 
 
-def test_confirm_email_expired_token(mocker):
-    """Token expirado → 400."""
-    from fastapi.testclient import TestClient
-    import api.main as app_module
-    from utils.email_sender import generate_email_token
+# ============================================================
+#  verify_email_token
+# ============================================================
 
-    raw, _ = generate_email_token()
-    expires_at = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+def _future(hours=24) -> str:
+    return (datetime.now(timezone.utc) + timedelta(hours=hours)).isoformat()
 
+def _past(hours=1) -> str:
+    return (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+
+
+def _make_token():
+    import secrets
+    raw = secrets.token_urlsafe(32)
+    hsh = hashlib.sha256(raw.encode()).hexdigest()
+    return raw, hsh
+
+
+def test_verify_email_token_success(mocker):
+    from services.member_service import verify_email_token
+
+    raw, hsh = _make_token()
     mock_sb = MagicMock()
     mock_sb.table().select().eq().execute.return_value.data = [{
-        "id": "tok1", "member_id": "m1",
-        "expires_at": expires_at,
+        "id": "tok-1", "member_id": "m-1",
+        "expires_at": _future(), "used_at": None,
     }]
+    mock_sb.table().update().eq().execute.return_value = None
+    mocker.patch("services.member_service._supabase", return_value=mock_sb)
+    mocker.patch("services.member_service._audit")
 
-    with patch.dict("os.environ", _TEST_ENV), \
-         patch("supabase.create_client", return_value=mock_sb):
-        client = TestClient(app_module.app, raise_server_exceptions=False)
-        resp = client.get(f"/auth/email/confirm/{raw}")
-
-    assert resp.status_code == 400
-    assert "expirado" in resp.json()["detail"].lower()
+    member_id = verify_email_token(raw)
+    assert member_id == "m-1"
 
 
-# ---- member profile: email_confirmed ----
+def test_verify_email_token_invalid(mocker):
+    from services.member_service import verify_email_token
 
-def test_get_member_profile_exposes_email_confirmed(mocker):
+    mock_sb = MagicMock()
+    mock_sb.table().select().eq().execute.return_value.data = []
+    mocker.patch("services.member_service._supabase", return_value=mock_sb)
+
+    with pytest.raises(ValueError, match="inválido"):
+        verify_email_token("bad-token")
+
+
+def test_verify_email_token_expired(mocker):
+    from services.member_service import verify_email_token
+
+    raw, _ = _make_token()
+    mock_sb = MagicMock()
+    mock_sb.table().select().eq().execute.return_value.data = [{
+        "id": "tok-1", "member_id": "m-1",
+        "expires_at": _past(1), "used_at": None,
+    }]
+    mocker.patch("services.member_service._supabase", return_value=mock_sb)
+    mocker.patch("services.member_service._audit")
+
+    with pytest.raises(ValueError, match="expirado"):
+        verify_email_token(raw)
+
+
+def test_verify_email_token_already_used(mocker):
+    from services.member_service import verify_email_token
+
+    raw, _ = _make_token()
+    mock_sb = MagicMock()
+    mock_sb.table().select().eq().execute.return_value.data = [{
+        "id": "tok-1", "member_id": "m-1",
+        "expires_at": _future(), "used_at": _past(1),
+    }]
+    mocker.patch("services.member_service._supabase", return_value=mock_sb)
+
+    with pytest.raises(ValueError, match="já utilizado"):
+        verify_email_token(raw)
+
+
+# ============================================================
+#  get_member_profile — inclui email_confirmed
+# ============================================================
+
+def test_profile_includes_email_confirmed_true(mocker):
     from services.member_service import get_member_profile
 
     mock_sb = MagicMock()
     mock_sb.table().select().eq().execute.return_value.data = [{
-        "id": "m1",
-        "phone_enc": "enc_phone",
-        "email_enc": "enc_email",
-        "email_confirmed": True,
-        "name_enc": "enc_name",
-        "language": "pt",
-        "state": "FL",
-        "plan": "free",
-        "points": 100,
-        "level": "bronze",
-        "categories": ["all"],
-        "referral_code": "ABC123",
-        "referral_count": 2,
-        "total_clicks": 5,
-        "created_at": "2026-01-01T00:00:00",
+        "id": "m-1", "name_enc": "enc_name", "phone_enc": "enc_phone",
+        "email_enc": "enc_email", "email_confirmed_at": "2026-01-01T10:00:00",
+        "language": "pt", "state": "FL", "plan": "free", "points": 100,
+        "level": "bronze", "categories": ["all"], "referral_code": "ABC12345",
+        "referral_count": 0, "total_clicks": 0, "created_at": "2026-01-01T00:00:00",
         "vip_expires_at": None,
     }]
+    mocker.patch("services.member_service._supabase", return_value=mock_sb)
+    mocker.patch("services.member_service.decrypt", return_value="test")
 
-    with patch("services.member_service._supabase", return_value=mock_sb):
-        with patch("services.member_service.decrypt", return_value="fake_value"):
-            profile = get_member_profile("m1")
-
-    assert profile is not None
+    profile = get_member_profile("m-1")
     assert profile["email_confirmed"] is True
+
+
+def test_profile_includes_email_confirmed_false(mocker):
+    from services.member_service import get_member_profile
+
+    mock_sb = MagicMock()
+    mock_sb.table().select().eq().execute.return_value.data = [{
+        "id": "m-1", "name_enc": None, "phone_enc": "enc_phone",
+        "email_enc": "enc_email", "email_confirmed_at": None,
+        "language": "pt", "state": None, "plan": "free", "points": 100,
+        "level": "bronze", "categories": ["all"], "referral_code": "XYZ67890",
+        "referral_count": 0, "total_clicks": 0, "created_at": "2026-01-01T00:00:00",
+        "vip_expires_at": None,
+    }]
+    mocker.patch("services.member_service._supabase", return_value=mock_sb)
+    mocker.patch("services.member_service.decrypt", return_value="test")
+
+    profile = get_member_profile("m-1")
+    assert profile["email_confirmed"] is False
+
+
+# ============================================================
+#  email_service — send_confirmation_email (dev mode)
+# ============================================================
+
+def test_send_confirmation_email_dev_returns_true(mocker):
+    from services.email_service import send_confirmation_email
+
+    mocker.patch.dict("os.environ", {"ENVIRONMENT": "development"})
+    result = send_confirmation_email("test@example.com", "https://example.com/confirm/tok")
+    assert result is True
+
+
+def test_send_confirmation_email_no_provider_returns_false(mocker):
+    from services.email_service import send_confirmation_email
+
+    with patch.dict("os.environ", {"ENVIRONMENT": "production"}, clear=False):
+        # Remove provider keys if set
+        import os
+        os.environ.pop("RESEND_API_KEY", None)
+        os.environ.pop("SMTP_HOST", None)
+        result = send_confirmation_email("test@example.com", "https://example.com/confirm/tok")
+
+    assert result is False

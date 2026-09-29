@@ -27,28 +27,48 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
-### [2026-09-29] Provedor de email transacional para confirmação de email
+---
 
-**Contexto:** A Fase 0.1 foi implementada com infraestrutura completa de confirmação de email (endpoints, token seguro, HTML de confirmação). Em dev, o link é logado no console. Em produção, precisa de um serviço de email.
+### [2026-09-27] #001 — Provider de email para confirmação
 
-**Pergunta:** Qual provedor de email transacional usar?
+**Contexto:** A Fase 0.1 implementa confirmação de email. O código abstrai o envio (Resend > SMTP > log-dev). Em produção, um provider é obrigatório para os emails chegarem ao usuário.
+
+**Pergunta:** Qual provider de email usar em produção?
 
 **Opções:**
-- **Resend** (resend.com) — Free: 3.000 emails/mês, 100/dia. API REST simples. Já suportado no código (basta definir `RESEND_API_KEY`). Exige conta e domínio verificado.
-  - ✅ Generous free tier para 1k usuários
-  - ✅ Integração já codificada (`utils/email_sender.py`)
-  - ⚠️ Exige verificar domínio clubeusa.com no painel deles
-- **SendGrid** — Free: 100 emails/dia. Mais complexo de configurar, mais conhecido.
-  - ⚠️ Limite de 100/dia no plano free é apertado
-- **Mailgun** — Free: 5.000 emails/mês por 3 meses, depois pago.
-  - ⚠️ Teste gratuito limitado
-- **AWS SES** — $0,10/1.000 emails. Baratíssimo em escala, mas setup mais complexo (IAM, verificação de domínio, etc.).
-  - ✅ Custo quase zero em escala
-  - ⚠️ Setup mais trabalhoso
+- **Resend** (recomendado): grátis até 3.000 emails/mês; API simples (um header Bearer); domínio próprio necessário para não cair em spam. Adicionar `RESEND_API_KEY` e `EMAIL_FROM` no env do Render.
+  - Prós: fácil integração, boa deliverability, plano grátis suficiente para 1k usuários
+  - Contras: requer verificação de domínio (clubeusa.com)
+- **Sendgrid**: grátis até 100 emails/dia (limite apertado); mais burocrático.
+  - Prós: consolidado no mercado
+  - Contras: limite baixo no free tier
+- **SMTP via Gmail/Zoho**: gratuito, mas com limites e menos deliverability.
+  - Prós: sem custo inicial
+  - Contras: risco de spam, limite 500/dia Gmail
 
-**Recomendação:** Começar com **Resend** (já suportado, free tier suficiente para 1k usuários). Migrar para SES quando ultrapassar 90k emails/mês. Passos: criar conta em resend.com → verificar domínio clubeusa.com → adicionar `RESEND_API_KEY` no `.env` do servidor.
+**Recomendação:** Resend. Criar conta em resend.com, adicionar domínio `clubeusa.com`, setar `RESEND_API_KEY` e `EMAIL_FROM=noreply@clubeusa.com` no painel do Render. Leva ~30 min.
 
 **Status:** PENDENTE
+
+---
+
+### [2026-09-27] #002 — Slug customizado para influenciadores (/i/joao)
+
+**Contexto:** Fase 0.2 implementa `/i/{CODE}` com o código aleatório de 8 chars (ex: `/i/AB3D5F7G`). O roadmap menciona `/i/joao` — slugs legíveis por nome.
+
+**Pergunta:** Vale a pena suportar slug customizado agora?
+
+**Opções:**
+- **A. Manter código aleatório** (implementado): `/i/AB3D5F7G`. Funcional, rastreável, sem conflitos.
+  - Prós: zero esforço extra, seguro, já funciona
+  - Contras: link feio para influencer divulgar nas redes
+- **B. Adicionar campo `referral_slug` opcional** (a fazer): permite que influenciadores registrem `/i/joao`. Exige: coluna `referral_slug TEXT UNIQUE` em members + endpoint de atualização de slug + validação (sem espaços, sem caracteres especiais, sem palavras reservadas).
+  - Prós: links atraentes para influencers (Fase 1.3 depende disso)
+  - Contras: ~2h de dev extra; colisão de slugs precisa ser tratada
+
+**Recomendação:** Fazer a **Opção B** quando iniciar a Fase 1.3 (Programa de Influenciadores). Não é bloqueante agora — o `/i/{CODE}` já funciona e rastreia corretamente.
+
+**Status:** PENDENTE (adiar para Fase 1.3)
 
 ---
 

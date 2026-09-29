@@ -32,6 +32,9 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  POST /auth/email/confirm/request — solicitar confirmação de email (auth)
+#  GET  /auth/email/confirm/{token} — verificar link de confirmação (público)
+#  GET  /i/{code}               — redirect de indicação (público, fase 0.2)
 # ============================================================
 
 import hmac
@@ -391,139 +394,6 @@ async def verify_otp(body: OTPVerify):
 
     token = create_token(member["id"], member["plan"])
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
-
-
-# ============================================================
-#  ROTAS — EMAIL CONFIRMACAO
-# ============================================================
-
-@app.post("/auth/email/resend-confirmation")
-async def resend_email_confirmation(member: dict = Depends(get_current_member)):
-    """
-    Reenvia email de confirmacao para o membro autenticado.
-    Requer que o membro tenha email cadastrado.
-    """
-    from supabase import create_client
-    from utils.email_sender import generate_email_token, send_confirmation_email
-    from datetime import datetime, timedelta
-
-    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
-    result = sb.table("members").select(
-        "id,email_enc,email_confirmed,name_enc,language"
-    ).eq("id", member["sub"]).execute()
-
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Membro nao encontrado.")
-
-    m = result.data[0]
-
-    if not m.get("email_enc"):
-        raise HTTPException(status_code=400, detail="Nenhum email cadastrado. Atualize seu perfil primeiro.")
-
-    if m.get("email_confirmed"):
-        return {"message": "Email ja confirmado.", "confirmed": True}
-
-    from utils.security import decrypt
-    email    = decrypt(m["email_enc"])
-    name     = decrypt(m["name_enc"]) if m.get("name_enc") else ""
-    language = m.get("language", "pt")
-
-    # Remove tokens antigos do mesmo membro
-    sb.table("email_confirmation_tokens").delete().eq("member_id", member["sub"]).execute()
-
-    token_raw, token_hash = generate_email_token()
-    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
-
-    sb.table("email_confirmation_tokens").insert({
-        "member_id":  member["sub"],
-        "token_hash": token_hash,
-        "expires_at": expires_at,
-    }).execute()
-
-    send_confirmation_email(email, token_raw, name=name, language=language)
-
-    return {
-        "message":  "Email de confirmacao enviado. Verifique sua caixa de entrada.",
-        "confirmed": False,
-    }
-
-
-@app.get("/auth/email/confirm/{token}", include_in_schema=False)
-async def confirm_email(token: str):
-    """
-    Confirmacao de email via link enviado ao usuario.
-    Rota publica — o token e o unico segredo.
-    """
-    from supabase import create_client
-    from utils.email_sender import hash_token
-    from datetime import datetime, timezone
-
-    token_hash = hash_token(token)
-    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
-
-    result = sb.table("email_confirmation_tokens").select(
-        "id,member_id,expires_at"
-    ).eq("token_hash", token_hash).execute()
-
-    if not result.data:
-        raise HTTPException(status_code=400, detail="Link invalido ou expirado.")
-
-    record = result.data[0]
-    expires = datetime.fromisoformat(record["expires_at"].replace("Z", "+00:00"))
-    if expires.tzinfo is None:
-        expires = expires.replace(tzinfo=timezone.utc)
-
-    if datetime.now(timezone.utc) > expires:
-        sb.table("email_confirmation_tokens").delete().eq("id", record["id"]).execute()
-        raise HTTPException(status_code=400, detail="Link expirado. Solicite um novo.")
-
-    member_id = record["member_id"]
-
-    # Confirma o email e remove o token (single-use)
-    sb.table("members").update({"email_confirmed": True}).eq("id", member_id).execute()
-    sb.table("email_confirmation_tokens").delete().eq("id", record["id"]).execute()
-
-    # Audit log
-    sb.table("audit_logs").insert({
-        "actor_type":  "member",
-        "actor_id":    member_id,
-        "action":      "member.email_confirmed",
-        "target_type": "member",
-        "target_id":   member_id,
-    }).execute()
-
-    log.info(f"Email confirmado para membro {member_id}")
-
-    from fastapi.responses import HTMLResponse
-    return HTMLResponse(content=_email_confirmed_page(), status_code=200)
-
-
-def _email_confirmed_page() -> str:
-    return """<!DOCTYPE html>
-<html lang="pt">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Email confirmado — Clube USA</title>
-<style>
-  body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
-       min-height:100vh;margin:0;background:#f0f4f8}
-  .card{background:#fff;border-radius:12px;padding:40px 32px;max-width:420px;
-        text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.08)}
-  h2{color:#1a6fc4;margin-top:0} p{color:#555;line-height:1.6}
-  .check{font-size:64px;margin-bottom:16px}
-  a{display:inline-block;margin-top:24px;background:#1a6fc4;color:#fff;
-    padding:12px 28px;border-radius:6px;text-decoration:none;font-size:15px}
-</style>
-</head>
-<body>
-  <div class="card">
-    <div class="check">✅</div>
-    <h2>Email confirmado!</h2>
-    <p>Seu endereço de email foi verificado com sucesso.<br>
-       Sua conta está completa.</p>
-    <a href="/">Ir para o painel</a>
-  </div>
-</body>
-</html>"""
 
 
 # ============================================================
@@ -1233,3 +1103,96 @@ async def admin_send_deals(_=Depends(require_admin)):
 async def admin_list_alerts(_=Depends(require_admin)):
     from services.admin_service import list_admin_alerts
     return list_admin_alerts()
+
+
+# ============================================================
+#  ROTAS — CONFIRMAÇÃO DE EMAIL (Fase 0.1)
+# ============================================================
+
+@app.post("/auth/email/confirm/request", status_code=202)
+async def email_confirm_request(member: dict = Depends(get_current_member)):
+    """
+    Envia (ou reenvia) email de confirmação ao membro autenticado.
+    Requer que o membro tenha email cadastrado.
+    """
+    from services.member_service import request_email_confirmation
+    from services.email_service import send_confirmation_email
+    try:
+        raw_token, email = request_email_confirmation(member["sub"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    confirm_url = f"{APP_URL}/auth/email/confirm/{raw_token}"
+    sent = send_confirmation_email(email, confirm_url, language=member.get("lang", "pt"))
+
+    return {
+        "message": "Email de confirmação enviado. Verifique sua caixa de entrada.",
+        "sent":    sent,
+    }
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def email_confirm_verify(token: str):
+    """
+    Verifica token de confirmação de email (link clicado pelo usuário).
+    Em sucesso: marca email como confirmado e retorna página de sucesso.
+    """
+    from services.member_service import verify_email_token
+    from fastapi.responses import HTMLResponse
+
+    try:
+        verify_email_token(token)
+    except ValueError as e:
+        html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Erro — Clube USA</title></head>
+<body style="font-family:sans-serif;max-width:520px;margin:80px auto;text-align:center">
+  <h2 style="color:#d93025">Não foi possível confirmar o email</h2>
+  <p>{e}</p>
+  <p><a href="{APP_URL}">Voltar ao Clube USA</a></p>
+</body></html>"""
+        return HTMLResponse(content=html, status_code=400)
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Email confirmado — Clube USA</title>
+<meta http-equiv="refresh" content="4;url={APP_URL}">
+</head>
+<body style="font-family:sans-serif;max-width:520px;margin:80px auto;text-align:center">
+  <h2 style="color:#1a73e8">✅ Email confirmado!</h2>
+  <p>Seu email foi verificado com sucesso.</p>
+  <p>Redirecionando em 4 segundos... <a href="{APP_URL}">clique aqui</a> se não redirecionar.</p>
+</body></html>"""
+    return HTMLResponse(content=html, status_code=200)
+
+
+# ============================================================
+#  ROTAS — REFERRAL REDIRECT (Fase 0.2)
+# ============================================================
+
+@app.get("/i/{code}", include_in_schema=False)
+async def referral_redirect(code: str):
+    """
+    Redireciona links de indicação (clubeusa.com/i/CODE) para a home
+    com o referral_code pré-preenchido como query param.
+    Valida que o código existe antes de redirecionar (anti-spam).
+    """
+    import re
+    from fastapi.responses import RedirectResponse
+    from supabase import create_client
+
+    # Valida formato básico (8 chars alfanuméricos — mesmo padrão do referral_code)
+    if not re.match(r'^[A-Z0-9]{4,12}$', code.upper()):
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=APP_URL, status_code=302)
+
+    code_upper = code.upper()
+    try:
+        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+        result = sb.table("members").select("id").eq(
+            "referral_code", code_upper
+        ).eq("status", "active").execute()
+        if not result.data:
+            return RedirectResponse(url=APP_URL, status_code=302)
+    except Exception:
+        pass
+
+    return RedirectResponse(url=f"{APP_URL}?ref={code_upper}", status_code=302)
