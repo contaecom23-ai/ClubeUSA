@@ -32,6 +32,14 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  --- Fase 1.4: Empregos ---
+#  GET  /jobs/categories         — categorias e tipos (publico)
+#  GET  /jobs                    — listar vagas ativas (publico, filtros: category/state/zip)
+#  GET  /jobs/{id}               — detalhe de vaga (publico)
+#  POST /jobs/admin/jobs         — criar vaga (admin)
+#  PUT  /jobs/admin/jobs/{id}    — atualizar vaga (admin)
+#  DELETE /jobs/admin/jobs/{id}  — desativar vaga (admin)
+#  GET  /jobs/admin/jobs         — listar todas as vagas (admin)
 # ============================================================
 
 import hmac
@@ -52,6 +60,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.jobs import router as jobs_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -83,6 +92,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(jobs_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
