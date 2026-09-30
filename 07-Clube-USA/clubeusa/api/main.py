@@ -17,6 +17,9 @@
 #  GET  /public/groups        — 2 grupos WhatsApp ativos (sem auth)
 #  POST /webhook/group        — webhook Z-API entradas/saidas de grupo
 #  GET  /health               — health check
+#  GET  /auth/confirm-email   — confirmar email via token (publico)
+#  POST /auth/resend-email-confirmation — reenviar email de confirmacao (autenticado)
+#  GET  /i/{code}             — redirect amigavel de indicacao (publico)
 #  POST /alerts              — criar alerta de preco (plano pago)
 #  GET  /alerts              — listar alertas ativos (plano pago)
 #  DELETE /alerts/{id}       — cancelar alerta (plano pago)
@@ -42,9 +45,9 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, Depends, HTTPException, Request, Header
+from fastapi import FastAPI, Depends, HTTPException, Request, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -393,6 +396,67 @@ async def verify_otp(body: OTPVerify):
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
 
 
+@app.get("/auth/confirm-email")
+async def confirm_email(token: str = Query(..., min_length=20, max_length=64)):
+    """
+    Confirma email via link enviado na inscricao.
+    Token de uso unico com TTL de 48 horas.
+    """
+    from services.member_service import confirm_email as svc_confirm
+    try:
+        result = svc_confirm(token)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if result.get("already_confirmed"):
+        return {"message": "Email ja confirmado anteriormente.", "member_id": result["member_id"]}
+    return {"message": "Email confirmado com sucesso!", "member_id": result["member_id"]}
+
+
+class ResendConfirmationRequest(BaseModel):
+    pass  # sem corpo — usa token JWT do membro logado
+
+
+@app.post("/auth/resend-email-confirmation")
+async def resend_email_confirmation(member: dict = Depends(get_current_member)):
+    """Reenvia email de confirmacao. Rate-limit: 1 por 5 minutos."""
+    from services.member_service import resend_email_confirmation as svc_resend
+    try:
+        sent = svc_resend(member["sub"])
+    except ValueError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+
+    if not sent:
+        raise HTTPException(
+            status_code=400,
+            detail="Email ja confirmado ou nenhum email cadastrado."
+        )
+    return {"message": "Email de confirmacao reenviado."}
+
+
+# ============================================================
+#  ROTA — REFERRAL LINK AMIGAVEL (Fase 0.2)
+#  GET /i/{code} → redireciona para /?ref={code}
+# ============================================================
+
+import re as _re
+_REFERRAL_CODE_RE = _re.compile(r'^[A-Z0-9]{6,12}$')
+
+
+@app.get("/i/{code}", include_in_schema=False)
+async def referral_redirect(code: str):
+    """
+    Link amigavel de indicacao: /i/ABCD1234
+    Redireciona para a landing page com o codigo de referral na query string.
+    """
+    code_clean = code.strip().upper()
+    if not _REFERRAL_CODE_RE.match(code_clean):
+        # Codigo invalido — redireciona para home sem referral
+        return RedirectResponse(url="/", status_code=302)
+
+    return RedirectResponse(url=f"/?ref={code_clean}", status_code=302)
+
+
 # ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
@@ -478,7 +542,8 @@ async def get_referral(member: dict = Depends(get_current_member)):
         raise HTTPException(status_code=404)
 
     m = result.data[0]
-    referral_link = f"{APP_URL}?ref={m['referral_code']}"
+    referral_link = f"{APP_URL}/i/{m['referral_code']}"
+    referral_link_legacy = f"{APP_URL}?ref={m['referral_code']}"
 
     # Historico de indicacoes
     refs = sb.table("referrals").select(
@@ -486,13 +551,14 @@ async def get_referral(member: dict = Depends(get_current_member)):
     ).eq("referrer_id", member["sub"]).order("created_at", desc=True).limit(10).execute()
 
     return {
-        "referral_code":  m["referral_code"],
-        "referral_link":  referral_link,
-        "referral_count": m["referral_count"],
-        "points_earned":  m["referral_count"] * 200,
-        "total_points":   m["points"],
-        "level":          m["level"],
-        "history":        refs.data or [],
+        "referral_code":        m["referral_code"],
+        "referral_link":        referral_link,
+        "referral_link_legacy": referral_link_legacy,
+        "referral_count":       m["referral_count"],
+        "points_earned":        m["referral_count"] * 200,
+        "total_points":         m["points"],
+        "level":                m["level"],
+        "history":              refs.data or [],
     }
 
 
