@@ -21,8 +21,9 @@
 #  GET  /alerts              — listar alertas ativos (plano pago)
 #  DELETE /alerts/{id}       — cancelar alerta (plano pago)
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
-#  POST /auth/email/send     — enviar OTP de confirmacao de email (autenticado)
-#  POST /auth/email/verify   — confirmar email com OTP (autenticado)
+#  POST /auth/email/send-confirmation — enviar link de confirmacao de email (autenticado)
+#  GET  /auth/email/confirm/{token}   — confirmar email via link (publico)
+#  PATCH /member/email                — atualizar email do membro (autenticado)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
 #  GET  /admin/members           — lista membros (admin)
@@ -54,6 +55,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.email_confirmation import router as email_confirmation_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -85,6 +87,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(email_confirmation_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -188,10 +191,6 @@ class OTPVerify(BaseModel):
 
 class ClickRequest(BaseModel):
     deal_id: str
-
-
-class EmailVerifyRequest(BaseModel):
-    token: str
 
 
 class AlertCreate(BaseModel):
@@ -397,91 +396,6 @@ async def verify_otp(body: OTPVerify):
 
     token = create_token(member["id"], member["plan"])
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
-
-
-@app.post("/auth/email/send")
-async def send_email_confirmation(member: dict = Depends(get_current_member)):
-    """
-    Envia OTP de 6 dígitos para o email cadastrado do membro.
-    Requer autenticação (JWT). Email deve estar cadastrado no perfil.
-    Válido por 24 horas.
-    """
-    from supabase import create_client
-    from utils.security import generate_otp, decrypt
-    from utils.email_sender import send_email_otp
-    from services.email_confirmation_service import save_email_token
-
-    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
-    result = sb.table("members").select(
-        "email_enc,email_hash,email_confirmed,name_enc"
-    ).eq("id", member["sub"]).execute()
-
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Membro nao encontrado.")
-
-    m = result.data[0]
-    if not m.get("email_enc"):
-        raise HTTPException(
-            status_code=422,
-            detail="Nenhum email cadastrado. Atualize seu perfil com um email primeiro."
-        )
-
-    if m.get("email_confirmed"):
-        return {"message": "Email ja confirmado.", "email_confirmed": True}
-
-    token = generate_otp()
-    save_email_token(m["email_hash"], token)
-
-    email = decrypt(m["email_enc"])
-    name  = decrypt(m["name_enc"]) if m.get("name_enc") else None
-
-    try:
-        send_email_otp(email, token, name)
-    except EnvironmentError as e:
-        log.error(f"Configuracao de email ausente: {e}")
-        raise HTTPException(status_code=503, detail="Servico de email nao configurado. Contate o suporte.")
-    except Exception as e:
-        log.error(f"Falha ao enviar email de confirmacao: {e}")
-        raise HTTPException(status_code=502, detail="Falha ao enviar email. Tente novamente.")
-
-    return {"message": "Codigo enviado para seu email.", "expires_in": 86400}
-
-
-@app.post("/auth/email/verify")
-async def verify_email_confirmation(
-    body: EmailVerifyRequest,
-    member: dict = Depends(get_current_member),
-):
-    """
-    Confirma email do membro com o OTP recebido.
-    Requer autenticação (JWT). Marca email_confirmed = TRUE no banco.
-    """
-    from supabase import create_client
-    from services.email_confirmation_service import verify_email_token, set_email_confirmed
-
-    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
-    result = sb.table("members").select(
-        "email_hash,email_confirmed"
-    ).eq("id", member["sub"]).execute()
-
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Membro nao encontrado.")
-
-    m = result.data[0]
-
-    if m.get("email_confirmed"):
-        return {"message": "Email ja confirmado.", "email_confirmed": True}
-
-    if not m.get("email_hash"):
-        raise HTTPException(status_code=422, detail="Nenhum email cadastrado.")
-
-    ok, error_msg = verify_email_token(m["email_hash"], body.token)
-    if not ok:
-        status_code = 429 if "tentativas" in error_msg else 400
-        raise HTTPException(status_code=status_code, detail=error_msg)
-
-    set_email_confirmed(member["sub"])
-    return {"message": "Email confirmado com sucesso!", "email_confirmed": True}
 
 
 # ============================================================
