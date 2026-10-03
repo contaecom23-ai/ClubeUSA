@@ -5,7 +5,7 @@
 
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from utils.security import (
@@ -81,7 +81,23 @@ def register_member(
     language = language if language in ("pt", "es") else "pt"
     categories = categories or ["all"]
 
-    # 2. Verificar duplicata por hash (sem expor dados)
+    # 2. Anti-fraude Fase 0.4: max 3 cadastros por IP nas ultimas 24h
+    if ip:
+        ip_hash_check = hash_ip(ip)
+        cutoff = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+        sb_check = _supabase()
+        recent = (
+            sb_check.table("audit_logs")
+            .select("id", count="exact")
+            .eq("action", "member.created")
+            .eq("ip_hash", ip_hash_check)
+            .gte("created_at", cutoff)
+            .execute()
+        )
+        if (recent.count or 0) >= 3:
+            raise PermissionError("Muitos cadastros deste endereco. Tente novamente amanha.")
+
+    # Verificar duplicata por hash (sem expor dados)
     sb = _supabase()
     phone_hash = hash_pii(phone)
     existing = sb.table("members").select("id,status").eq("phone_hash", phone_hash).execute()
@@ -213,7 +229,6 @@ def _check_vip_milestone(referrer_id: str):
 
     m = result.data[0]
     if m["referral_count"] >= 3 and m["plan"] == "free" and not m.get("vip_trial_used", False):
-        from datetime import datetime, timedelta
         sb.table("members").update({
             "plan":           "vip",
             "vip_started_at": datetime.utcnow().isoformat(),
