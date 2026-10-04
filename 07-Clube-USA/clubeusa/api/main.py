@@ -831,6 +831,13 @@ async def group_webhook(request: Request):
     Recebe eventos de entrada/saida de membros via Z-API.
     Atualiza member_count em tempo real para manter os 2 grupos corretos no site.
     """
+    # Valida token se ZAPI_WEBHOOK_TOKEN estiver configurado (backward-compat: sem env var = aceita tudo)
+    _wt = os.environ.get("ZAPI_WEBHOOK_TOKEN", "")
+    if _wt:
+        provided = request.headers.get("X-Webhook-Token", "")
+        if not hmac.compare_digest(provided, _wt):
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
     try:
         payload = await request.json()
     except Exception:
@@ -1096,14 +1103,11 @@ async def admin_scan_deals(_=Depends(require_admin)):
 @app.post("/admin/deals/send")
 async def admin_send_deals(_=Depends(require_admin)):
     """Envia todos os deals aprovados em background."""
-    _ds2 = os.path.join(os.path.dirname(__file__), "..", "..", "dealscanner2")
-    _log = open(os.path.join(_ds2, "logs", "sender_bg.log"), "a")
+    _ds2 = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "dealscanner2"))
     subprocess.Popen(
         [sys.executable, "run_sender.py"],
-        cwd=os.path.abspath(_ds2),
+        cwd=_ds2,
         start_new_session=True,
-        stdout=_log,
-        stderr=_log,
     )
     return {"ok": True, "message": "Envio iniciado em background."}
 
