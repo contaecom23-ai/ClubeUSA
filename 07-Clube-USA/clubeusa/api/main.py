@@ -52,6 +52,8 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.email_confirmation import router as email_confirmation_router
+from routers.analytics import router as analytics_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -83,6 +85,8 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(email_confirmation_router)
+app.include_router(analytics_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -827,6 +831,13 @@ async def group_webhook(request: Request):
     Recebe eventos de entrada/saida de membros via Z-API.
     Atualiza member_count em tempo real para manter os 2 grupos corretos no site.
     """
+    # Valida token se ZAPI_WEBHOOK_TOKEN estiver configurado (backward-compat: sem env var = aceita tudo)
+    _wt = os.environ.get("ZAPI_WEBHOOK_TOKEN", "")
+    if _wt:
+        provided = request.headers.get("X-Webhook-Token", "")
+        if not hmac.compare_digest(provided, _wt):
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
     try:
         payload = await request.json()
     except Exception:
@@ -877,6 +888,14 @@ async def health():
         "service": "clube-usa-api",
         "version": "1.0.0",
     }
+
+
+@app.get("/i/{referral_code}", include_in_schema=False)
+async def referral_redirect(referral_code: str):
+    """Link curto de indicacao: /i/JOAO → /?ref=JOAO (Fase 0.2)"""
+    from fastapi.responses import RedirectResponse
+    code = referral_code.strip().upper()[:20]
+    return RedirectResponse(url=f"{APP_URL}?ref={code}", status_code=302)
 
 
 # ============================================================
@@ -1084,14 +1103,11 @@ async def admin_scan_deals(_=Depends(require_admin)):
 @app.post("/admin/deals/send")
 async def admin_send_deals(_=Depends(require_admin)):
     """Envia todos os deals aprovados em background."""
-    _ds2 = os.path.join(os.path.dirname(__file__), "..", "..", "dealscanner2")
-    _log = open(os.path.join(_ds2, "logs", "sender_bg.log"), "a")
+    _ds2 = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "dealscanner2"))
     subprocess.Popen(
         [sys.executable, "run_sender.py"],
-        cwd=os.path.abspath(_ds2),
+        cwd=_ds2,
         start_new_session=True,
-        stdout=_log,
-        stderr=_log,
     )
     return {"ok": True, "message": "Envio iniciado em background."}
 
