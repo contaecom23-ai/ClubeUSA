@@ -394,6 +394,48 @@ async def verify_otp(body: OTPVerify):
 
 
 # ============================================================
+#  ROTAS — EMAIL VERIFICATION (Fase 0.1)
+# ============================================================
+
+@app.get("/auth/verify-email")
+async def verify_email(token: str):
+    """
+    Confirma email via token recebido por email.
+    Rota pública — acessada pelo link no email de confirmação.
+    """
+    from services.member_service import confirm_email
+    try:
+        result = confirm_email(token)
+        return {
+            "message": "Email confirmado com sucesso!",
+            "member_id": result["member_id"],
+            "email": result["email"],
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
+
+
+@app.post("/auth/verify-email/resend")
+async def resend_verification(member: dict = Depends(get_current_member)):
+    """
+    Reenvia email de confirmação para o membro autenticado.
+    Requer JWT válido.
+    """
+    from services.member_service import resend_verification_email
+    try:
+        sent = resend_verification_email(member["sub"])
+        if not sent:
+            return {"message": "Email já confirmado."}
+        return {"message": "Email de confirmação reenviado."}
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
+
+
+# ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
 
