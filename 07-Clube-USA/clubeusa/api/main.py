@@ -134,8 +134,11 @@ async def rate_limit_middleware(request: Request, call_next):
     ip_hash = hash_ip(ip)
 
     # Rate limit por IP: 60 req/min geral, 5 req/min para auth
+    # /auth/email/confirm e um clique de link (email) — limite maior para nao frustrar usuarios
     path = request.url.path
-    if path.startswith("/auth"):
+    if path.startswith("/auth/email/confirm"):
+        allowed = check_rate_limit(f"email_confirm:{ip_hash}", max_req=20, window_sec=60)
+    elif path.startswith("/auth"):
         allowed = check_rate_limit(f"auth:{ip_hash}", max_req=5, window_sec=60)
     else:
         allowed = check_rate_limit(f"api:{ip_hash}", max_req=60, window_sec=60)
@@ -358,6 +361,77 @@ async def request_otp(body: OTPRequest, request: Request):
         log.info(f"[DEV] OTP para {phone}: {otp}")
 
     return {"message": "Codigo enviado para seu WhatsApp.", "expires_in": 600}
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def confirm_email(token: str):
+    """
+    Confirma o email via token enviado por email.
+    Rota publica — o token e o unico mecanismo de autenticacao.
+    """
+    from services.email_service import verify_confirmation_token
+    from supabase import create_client
+
+    member_id = verify_confirmation_token(token)
+    if not member_id:
+        # Retorna pagina amigavel ao inves de 400 (melhor UX para clicks em email)
+        html_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "platform.html")
+        # Redireciona para o site com parametro de erro
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Link invalido ou expirado. Solicite um novo link de confirmacao."}
+        )
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    sb.table("members").update({"email_confirmed": True}).eq("id", member_id).execute()
+
+    sb.table("audit_logs").insert({
+        "actor_type":  "member",
+        "actor_id":    member_id,
+        "action":      "member.email_confirmed",
+        "target_type": "member",
+        "target_id":   member_id,
+    }).execute()
+
+    log.info(f"Email confirmado para membro {member_id}")
+    return {"ok": True, "message": "Email confirmado com sucesso!"}
+
+
+@app.post("/auth/email/resend")
+async def resend_confirmation(member: dict = Depends(get_current_member)):
+    """
+    Reenvia email de confirmacao. Limitado por rate-limit (5 req/min via middleware).
+    So faz sentido se o membro tem email cadastrado mas ainda nao confirmado.
+    """
+    from services.email_service import create_confirmation_token, send_confirmation_email
+    from utils.security import decrypt
+    from supabase import create_client
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("members").select(
+        "email_enc,email_confirmed,language"
+    ).eq("id", member["sub"]).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=404)
+
+    m = result.data[0]
+
+    if m.get("email_confirmed"):
+        return {"message": "Email ja confirmado."}
+
+    if not m.get("email_enc"):
+        raise HTTPException(status_code=400, detail="Nenhum email cadastrado.")
+
+    try:
+        email = decrypt(m["email_enc"])
+        token = create_confirmation_token(member["sub"])
+        send_confirmation_email(email, token, m.get("language", "pt"))
+    except Exception as e:
+        log.error(f"Erro ao reenviar confirmacao de email: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao enviar email. Tente novamente.")
+
+    return {"message": "Email de confirmacao reenviado."}
 
 
 @app.post("/auth/otp/verify")

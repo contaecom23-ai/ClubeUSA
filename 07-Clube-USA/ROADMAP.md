@@ -6,7 +6,7 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado *(backend completo: migration, tokens single-use, endpoints confirm/resend, testes 14/14 — falta configurar EMAIL_PROVIDER no Supabase/prod)*
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
