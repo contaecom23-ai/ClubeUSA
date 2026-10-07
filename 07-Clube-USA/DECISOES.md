@@ -1,7 +1,7 @@
 # DECISOES — Clube USA
 
 > Fila de decisões que dependem do dono do produto (você).
-> Para cada item: data, contexto, pergunta objetiva, opções com prós/contras e recomendação do Claude.
+> Para cada item: data, contexta, pergunta objetiva, opções com prós/contras e recomendação do Claude.
 > Claude NÃO age em itens desta lista sem sua aprovação explícita.
 
 ---
@@ -27,39 +27,56 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
-### [2026-10-07] Escolha do provider de email para confirmação (Fase 0.1)
+### [2026-09-27] #001 — Provider de email para confirmação
 
-**Contexto:** A Fase 0.1 requer envio de email de confirmação. A infraestrutura backend está pronta (tokens, endpoints, testes). Falta ativar o provider em produção.
+**Contexto:** A Fase 0.1 implementa confirmação de email. O código abstrai o envio (Resend > SMTP > log-dev). Em produção, um provider é obrigatório para os emails chegarem ao usuário.
 
-**Pergunta:** Qual serviço de email usar para o Clube USA?
+**Pergunta:** Qual provider de email usar em produção?
 
 **Opções:**
+- **Resend** (recomendado): grátis até 3.000 emails/mês; API simples (um header Bearer); domínio próprio necessário para não cair em spam. Adicionar `RESEND_API_KEY` e `EMAIL_FROM` no env do Render.
+  - Prós: fácil integração, boa deliverability, plano grátis suficiente para 1k usuários
+  - Contras: requer verificação de domínio (clubeusa.com)
+- **Sendgrid**: grátis até 100 emails/dia (limite apertado); mais burocrático.
+  - Prós: consolidado no mercado
+  - Contras: limite baixo no free tier
+- **SMTP via Gmail/Zoho**: gratuito, mas com limites e menos deliverability.
+  - Prós: sem custo inicial
+  - Contras: risco de spam, limite 500/dia Gmail
 
-- **Resend (resend.com)** — recomendado
-  - Free tier: 3.000 emails/mês, 100/dia
-  - Setup: criar conta, verificar domínio `clubeusa.com`, gerar `RESEND_API_KEY`
-  - Prós: API simples, boa entregabilidade, free tier suficiente para 1k usuários, não requer configuração de SMTP
-  - Contras: depende de serviço externo (mas todos dependem)
+**Recomendação:** Resend. Criar conta em resend.com, adicionar domínio `clubeusa.com`, setar `RESEND_API_KEY` e `EMAIL_FROM=noreply@clubeusa.com` no painel do Render. Leva ~30 min.
 
-- **SMTP (Gmail, Mailgun, SendGrid SMTP)**
-  - Free tier variado; Gmail tem limite 500/dia
-  - Prós: mais controle, pode usar o que já tem
-  - Contras: configuração mais manual, deliverability menor com Gmail pessoal
-
-**Recomendação:** Resend — melhor deliverability, API mais simples, free tier suficiente para a Fase 0. Plano pago ($20/mês) quando precisar de mais volume.
-
-**O que precisa fazer:**
+**O que fazer:**
 1. Criar conta em resend.com
-2. Verificar o domínio `clubeusa.com` (adicionar DNS TXT/MX)
-3. Adicionar no Supabase/Render/ambiente de produção:
+2. Verificar o domínio `clubeusa.com` (DNS TXT/MX)
+3. Adicionar no ambiente de produção (Render/Supabase):
    ```
-   EMAIL_PROVIDER=resend
-   EMAIL_FROM=noreply@clubeusa.com
    RESEND_API_KEY=re_...
+   EMAIL_FROM=noreply@clubeusa.com
    ```
-4. Aplicar migration: `clubeusa/db/email_confirmation_migration.sql` no Supabase SQL Editor
+4. Aplicar migration: `clubeusa/db/email_confirm_migration.sql` no Supabase SQL Editor
 
 **Status:** PENDENTE
+
+---
+
+### [2026-09-27] #002 — Slug customizado para influenciadores (/i/joao)
+
+**Contexto:** Fase 0.2 implementa `/i/{CODE}` com o código aleatório de 8 chars (ex: `/i/AB3D5F7G`). O roadmap menciona `/i/joao` — slugs legíveis por nome.
+
+**Pergunta:** Vale a pena suportar slug customizado agora?
+
+**Opções:**
+- **A. Manter código aleatório** (implementado): `/i/AB3D5F7G`. Funcional, rastreável, sem conflitos.
+  - Prós: zero esforço extra, seguro, já funciona
+  - Contras: link feio para influencer divulgar nas redes
+- **B. Adicionar campo `referral_slug` opcional** (a fazer): permite que influenciadores registrem `/i/joao`. Exige: coluna `referral_slug TEXT UNIQUE` em members + endpoint de atualização de slug + validação (sem espaços, sem caracteres especiais, sem palavras reservadas).
+  - Prós: links atraentes para influencers (Fase 1.3 depende disso)
+  - Contras: ~2h de dev extra; colisão de slugs precisa ser tratada
+
+**Recomendação:** Fazer a **Opção B** quando iniciar a Fase 1.3 (Programa de Influenciadores). Não é bloqueante agora — o `/i/{CODE}` já funciona e rastreia corretamente.
+
+**Status:** PENDENTE (adiar para Fase 1.3)
 
 ---
 
