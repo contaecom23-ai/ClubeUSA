@@ -4,6 +4,7 @@
 # ============================================================
 
 import os
+import re
 import logging
 from datetime import datetime
 from typing import Optional
@@ -327,3 +328,38 @@ def track_click(member_id: str, deal_id: str, ip: str = None) -> str:
     sb.rpc("increment_clicks", {"p_member_id": member_id}).execute()
 
     return utm
+
+
+# ============================================================
+#  RESOLUÇÃO DE CÓDIGO DE INDICAÇÃO (pretty URL)
+# ============================================================
+
+_REFERRAL_CODE_RE = re.compile(r'^[A-Z0-9]{4,12}$')
+
+
+def resolve_referral_code(code: str) -> str:
+    """
+    Valida e resolve um código de indicação.
+
+    Returns member_id do dono do código.
+    Raises ValueError se o código for inválido, mal formatado ou não existir.
+    """
+    if not code:
+        raise ValueError("Código ausente.")
+
+    code = code.upper()
+    if not _REFERRAL_CODE_RE.match(code):
+        raise ValueError("Formato de código inválido.")
+
+    sb = _supabase()
+    result = (
+        sb.table("members")
+        .select("id")
+        .eq("referral_code", code)
+        .eq("status", "active")
+        .execute()
+    )
+    if not result.data:
+        raise ValueError("Código não encontrado.")
+
+    return result.data[0]["id"]
