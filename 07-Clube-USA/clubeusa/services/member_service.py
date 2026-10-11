@@ -250,22 +250,69 @@ def get_member_profile(member_id: str) -> Optional[dict]:
 
     # Descriptografa PII apenas para exibicao
     return {
-        "id":           m["id"],
-        "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
-        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "language":     m["language"],
-        "state":        m["state"],
-        "plan":         m["plan"],
-        "points":       m["points"],
-        "level":        m["level"],
-        "categories":   m["categories"],
-        "referral_code": m["referral_code"],
+        "id":             m["id"],
+        "name":           decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":          _mask_phone(decrypt(m["phone_enc"])),
+        "email":          _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email_verified": m.get("email_verified", False),
+        "has_email":      bool(m.get("email_enc")),
+        "language":       m["language"],
+        "state":          m["state"],
+        "plan":           m["plan"],
+        "points":         m["points"],
+        "level":          m["level"],
+        "categories":     m["categories"],
+        "referral_code":  m["referral_code"],
         "referral_count": m["referral_count"],
-        "total_clicks": m["total_clicks"],
-        "created_at":   m["created_at"],
+        "total_clicks":   m["total_clicks"],
+        "created_at":     m["created_at"],
         "vip_expires_at": m.get("vip_expires_at"),
     }
+
+
+def update_member_email(member_id: str, email: str) -> dict:
+    """
+    Atualiza o email do membro e marca como nao verificado.
+    Se o email ja existe em outro membro, levanta ValueError.
+    """
+    try:
+        email = validate_email(email)
+    except ValueError as e:
+        raise ValueError(f"Email invalido: {e}")
+
+    sb = _supabase()
+    email_hash = hash_pii(email)
+
+    # Verifica conflito com outro membro
+    conflict = sb.table("members").select("id").eq("email_hash", email_hash).neq("id", member_id).execute()
+    if conflict.data:
+        raise ValueError("Este email ja esta associado a outra conta.")
+
+    sb.table("members").update({
+        "email_hash":     email_hash,
+        "email_enc":      encrypt(email),
+        "email_verified": False,
+    }).eq("id", member_id).execute()
+
+    _audit("member.email_updated", member_id)
+    return {"message": "Email atualizado. Confirme o novo email para valida-lo."}
+
+
+def update_member_profile(member_id: str, name: str = None, state: str = None, language: str = None) -> dict:
+    """Atualiza campos de perfil nao-sensiveis."""
+    sb = _supabase()
+    updates = {}
+    if name is not None:
+        updates["name_enc"] = encrypt(sanitize(name, 80))
+    if state is not None:
+        updates["state"] = sanitize(state, 50)
+    if language is not None and language in ("pt", "es"):
+        updates["language"] = language
+    if not updates:
+        raise ValueError("Nenhum campo valido para atualizar.")
+    sb.table("members").update(updates).eq("id", member_id).execute()
+    _audit("member.profile_updated", member_id, {"fields": list(updates.keys())})
+    return {"message": "Perfil atualizado."}
 
 
 def update_member_categories(member_id: str, categories: list) -> dict:

@@ -6,8 +6,19 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Cadastro via OTP WhatsApp (registro + autenticação sem senha) ✓
+  - Perfil mínimo: nome, telefone, email, estado, categorias, idioma ✓
+  - Email confirmation flow: `POST /auth/email/send-verification` + `GET /auth/email/confirm?token=` ✓
+  - `PATCH /member/profile` (nome, estado, idioma) + `PATCH /member/profile/email` ✓
+  - Migration: `db/email_verification_migration.sql` (adiciona `email_verified` + tabela `email_tokens`) ✓
+  - **Pendente deploy**: configurar `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` no servidor (ver DECISOES.md)
+- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+  - `referral_code` único por membro (gerado no cadastro) ✓
+  - Atribuição no cadastro via `?ref=CODE` ✓
+  - Redirect vanity `GET /i/{code}` → `/?ref=CODE` ✓
+  - Stats endpoint `GET /member/referral` ✓
+  - Pontuação automática + milestone VIP 30 dias (3 indicações) ✓
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
@@ -66,4 +77,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-11*
