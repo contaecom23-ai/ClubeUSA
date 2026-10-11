@@ -394,6 +394,95 @@ async def verify_otp(body: OTPVerify):
 
 
 # ============================================================
+#  ROTAS — EMAIL VERIFICATION
+# ============================================================
+
+@app.post("/auth/email/send-verification")
+async def send_email_verification(member: dict = Depends(get_current_member)):
+    """
+    Envia email de confirmacao para o endereco cadastrado do membro.
+    Idempotente: invalida token anterior antes de gerar novo.
+    """
+    import secrets
+    from datetime import datetime, timedelta
+    from supabase import create_client
+    from utils.security import decrypt
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("members").select("email_enc,email_verified").eq("id", member["sub"]).execute()
+    if not result.data:
+        raise HTTPException(status_code=404)
+
+    m = result.data[0]
+    if not m.get("email_enc"):
+        raise HTTPException(
+            status_code=400,
+            detail="Nenhum email cadastrado. Atualize seu perfil com um email valido primeiro."
+        )
+    if m.get("email_verified"):
+        return {"message": "Email ja confirmado.", "already_verified": True}
+
+    email = decrypt(m["email_enc"])
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+
+    # Invalida tokens anteriores do mesmo membro para este tipo
+    sb.table("email_tokens").delete().eq("member_id", member["sub"]).eq("token_type", "email_verification").execute()
+    sb.table("email_tokens").insert({
+        "member_id":  member["sub"],
+        "token":      token,
+        "token_type": "email_verification",
+        "expires_at": expires_at,
+    }).execute()
+
+    from services.email_service import send_verification_email
+    sent = send_verification_email(email, token, APP_URL)
+
+    return {
+        "message": "Email de confirmacao enviado. Verifique sua caixa de entrada." if sent
+                   else "Configure SMTP para envio em producao.",
+        "sent": sent,
+    }
+
+
+@app.get("/auth/email/confirm")
+async def confirm_email(token: str):
+    """
+    Confirma email via token recebido por email. Endpoint publico.
+    Redireciona para o app apos confirmacao.
+    """
+    from supabase import create_client
+    from datetime import datetime, timezone
+    from fastapi.responses import RedirectResponse
+
+    if not token or len(token) > 128:
+        raise HTTPException(status_code=400, detail="Token invalido.")
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("email_tokens").select("*").eq("token", token).eq("token_type", "email_verification").execute()
+
+    if not result.data:
+        raise HTTPException(status_code=400, detail="Token invalido ou expirado.")
+
+    record = result.data[0]
+
+    if record.get("used_at"):
+        raise HTTPException(status_code=400, detail="Token ja utilizado.")
+
+    expires = datetime.fromisoformat(record["expires_at"].replace("Z", "+00:00"))
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires:
+        raise HTTPException(status_code=400, detail="Token expirado. Solicite um novo em seu painel.")
+
+    sb.table("members").update({"email_verified": True}).eq("id", record["member_id"]).execute()
+    sb.table("email_tokens").update({"used_at": datetime.utcnow().isoformat()}).eq("id", record["id"]).execute()
+
+    log.info(f"Email confirmado para membro {record['member_id']}")
+    return RedirectResponse(url=f"{APP_URL}/?email_confirmed=1", status_code=302)
+
+
+# ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
 
@@ -419,7 +508,47 @@ class UpdateCategoriesRequest(BaseModel):
         return cleaned or ["all"]
 
 
+class UpdateProfileRequest(BaseModel):
+    name:       Optional[str] = None
+    state:      Optional[str] = None
+    language:   Optional[str] = None
+
+    @field_validator("language")
+    @classmethod
+    def validate_language(cls, v):
+        if v and v not in ("pt", "es"):
+            raise ValueError("Idioma invalido.")
+        return v
+
+
+class UpdateEmailRequest(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_field(cls, v):
+        import re
+        if not re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', v.strip()):
+            raise ValueError("Email invalido.")
+        return v.strip().lower()
+
+
 @app.patch("/member/profile")
+async def update_profile(body: UpdateProfileRequest, member: dict = Depends(get_current_member)):
+    """Atualiza nome, estado e idioma do membro."""
+    from services.member_service import update_member_profile
+    try:
+        return update_member_profile(
+            member["sub"],
+            name=body.name,
+            state=body.state,
+            language=body.language,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.patch("/member/profile/categories")
 async def update_profile_categories(body: UpdateCategoriesRequest, member: dict = Depends(get_current_member)):
     """Atualiza os nichos (categorias) de interesse do membro."""
     from services.member_service import update_member_categories
@@ -427,6 +556,37 @@ async def update_profile_categories(body: UpdateCategoriesRequest, member: dict 
         return update_member_categories(member["sub"], body.categories)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.patch("/member/profile/email")
+async def update_profile_email(body: UpdateEmailRequest, member: dict = Depends(get_current_member)):
+    """
+    Atualiza email do membro. Marca como nao verificado e pode disparar novo email de confirmacao.
+    """
+    from services.member_service import update_member_email
+    try:
+        result = update_member_email(member["sub"], body.email)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Dispara email de confirmacao automaticamente se SMTP configurado
+    if os.environ.get("SMTP_HOST"):
+        import secrets
+        from datetime import datetime, timedelta
+        from supabase import create_client
+        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+        token = secrets.token_urlsafe(32)
+        sb.table("email_tokens").delete().eq("member_id", member["sub"]).eq("token_type", "email_verification").execute()
+        sb.table("email_tokens").insert({
+            "member_id":  member["sub"],
+            "token":      token,
+            "token_type": "email_verification",
+            "expires_at": (datetime.utcnow() + timedelta(hours=24)).isoformat(),
+        }).execute()
+        from services.email_service import send_verification_email
+        send_verification_email(body.email, token, APP_URL)
+
+    return result
 
 
 @app.get("/member/deals")
@@ -769,6 +929,19 @@ def _send_vip_welcome(member_id: str):
 # ============================================================
 #  ROTAS — PUBLICAS (sem autenticacao)
 # ============================================================
+
+@app.get("/i/{referral_code}", include_in_schema=False)
+async def referral_redirect(referral_code: str):
+    """
+    Link de indicacao vanity: clubeusa.com/i/CODIGO redireciona para
+    a pagina principal com o codigo pre-preenchido no cadastro.
+    Endpoint publico — sem autenticacao.
+    """
+    from fastapi.responses import RedirectResponse
+    import re
+    if not re.match(r'^[A-Z0-9]{6,12}$', referral_code.upper()):
+        raise HTTPException(status_code=404)
+    return RedirectResponse(url=f"{APP_URL}/?ref={referral_code.upper()}", status_code=302)
 
 @app.get("/public/groups")
 async def public_groups():
