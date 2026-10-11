@@ -14,6 +14,7 @@
 #  POST /billing/subscribe    — assinar VIP via Stripe
 #  POST /billing/portal       — portal de gestao da assinatura
 #  POST /billing/webhook      — webhook Stripe (pagamento confirmado)
+#  GET  /i/{code}             — pretty URL de indicacao → redirect para /?ref=CODE (sem auth)
 #  GET  /public/groups        — 2 grupos WhatsApp ativos (sem auth)
 #  POST /webhook/group        — webhook Z-API entradas/saidas de grupo
 #  GET  /health               — health check
@@ -44,7 +45,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -981,6 +982,28 @@ def _send_otp_whatsapp(phone: str, otp: str):
         )
     except Exception as e:
         log.error(f"Falha ao enviar OTP: {e}")
+
+
+# ============================================================
+#  ROTAS — INDICACAO (pretty URL pública)
+# ============================================================
+
+@app.get("/i/{code}", include_in_schema=False)
+async def referral_redirect(code: str):
+    """
+    Pretty URL de indicação: clubeusa.com/i/JOAO → /?ref=JOAO
+    Rota pública — acessada por quem recebe o link de indicação.
+    """
+    from services.member_service import resolve_referral_code
+    try:
+        resolve_referral_code(code)
+    except ValueError:
+        raise HTTPException(status_code=404)
+    except Exception as e:
+        log.error(f"Erro ao validar código de indicação {code}: {e}")
+        raise HTTPException(status_code=404)
+
+    return RedirectResponse(url=f"{APP_URL}?ref={code.upper()}", status_code=302)
 
 
 # ============================================================

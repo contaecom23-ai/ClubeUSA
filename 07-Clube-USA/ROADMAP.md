@@ -7,7 +7,12 @@
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
 - [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+  - [ ] **Pendente:** configurar provedor de email em produção (ver DECISOES.md D-001 — aguarda dono)
+- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+  - [x] Geração de `referral_code` único por membro
+  - [x] Atribuição `referred_by` + tabela `referrals` + pontuação automática
+  - [x] Endpoint `GET /member/referral` retorna link `?ref=CODE`
+  - [x] Rota `GET /i/{code}` (pretty URL) → redirect para `/?ref=CODE`
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
@@ -66,4 +71,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-11*
