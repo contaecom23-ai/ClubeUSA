@@ -4,8 +4,10 @@
 # ============================================================
 
 import os
+import secrets
+import hashlib
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from utils.security import (
@@ -16,6 +18,9 @@ from utils.security import (
 from services.group_manager import assign_member_to_group
 
 log = logging.getLogger("member_service")
+
+EMAIL_CONFIRM_TTL_HOURS = 24
+EMAIL_CONFIRM_RESEND_COOLDOWN_MINUTES = 5
 
 
 def _supabase():
@@ -109,18 +114,31 @@ def register_member(
             referred_by = ref_result.data[0]["id"]
 
     # 4. Inserir com PII criptografado
+    confirm_token_raw  = None
+    confirm_token_hash = None
+    confirm_expires    = None
+    if email:
+        confirm_token_raw  = secrets.token_urlsafe(32)
+        confirm_token_hash = hashlib.sha256(confirm_token_raw.encode()).hexdigest()
+        confirm_expires    = (
+            datetime.now(timezone.utc) + timedelta(hours=EMAIL_CONFIRM_TTL_HOURS)
+        ).isoformat()
+
     member_data = {
-        "phone_hash":     phone_hash,
-        "phone_enc":      encrypt(phone),           # criptografado
-        "email_hash":     hash_pii(email) if email else None,
-        "email_enc":      encrypt(email) if email else None,
-        "name_enc":       encrypt(name) if name else None,
-        "language":       language,
-        "state":          state,
-        "categories":     categories,
-        "referred_by":    referred_by,
-        "points":         100,                       # pontos de boas-vindas
-        "referral_code":  generate_referral_code(),
+        "phone_hash":                phone_hash,
+        "phone_enc":                 encrypt(phone),
+        "email_hash":                hash_pii(email) if email else None,
+        "email_enc":                 encrypt(email) if email else None,
+        "name_enc":                  encrypt(name) if name else None,
+        "language":                  language,
+        "state":                     state,
+        "categories":                categories,
+        "referred_by":               referred_by,
+        "points":                    100,
+        "referral_code":             generate_referral_code(),
+        "email_confirmed":           False,
+        "email_confirm_token":       confirm_token_hash,
+        "email_confirm_expires_at":  confirm_expires,
     }
 
     result = sb.table("members").insert(member_data).execute()
@@ -136,6 +154,14 @@ def register_member(
     except Exception as e:
         log.warning(f"Nao foi possivel atribuir grupo: {e}")
         group = None
+
+    # 5.5 Enviar email de confirmacao se email foi fornecido
+    if email and confirm_token_raw:
+        try:
+            from services.email_service import send_email_confirmation
+            send_email_confirmation(email, confirm_token_raw)
+        except Exception as e:
+            log.warning(f"Falha ao enviar email de confirmacao: {e}")
 
     # 6. Processar indicacao — pontuar quem indicou
     if referred_by:
@@ -156,14 +182,15 @@ def register_member(
     token = create_token(member_id, member.get("plan", "free"))
 
     return {
-        "action":      "registered",
-        "member_id":   member_id,
-        "token":       token,
-        "points":      100,
-        "level":       "bronze",
-        "referral_code": member["referral_code"],
-        "group_invite": group.get("invite_link") if group else None,
-        "group_name":   group.get("name") if group else None,
+        "action":                   "registered",
+        "member_id":                member_id,
+        "token":                    token,
+        "points":                   100,
+        "level":                    "bronze",
+        "referral_code":            member["referral_code"],
+        "group_invite":             group.get("invite_link") if group else None,
+        "group_name":               group.get("name") if group else None,
+        "email_confirmation_sent":  bool(email and confirm_token_raw),
     }
 
 
@@ -250,21 +277,22 @@ def get_member_profile(member_id: str) -> Optional[dict]:
 
     # Descriptografa PII apenas para exibicao
     return {
-        "id":           m["id"],
-        "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
-        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "language":     m["language"],
-        "state":        m["state"],
-        "plan":         m["plan"],
-        "points":       m["points"],
-        "level":        m["level"],
-        "categories":   m["categories"],
-        "referral_code": m["referral_code"],
-        "referral_count": m["referral_count"],
-        "total_clicks": m["total_clicks"],
-        "created_at":   m["created_at"],
-        "vip_expires_at": m.get("vip_expires_at"),
+        "id":                m["id"],
+        "name":              decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":             _mask_phone(decrypt(m["phone_enc"])),
+        "email":             _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email_confirmed":   m.get("email_confirmed", False),
+        "language":          m["language"],
+        "state":             m["state"],
+        "plan":              m["plan"],
+        "points":            m["points"],
+        "level":             m["level"],
+        "categories":        m["categories"],
+        "referral_code":     m["referral_code"],
+        "referral_count":    m["referral_count"],
+        "total_clicks":      m["total_clicks"],
+        "created_at":        m["created_at"],
+        "vip_expires_at":    m.get("vip_expires_at"),
     }
 
 
@@ -274,6 +302,130 @@ def update_member_categories(member_id: str, categories: list) -> dict:
     if not result.data:
         raise ValueError("Membro não encontrado.")
     return {"categories": result.data[0]["categories"]}
+
+
+# ============================================================
+#  CONFIRMACAO DE EMAIL
+# ============================================================
+
+def confirm_email(token_raw: str) -> dict:
+    """
+    Verifica o token de confirmacao de email e marca email_confirmed = True.
+
+    Busca por hash do token para evitar timing attacks e nao expor o token raw no banco.
+
+    Returns:
+        {"ok": True} em sucesso.
+
+    Raises:
+        ValueError: token invalido, expirado ou email ja confirmado.
+    """
+    if not token_raw or len(token_raw) > 200:
+        raise ValueError("Token invalido.")
+
+    token_hash = hashlib.sha256(token_raw.encode()).hexdigest()
+
+    sb = _supabase()
+    result = sb.table("members").select(
+        "id,email_confirmed,email_confirm_expires_at"
+    ).eq("email_confirm_token", token_hash).execute()
+
+    if not result.data:
+        raise ValueError("Token invalido ou ja utilizado.")
+
+    m = result.data[0]
+
+    if m.get("email_confirmed"):
+        raise ValueError("Email ja confirmado.")
+
+    expires_raw = m.get("email_confirm_expires_at")
+    if expires_raw:
+        expires = datetime.fromisoformat(expires_raw.replace("Z", "+00:00"))
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > expires:
+            # Limpa token expirado por higiene
+            sb.table("members").update({
+                "email_confirm_token":      None,
+                "email_confirm_expires_at": None,
+            }).eq("id", m["id"]).execute()
+            raise ValueError("Token expirado. Solicite um novo via /auth/email/resend.")
+
+    sb.table("members").update({
+        "email_confirmed":          True,
+        "email_confirm_token":      None,
+        "email_confirm_expires_at": None,
+    }).eq("id", m["id"]).execute()
+
+    _audit("member.email_confirmed", m["id"])
+    log.info(f"Email confirmado para membro {m['id']}")
+
+    return {"ok": True, "member_id": m["id"]}
+
+
+def resend_email_confirmation(member_id: str) -> dict:
+    """
+    Gera novo token e reenvia email de confirmacao.
+    Bloqueia se email ja confirmado ou se cooldown ainda nao passou.
+
+    Returns:
+        {"ok": True, "expires_in_hours": 24}
+
+    Raises:
+        ValueError: email ja confirmado, sem email cadastrado, ou cooldown ativo.
+    """
+    sb = _supabase()
+    result = sb.table("members").select(
+        "id,email_enc,email_confirmed,email_confirm_expires_at"
+    ).eq("id", member_id).execute()
+
+    if not result.data:
+        raise ValueError("Membro nao encontrado.")
+
+    m = result.data[0]
+
+    if m.get("email_confirmed"):
+        raise ValueError("Email ja confirmado.")
+
+    if not m.get("email_enc"):
+        raise ValueError("Nenhum email cadastrado neste perfil.")
+
+    # Cooldown: impede spam de reenvio
+    expires_raw = m.get("email_confirm_expires_at")
+    if expires_raw:
+        expires = datetime.fromisoformat(expires_raw.replace("Z", "+00:00"))
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        token_issued_at = expires - timedelta(hours=EMAIL_CONFIRM_TTL_HOURS)
+        cooldown_end = token_issued_at + timedelta(minutes=EMAIL_CONFIRM_RESEND_COOLDOWN_MINUTES)
+        if datetime.now(timezone.utc) < cooldown_end:
+            wait_sec = int((cooldown_end - datetime.now(timezone.utc)).total_seconds())
+            raise ValueError(
+                f"Aguarde {wait_sec} segundos antes de solicitar novo envio."
+            )
+
+    # Gera novo token
+    token_raw  = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token_raw.encode()).hexdigest()
+    new_expires = (
+        datetime.now(timezone.utc) + timedelta(hours=EMAIL_CONFIRM_TTL_HOURS)
+    ).isoformat()
+
+    sb.table("members").update({
+        "email_confirm_token":      token_hash,
+        "email_confirm_expires_at": new_expires,
+    }).eq("id", member_id).execute()
+
+    email = decrypt(m["email_enc"])
+
+    from services.email_service import send_email_confirmation
+    sent = send_email_confirmation(email, token_raw)
+    if not sent:
+        log.warning(f"Falha ao reenviar email de confirmacao para membro {member_id}")
+
+    _audit("member.email_confirm_resent", member_id)
+
+    return {"ok": True, "expires_in_hours": EMAIL_CONFIRM_TTL_HOURS}
 
 
 def _mask_phone(phone: str) -> str:

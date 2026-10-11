@@ -184,6 +184,17 @@ class OTPVerify(BaseModel):
     phone: str
     otp:   str
 
+class EmailConfirmRequest(BaseModel):
+    token: str
+
+    @field_validator("token")
+    @classmethod
+    def validate_token(cls, v):
+        v = v.strip()
+        if not v or len(v) > 200:
+            raise ValueError("Token invalido.")
+        return v
+
 class ClickRequest(BaseModel):
     deal_id: str
 
@@ -391,6 +402,37 @@ async def verify_otp(body: OTPVerify):
 
     token = create_token(member["id"], member["plan"])
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
+
+
+# ============================================================
+#  ROTAS — CONFIRMACAO DE EMAIL
+# ============================================================
+
+@app.post("/auth/email/verify")
+async def verify_email(body: EmailConfirmRequest):
+    """
+    Confirma o email do membro a partir do token enviado por email.
+    Rota publica (nao exige JWT) — o token autentica a acao.
+    """
+    from services.member_service import confirm_email
+    try:
+        return confirm_email(body.token)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/auth/email/resend")
+async def resend_email_verification(member: dict = Depends(get_current_member)):
+    """
+    Reenvia email de confirmacao para o membro autenticado.
+    Aplica cooldown de 5 minutos para evitar spam.
+    """
+    from services.member_service import resend_email_confirmation
+    try:
+        return resend_email_confirmation(member["sub"])
+    except ValueError as e:
+        status_code = 429 if "Aguarde" in str(e) else 400
+        raise HTTPException(status_code=status_code, detail=str(e))
 
 
 # ============================================================
