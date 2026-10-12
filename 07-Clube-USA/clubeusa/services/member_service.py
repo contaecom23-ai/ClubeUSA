@@ -110,17 +110,18 @@ def register_member(
 
     # 4. Inserir com PII criptografado
     member_data = {
-        "phone_hash":     phone_hash,
-        "phone_enc":      encrypt(phone),           # criptografado
-        "email_hash":     hash_pii(email) if email else None,
-        "email_enc":      encrypt(email) if email else None,
-        "name_enc":       encrypt(name) if name else None,
-        "language":       language,
-        "state":          state,
-        "categories":     categories,
-        "referred_by":    referred_by,
-        "points":         100,                       # pontos de boas-vindas
-        "referral_code":  generate_referral_code(),
+        "phone_hash":      phone_hash,
+        "phone_enc":       encrypt(phone),           # criptografado
+        "email_hash":      hash_pii(email) if email else None,
+        "email_enc":       encrypt(email) if email else None,
+        "name_enc":        encrypt(name) if name else None,
+        "language":        language,
+        "state":           state,
+        "categories":      categories,
+        "referred_by":     referred_by,
+        "points":          100,                       # pontos de boas-vindas
+        "referral_code":   generate_referral_code(),
+        "email_confirmed": False,                     # confirmar via link no email
     }
 
     result = sb.table("members").insert(member_data).execute()
@@ -249,22 +250,24 @@ def get_member_profile(member_id: str) -> Optional[dict]:
     m = result.data[0]
 
     # Descriptografa PII apenas para exibicao
+    has_email = bool(m.get("email_enc"))
     return {
-        "id":           m["id"],
-        "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
-        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "language":     m["language"],
-        "state":        m["state"],
-        "plan":         m["plan"],
-        "points":       m["points"],
-        "level":        m["level"],
-        "categories":   m["categories"],
-        "referral_code": m["referral_code"],
-        "referral_count": m["referral_count"],
-        "total_clicks": m["total_clicks"],
-        "created_at":   m["created_at"],
-        "vip_expires_at": m.get("vip_expires_at"),
+        "id":              m["id"],
+        "name":            decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":           _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
+        "email":           _mask_email(decrypt(m["email_enc"])) if has_email else "",
+        "email_confirmed": m.get("email_confirmed", False) if has_email else None,
+        "language":        m["language"],
+        "state":           m["state"],
+        "plan":            m["plan"],
+        "points":          m["points"],
+        "level":           m["level"],
+        "categories":      m["categories"],
+        "referral_code":   m["referral_code"],
+        "referral_count":  m["referral_count"],
+        "total_clicks":    m["total_clicks"],
+        "created_at":      m["created_at"],
+        "vip_expires_at":  m.get("vip_expires_at"),
     }
 
 
