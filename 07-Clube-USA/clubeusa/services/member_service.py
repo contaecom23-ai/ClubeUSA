@@ -152,28 +152,34 @@ def register_member(
         "categories": categories,
     }, ip=ip)
 
-    # 8. Enviar email de verificacao se email fornecido
-    email_verification_sent = False
+    # 8. Dispara confirmacao de email (nao-bloqueante: falha nao impede cadastro)
+    email_confirmation_sent = False
     if email:
         try:
-            from services.email_service import send_verification_email
-            email_verification_sent = send_verification_email(member_id, email)
+            from services.email_service import create_confirmation_token, send_confirmation_email
+            raw_token  = create_confirmation_token(member_id)
+            confirm_url = (
+                f"{os.environ.get('APP_URL', 'https://clubeusa.com')}"
+                f"/auth/email/confirm/{raw_token}"
+            )
+            send_confirmation_email(email, confirm_url, language=language)
+            email_confirmation_sent = True
         except Exception as e:
-            log.warning(f"Nao foi possivel enviar email de verificacao: {e}")
+            log.warning(f"Falha ao enviar confirmacao de email no cadastro: {e}")
 
     # 9. Gerar token JWT
     token = create_token(member_id, member.get("plan", "free"))
 
     return {
-        "action":      "registered",
-        "member_id":   member_id,
-        "token":       token,
-        "points":      100,
-        "level":       "bronze",
-        "referral_code": member["referral_code"],
-        "group_invite": group.get("invite_link") if group else None,
-        "group_name":   group.get("name") if group else None,
-        "email_verification_sent": email_verification_sent,
+        "action":                  "registered",
+        "member_id":               member_id,
+        "token":                   token,
+        "points":                  100,
+        "level":                   "bronze",
+        "referral_code":           member["referral_code"],
+        "group_invite":            group.get("invite_link") if group else None,
+        "group_name":              group.get("name") if group else None,
+        "email_confirmation_sent": email_confirmation_sent,
     }
 
 
@@ -262,9 +268,9 @@ def get_member_profile(member_id: str) -> Optional[dict]:
     return {
         "id":              m["id"],
         "name":            decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":           _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
+        "phone":           _mask_phone(decrypt(m["phone_enc"])),
         "email":           _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "email_confirmed": bool(m.get("email_confirmed_at")),
+        "email_confirmed": bool(m.get("email_confirmed")),
         "language":        m["language"],
         "state":           m["state"],
         "plan":            m["plan"],

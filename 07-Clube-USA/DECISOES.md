@@ -27,29 +27,56 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
-### [2026-10-13] Provedor de email transacional para produção
+### [2026-09-27] #001 — Provider de email para confirmação
 
-**Contexto:** A Fase 0.1 implementou confirmação de email via SMTP. Em dev/staging, sem `SMTP_*` configurado, a URL de verificação é apenas logada (funciona para testes). Em produção, você precisa de um provedor real.
+**Contexto:** A Fase 0.1 implementa confirmação de email. O código abstrai o envio com hierarquia: Resend > SMTP > log-dev. Em produção, um provider é obrigatório para os emails chegarem ao usuário.
 
-**Pergunta:** Qual provedor SMTP usar em produção?
+**Pergunta:** Qual provider de email usar em produção?
 
 **Opções:**
-- **A) SendGrid (recomendado):** Free até 100 emails/dia. Confiabilidade alta, painel de analytics, fácil de configurar. `SMTP_HOST=smtp.sendgrid.net`, `SMTP_USER=apikey`, `SMTP_PASS=SG.xxx`. Pros: free tier generoso para MVP, boa entregabilidade. Cons: conta a criar.
-- **B) Gmail (Google Workspace / conta pessoal):** Zero custo adicional se já tem conta Google. Mais fácil de configurar rapidamente. Pros: imediato. Cons: limite diário ~500 emails no Gmail gratuito (suficiente para MVP), requer App Password ativo.
-- **C) AWS SES:** Custo muito baixo (US$0.10/1000 emails). Pros: escala bem. Cons: requer conta AWS, verificação de domínio, mais setup inicial — overkill para MVP.
+- **Resend** (recomendado): grátis até 3.000 emails/mês; API simples (um header Bearer); domínio próprio necessário para não cair em spam. Adicionar `RESEND_API_KEY` e `EMAIL_FROM` no env do Render.
+  - Prós: fácil integração, boa deliverability, plano grátis suficiente para 1k usuários
+  - Contras: requer verificação de domínio (clubeusa.com)
+- **SendGrid**: grátis até 100 emails/dia (limite apertado); mais burocrático.
+  - Prós: consolidado no mercado
+  - Contras: limite baixo no free tier, não cobre 1k usuários no free
+- **SMTP via Gmail/Zoho**: gratuito, mas com limites e menos deliverability.
+  - Prós: sem custo inicial, configuração simples via `SMTP_HOST`
+  - Contras: risco de spam, limite 500/dia Gmail
 
-**Recomendação:** SendGrid opção A — free tier cobre bem os primeiros 1.000 usuários, entregabilidade profissional, e a configuração é 3 variáveis de ambiente. Criar conta em sendgrid.com, gerar API key e adicionar ao ambiente de produção.
+**Recomendação:** Resend. Criar conta em resend.com, adicionar domínio `clubeusa.com`, setar `RESEND_API_KEY` e `EMAIL_FROM=noreply@clubeusa.com` no painel do Render. Leva ~30 min.
 
-**Ação necessária:** Após escolher, adicionar ao `.env` de produção:
-```
-SMTP_HOST=smtp.sendgrid.net
-SMTP_PORT=587
-SMTP_USER=apikey
-SMTP_PASS=SG.<sua-chave>
-FROM_EMAIL=noreply@clubeusa.com
-```
+**O que fazer:**
+1. Criar conta em resend.com
+2. Verificar o domínio `clubeusa.com` (DNS TXT/MX)
+3. Adicionar no ambiente de produção (Render):
+   ```
+   RESEND_API_KEY=re_...
+   EMAIL_FROM=noreply@clubeusa.com
+   ```
+4. Aplicar migration no Supabase SQL Editor: `clubeusa/db/email_confirmation_migration.sql`
 
 **Status:** PENDENTE
+
+---
+
+### [2026-09-27] #002 — Slug customizado para influenciadores (/i/joao)
+
+**Contexto:** Fase 0.2 implementa `/i/{CODE}` com o código aleatório de 8 chars (ex: `/i/AB3D5F7G`). O roadmap menciona `/i/joao` — slugs legíveis por nome.
+
+**Pergunta:** Vale a pena suportar slug customizado agora?
+
+**Opções:**
+- **A. Manter código aleatório** (implementado): `/i/AB3D5F7G`. Funcional, rastreável, sem conflitos.
+  - Prós: zero esforço extra, seguro, já funciona
+  - Contras: link feio para influencer divulgar nas redes
+- **B. Adicionar campo `referral_slug` opcional** (a fazer): permite que influenciadores registrem `/i/joao`. Exige: coluna `referral_slug TEXT UNIQUE` em members + endpoint de atualização de slug + validação (sem espaços, sem caracteres especiais, sem palavras reservadas).
+  - Prós: links atraentes para influencers (Fase 1.3 depende disso)
+  - Contras: ~2h de dev extra; colisão de slugs precisa ser tratada
+
+**Recomendação:** Fazer a **Opção B** quando iniciar a Fase 1.3 (Programa de Influenciadores). Não é bloqueante agora — o `/i/{CODE}` já funciona e rastreia corretamente.
+
+**Status:** PENDENTE (adiar para Fase 1.3)
 
 ---
 
