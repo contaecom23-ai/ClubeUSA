@@ -394,6 +394,65 @@ async def verify_otp(body: OTPVerify):
 
 
 # ============================================================
+#  ROTAS — EMAIL CONFIRMACAO
+# ============================================================
+
+@app.post("/member/email/send-verification")
+async def send_email_verification(member: dict = Depends(get_current_member)):
+    """
+    Envia (ou reenvio) email de verificacao para o membro autenticado.
+    Requer que o membro tenha um email cadastrado.
+    """
+    from supabase import create_client
+    from services.email_service import send_verification_email
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("members").select(
+        "email_enc,email_confirmed_at"
+    ).eq("id", member["sub"]).execute()
+
+    if not result.data or not result.data[0].get("email_enc"):
+        raise HTTPException(status_code=400, detail="Nenhum email cadastrado. Atualize seu perfil.")
+
+    row = result.data[0]
+    if row.get("email_confirmed_at"):
+        return {"message": "Email ja confirmado.", "confirmed": True}
+
+    from utils.security import decrypt
+    email = decrypt(row["email_enc"])
+
+    try:
+        sent = send_verification_email(member["sub"], email)
+    except Exception as e:
+        log.error(f"Erro ao enviar email de verificacao: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao enviar email. Tente novamente.")
+
+    if not sent:
+        raise HTTPException(status_code=500, detail="Falha ao enviar email. Tente novamente.")
+
+    return {"message": "Email de confirmacao enviado. Verifique sua caixa de entrada.", "sent": True}
+
+
+@app.get("/auth/email/verify")
+async def verify_email(token: str):
+    """
+    Endpoint publico para confirmacao de email via link.
+    Retorna JSON; o frontend decide o redirecionamento.
+    """
+    from services.email_service import confirm_email_token
+
+    if not token:
+        raise HTTPException(status_code=400, detail="Token obrigatorio.")
+
+    result = confirm_email_token(token)
+
+    if not result["ok"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    return {"message": "Email confirmado com sucesso! Bem-vindo ao Clube USA.", "member_id": result["member_id"]}
+
+
+# ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
 
