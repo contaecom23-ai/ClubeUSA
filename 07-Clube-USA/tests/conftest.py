@@ -1,3 +1,5 @@
 # tests/conftest.py
 import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'clubeusa'))
+_clubeusa = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'clubeusa'))
+if _clubeusa not in sys.path:
+    sys.path.insert(0, _clubeusa)
