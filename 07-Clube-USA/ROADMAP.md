@@ -78,4 +78,4 @@
 
 ---
 
-*Atualizado em: 2026-10-11*
+*Atualizado em: 2026-10-14*

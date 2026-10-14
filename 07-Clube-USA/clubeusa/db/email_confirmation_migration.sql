@@ -1,36 +1,30 @@
 -- ============================================================
---  email_confirmation_migration.sql — SUPERSEDED
+--  email_confirmation_migration.sql — Clube USA
+--  Adiciona confirmacao de email ao perfil do membro
+--  e tabela de tokens de verificacao.
 --
---  NAO EXECUTAR: este arquivo usa abordagem inline na tabela members
---  (email_confirmed, email_token, email_token_expires_at), substituida
---  pela abordagem com tabela separada em email_confirm_migration.sql.
---  Mantido para referencia historica.
---
---  USE: db/email_confirm_migration.sql (adiciona email_confirmed_at +
---       cria tabela email_verify_tokens)
--- ============================================================
---  email_confirmation_migration.sql — Clube USA (ORIGINAL, nao usar)
---  Fase 0.1: confirmacao de email
---
---  Aplique com cuidado em producao (ALTER TABLE e seguro sem
---  lock de longa duracao, mas confirme com o DBA).
---
---  Como rodar: execute este arquivo no SQL Editor do Supabase
---  ou via psql como service_role.
+--  Execucao: rodar no painel SQL do Supabase (uma vez)
 -- ============================================================
 
+-- 1. Campo na tabela members
 ALTER TABLE members
-    ADD COLUMN IF NOT EXISTS email_confirmed        BOOLEAN     NOT NULL DEFAULT FALSE,
-    ADD COLUMN IF NOT EXISTS email_token            TEXT        UNIQUE,
-    ADD COLUMN IF NOT EXISTS email_token_expires_at TIMESTAMPTZ;
+    ADD COLUMN IF NOT EXISTS email_confirmed_at TIMESTAMPTZ;
 
--- Indice parcial: so cria entrada para linhas com token ativo
--- (evita index cheio de NULLs)
-CREATE INDEX IF NOT EXISTS idx_members_email_token
-    ON members (email_token)
-    WHERE email_token IS NOT NULL;
+-- Indice para consulta rapida de emails confirmados
+CREATE INDEX IF NOT EXISTS idx_members_email_confirmed
+    ON members (email_confirmed_at)
+    WHERE email_confirmed_at IS NOT NULL;
 
--- Comentario de auditoria
-COMMENT ON COLUMN members.email_confirmed        IS 'True se o usuario confirmou o email pelo link enviado.';
-COMMENT ON COLUMN members.email_token            IS 'Token de confirmacao de email (UUID url-safe, 32 bytes). Apagado apos uso.';
-COMMENT ON COLUMN members.email_token_expires_at IS 'Expiracao do token de confirmacao (TTL 24h).';
+-- 2. Tabela de tokens de verificacao de email
+CREATE TABLE IF NOT EXISTS email_tokens (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    member_id   UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    token       VARCHAR(64) NOT NULL UNIQUE,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used_at     TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_tokens_token     ON email_tokens (token);
+CREATE INDEX IF NOT EXISTS idx_email_tokens_member    ON email_tokens (member_id);
+CREATE INDEX IF NOT EXISTS idx_email_tokens_expires   ON email_tokens (expires_at);

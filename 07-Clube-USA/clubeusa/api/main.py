@@ -324,6 +324,38 @@ def _otp_verify(phone_hash: str, otp: str) -> tuple:
 #  ROTAS — AUTH
 # ============================================================
 
+@app.post("/auth/email/request-verification")
+async def request_email_verification(member: dict = Depends(get_current_member)):
+    """
+    Envia link de confirmacao de email para o email cadastrado do membro.
+    Requer autenticacao. O membro deve ter um email no perfil.
+    """
+    from services.email_service import request_email_verification as svc_request
+    try:
+        return svc_request(member["sub"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/auth/email/verify/{token}", include_in_schema=False)
+async def verify_email(token: str):
+    """
+    Confirma email via token (link recebido por email).
+    Rota publica — o token e a autenticacao.
+    """
+    from services.email_service import verify_email_token
+    try:
+        result = verify_email_token(token)
+        # Redireciona para o painel com flag de sucesso
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=f"{APP_URL}/painel?email_confirmed=1", status_code=302)
+    except ValueError as e:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(
+            url=f"{APP_URL}/painel?email_error=1&msg={str(e)}", status_code=302
+        )
+
+
 @app.post("/auth/register", status_code=201)
 async def register(body: RegisterRequest, request: Request):
     """Cadastro de novo membro."""

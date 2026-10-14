@@ -70,4 +70,4 @@ A migration necessária: `clubeusa/db/email_confirm_migration.sql` (adiciona `em
 
 ---
 
-*Atualizado em: 2026-10-11*
+*Atualizado em: 2026-10-14*
