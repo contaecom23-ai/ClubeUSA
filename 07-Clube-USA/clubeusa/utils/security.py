@@ -6,8 +6,9 @@ from jose import jwt, JWTError
 from collections import defaultdict
 from threading import Lock
 
-JWT_ALGORITHM  = "HS256"
-JWT_EXPIRE_HRS = 24
+JWT_ALGORITHM    = "HS256"
+JWT_EXPIRE_HRS   = 24   # WhatsApp OTP sessions
+JWT_WEB_DAYS     = 7    # Web email-login sessions
 
 def _get_env(key):
     val = os.environ.get(key)
@@ -38,14 +39,39 @@ def hash_ip(ip: str) -> str:
     salt = _get_env("ENCRYPTION_KEY") + "_ip"
     return hmac.new(salt.encode(), ip.encode(), hashlib.sha256).hexdigest()[:16]
 
-def create_token(member_id: str, plan: str = "free") -> str:
+def create_token(member_id: str, plan: str = "free", expire_hours: int = JWT_EXPIRE_HRS) -> str:
     payload = {
         "sub": member_id, "plan": plan,
         "iat": datetime.utcnow(),
-        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRE_HRS),
+        "exp": datetime.utcnow() + timedelta(hours=expire_hours),
         "jti": secrets.token_hex(16),
     }
     return jwt.encode(payload, _get_env("JWT_SECRET"), algorithm=JWT_ALGORITHM)
+
+
+def create_web_token(member_id: str, plan: str = "free") -> str:
+    """JWT de 7 dias para sessoes web (email login)."""
+    return create_token(member_id, plan, expire_hours=JWT_WEB_DAYS * 24)
+
+
+def hash_password(password: str) -> str:
+    """Bcrypt hash de senha."""
+    import bcrypt
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verifica senha contra bcrypt hash."""
+    import bcrypt
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
+
+
+def generate_email_token() -> str:
+    """Token de confirmacao de email — URL-safe, 32 bytes."""
+    return secrets.token_urlsafe(32)
 
 def verify_token(token: str) -> Optional[dict]:
     try:
