@@ -12,6 +12,8 @@ python-dotenv
 supabase
 python-jose[cryptography]
 cryptography
+bcrypt
+sendgrid
 
 # Integracoes externas
 requests

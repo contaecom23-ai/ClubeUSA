@@ -27,8 +27,33 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
-*(nenhuma ainda — o Claude preencherá aqui conforme avançar)*
+### [2026-10-15] Provedor de email transacional para confirmação de cadastro
+
+**Contexto:** A Fase 0.1 implementou o fluxo completo de cadastro por email com confirmação. O backend está pronto. Falta configurar o provedor de email para produção.
+
+**Pergunta:** Qual provedor usar para enviar emails de confirmação e boas-vindas?
+
+**Opções:**
+- **A) SendGrid** — $0 até 100 emails/dia grátis, SDK Python pronto, muito confiável. Recomendado para 1k-100k usuários. Ação: criar conta em sendgrid.com, pegar API key, setar `SENDGRID_API_KEY` e `EMAIL_FROM` no .env de produção.
+- **B) Supabase Auth nativo** — gratuito até 4 emails/h no free tier, limitado demais para crescimento. Exigiria refatorar auth para usar Supabase Auth em vez do nosso JWT customizado.
+- **C) Amazon SES** — mais barato em escala (USD 0.10/1k emails), mais complexo de configurar (DNS, verificação de domínio).
+
+**Recomendação:** Opção A (SendGrid). Menor fricção para começar, escala para 100k, integração já codificada no `services/email_service.py`. Custo zero até 100 emails/dia (ok para primeiros 1k usuários). Para ativar: só precisa setar `SENDGRID_API_KEY=SG.xxxxx` e `EMAIL_FROM=noreply@clubeusa.com` no ambiente de produção (Render, Railway, etc.).
+
+**Status:** PENDENTE
 
 ---
 
-*Atualizado em: 2026-06-23*
+### [2026-10-15] Rate limit de registro em-memória (limitação conhecida)
+
+**Contexto:** O rate limit atual (auth: 5 req/min por IP) usa dict em memória. Em instância única é suficiente para 1k usuários. Em múltiplas instâncias (escala horizontal), perde estado.
+
+**Pergunta:** Quando migrar rate limit para Redis/Supabase?
+
+**Recomendação:** Não agir agora. Em instância única (Render free/starter) é suficiente até ~10k usuários. Migrar para Redis quando for para múltiplas instâncias ou notar abusos. Registrado aqui para não esquecer.
+
+**Status:** PENDENTE (baixa prioridade — ok para Fase 0-1)
+
+---
+
+*Atualizado em: 2026-10-15*
