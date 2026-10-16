@@ -1,0 +1,8 @@
+-- ============================================================
+--  Migration 001: Verificacao de email
+--  ATENÇÃO: Use db/email_confirmation_migration.sql que contém
+--  o schema completo (tabela email_confirmation_tokens + colunas
+--  email_confirmed / email_confirmed_at em members).
+--  Este arquivo existe apenas para referência histórica.
+-- ============================================================
+-- Ver: 07-Clube-USA/clubeusa/db/email_confirmation_migration.sql
