@@ -1,19 +1,8 @@
 -- ============================================================
---  Migration 001: Adiciona campos de verificacao de email
---  Aplicar no Supabase SQL Editor antes do deploy.
+--  Migration 001: Verificacao de email
+--  ATENÇÃO: Use db/email_confirmation_migration.sql que contém
+--  o schema completo (tabela email_confirmation_tokens + colunas
+--  email_confirmed / email_confirmed_at em members).
+--  Este arquivo existe apenas para referência histórica.
 -- ============================================================
-
-ALTER TABLE members
-  ADD COLUMN IF NOT EXISTS email_verified         BOOLEAN     NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS email_verification_token TEXT,
-  ADD COLUMN IF NOT EXISTS email_verification_expires_at TIMESTAMPTZ;
-
--- Indice para lookup rapido pelo token (token e buscado em /auth/email/verify)
-CREATE INDEX IF NOT EXISTS idx_members_email_verification_token
-  ON members (email_verification_token)
-  WHERE email_verification_token IS NOT NULL;
-
--- Comentarios para documentacao
-COMMENT ON COLUMN members.email_verified IS 'True quando o membro confirmou o email clicando no link enviado.';
-COMMENT ON COLUMN members.email_verification_token IS 'Token hex-96 para confirmar email. Nulo apos confirmacao ou expiracao.';
-COMMENT ON COLUMN members.email_verification_expires_at IS 'Expiracao do token. TTL de 24h a partir do envio.';
+-- Ver: 07-Clube-USA/clubeusa/db/email_confirmation_migration.sql
