@@ -1,5 +1,5 @@
 -- ============================================================
---  Migration: Analytics — tabela de eventos
+--  Migration: Analytics — Fase 0.3
 --  Idempotente (pode re-executar sem erro)
 --  Aplicar no Supabase: Dashboard → SQL Editor
 -- ============================================================
@@ -17,6 +17,10 @@ CREATE INDEX IF NOT EXISTS idx_events_member ON events(member_id);
 CREATE INDEX IF NOT EXISTS idx_events_type   ON events(event_type);
 CREATE INDEX IF NOT EXISTS idx_events_time   ON events(created_at);
 
--- Evento: membro cadastrado
 COMMENT ON COLUMN events.event_type IS
   'Valores: member.registered | email.confirmed | deal.clicked | referral.used | profile.updated';
+
+-- Índice composto em audit_logs para queries de analytics (GET /admin/analytics).
+-- CONCURRENTLY não bloqueia leitura/escrita durante a criação.
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_audit_action_created
+    ON audit_logs (action, created_at DESC);
