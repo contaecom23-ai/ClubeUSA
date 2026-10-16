@@ -32,6 +32,8 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  GET  /admin/analytics         — analytics basico (Fase 0.3) (admin)
+#  GET  /i/{code}                — redirect de link de indicacao (Fase 0.2) (publico)
 # ============================================================
 
 import hmac
@@ -44,7 +46,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -308,8 +310,14 @@ def _otp_verify(phone_hash: str, otp: str) -> tuple:
 
 @app.post("/auth/register", status_code=201)
 async def register(body: RegisterRequest, request: Request):
-    """Cadastro de novo membro."""
+    """Cadastro de novo membro. Aceita referral_code no body ou via cookie clubeusa_ref."""
     from services.member_service import register_member
+
+    # Cookie de referral tem prioridade menor que o parâmetro explícito no body
+    ref_code = body.referral_code
+    if not ref_code:
+        ref_code = request.cookies.get("clubeusa_ref")
+
     try:
         result = register_member(
             phone         = body.phone,
@@ -318,7 +326,7 @@ async def register(body: RegisterRequest, request: Request):
             language      = body.language,
             state         = body.state,
             categories    = body.categories,
-            referral_code = body.referral_code,
+            referral_code = ref_code,
             ip            = request.client.host if request.client else None,
         )
         return result
@@ -1100,3 +1108,60 @@ async def admin_send_deals(_=Depends(require_admin)):
 async def admin_list_alerts(_=Depends(require_admin)):
     from services.admin_service import list_admin_alerts
     return list_admin_alerts()
+
+
+@app.get("/admin/analytics")
+async def admin_analytics(_=Depends(require_admin)):
+    """Analytics básico — Fase 0.3. Inclui definição protótipo de 'cadastro válido' (Fase 0.4)."""
+    from services.admin_service import get_analytics
+    return get_analytics()
+
+
+# ============================================================
+#  ROTA PÚBLICA — REDIRECT DE INDICAÇÃO (Fase 0.2)
+# ============================================================
+
+@app.get("/i/{code}", include_in_schema=False)
+async def referral_redirect(code: str):
+    """
+    Redirect público para links de indicação (ex: clubeusa.com/i/ABCD1234).
+    Valida o código, seta cookie de referral e redireciona para home com ?ref=CODE.
+    Cookie de 7 dias garante atribuição mesmo se o usuário navegar antes de se cadastrar.
+    """
+    import re
+    from utils.security import sanitize
+
+    # Sanitiza e valida formato do código (4–12 chars alfanuméricos)
+    code = sanitize(code.upper().strip(), 12)
+    if not re.match(r'^[A-Z0-9]{4,12}$', code):
+        return RedirectResponse(url="/", status_code=302)
+
+    # Verifica se código existe e pertence a membro ativo
+    try:
+        from supabase import create_client
+        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+        result = (
+            sb.table("members")
+            .select("id")
+            .eq("referral_code", code)
+            .eq("status", "active")
+            .execute()
+        )
+        if not result.data:
+            return RedirectResponse(url="/", status_code=302)
+    except Exception as e:
+        log.warning(f"Erro ao validar código de referral {code}: {e}")
+        # Em caso de falha de DB, redireciona sem cookie (não bloqueia o visitante)
+        return RedirectResponse(url="/", status_code=302)
+
+    response = RedirectResponse(url=f"/?ref={code}", status_code=302)
+    # Cookie HttpOnly, SameSite=Lax — seguro e preserva referral por 7 dias
+    response.set_cookie(
+        key="clubeusa_ref",
+        value=code,
+        max_age=7 * 24 * 3600,
+        httponly=True,
+        samesite="lax",
+        secure=os.environ.get("ENVIRONMENT") == "production",
+    )
+    return response
