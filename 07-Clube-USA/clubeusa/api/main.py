@@ -23,6 +23,7 @@
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
+#  GET  /admin/analytics         — funil + crescimento diário (admin)
 #  GET  /admin/members           — lista membros (admin)
 #  GET  /admin/members/{id}      — perfil completo (admin)
 #  POST /admin/members/{id}/status — alterar status (admin)
@@ -1013,6 +1014,12 @@ async def admin_panel():
 async def admin_metrics(_=Depends(require_admin)):
     from services.admin_service import get_metrics
     return get_metrics()
+
+
+@app.get("/admin/analytics")
+async def admin_analytics(_=Depends(require_admin)):
+    from services.analytics_service import get_analytics
+    return get_analytics()
 
 
 @app.get("/admin/members")

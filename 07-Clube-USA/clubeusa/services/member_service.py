@@ -155,6 +155,17 @@ def register_member(
     # 8. Gerar token JWT
     token = create_token(member_id, member.get("plan", "free"))
 
+    # 9. Log analytics event
+    try:
+        from services.analytics_service import log_event
+        log_event(member_id, "member.registered", {
+            "language": language,
+            "has_email": bool(email),
+            "has_referral": bool(referred_by),
+        })
+    except Exception as exc:
+        log.warning("analytics log_event falhou: %s", exc)
+
     return {
         "action":      "registered",
         "member_id":   member_id,
@@ -325,5 +336,14 @@ def track_click(member_id: str, deal_id: str, ip: str = None) -> str:
     # Adiciona 10 pontos pelo clique
     sb.rpc("increment_points", {"p_member_id": member_id, "p_points": 10}).execute()
     sb.rpc("increment_clicks", {"p_member_id": member_id}).execute()
+
+    # Log primeiro clique para funil de analytics
+    member_row = sb.table("members").select("total_clicks").eq("id", member_id).limit(1).execute().data
+    if member_row and (member_row[0].get("total_clicks") or 0) == 1:
+        try:
+            from services.analytics_service import log_event
+            log_event(member_id, "deal.clicked", {"deal_id": deal_id, "first_click": True})
+        except Exception as exc:
+            log.warning("analytics log_event falhou: %s", exc)
 
     return utm
