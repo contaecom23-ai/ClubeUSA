@@ -8,7 +8,12 @@
 
 - [ ] **0.1** Cadastro + perfil mínimo + email confirmado
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
+- [x] **0.3** Analytics básico
+  - Tabela `events` (migration `db/analytics_migration.sql`) para log de eventos do ciclo de vida do membro
+  - `analytics_service.py`: `log_event()` (silencioso em falha) + `get_analytics()` com funil completo (cadastro → email_set → confirmado → primeiro_clique) + crescimento diário 30 dias + stats de referral
+  - Endpoint `GET /admin/analytics` (admin-only): retorna snapshot do funil + growth_30d + distribuição de planos + stats de referral
+  - Eventos logados automaticamente: `member.registered` no cadastro, `deal.clicked` no primeiro clique, `email.confirmed` (pronto para quando PR #123 for merged)
+  - **Ação necessária:** aplicar migration `db/analytics_migration.sql` no Supabase
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
 ---
@@ -66,4 +71,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-16 (0.3 concluído)*
