@@ -6,6 +6,8 @@
 #  POST /auth/register        — cadastro de membro
 #  POST /auth/otp/request     — solicitar OTP por WhatsApp
 #  POST /auth/otp/verify      — verificar OTP e receber JWT
+#  GET  /auth/email/verify    — confirmar email via token (link do email)
+#  POST /auth/email/resend    — reenviar email de verificacao (requer auth)
 #  GET  /member/profile       — perfil do membro autenticado
 #  GET  /member/deals         — deals da semana por categoria
 #  GET  /member/referral      — link e stats de indicacao
@@ -391,6 +393,42 @@ async def verify_otp(body: OTPVerify):
 
     token = create_token(member["id"], member["plan"])
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
+
+
+# ============================================================
+#  ROTAS — VERIFICACAO DE EMAIL
+# ============================================================
+
+@app.get("/auth/email/verify")
+async def verify_email(token: str):
+    """
+    Confirma email do membro via token enviado por email.
+    Chamado pelo link no email (sem autenticacao necessaria).
+    """
+    from services.member_service import verify_email_token
+    result = verify_email_token(token)
+    if not result["ok"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+    if result.get("already_verified"):
+        return {"message": "Email já confirmado anteriormente.", "already_verified": True}
+    return {"message": "Email confirmado com sucesso!", "member_id": result["member_id"]}
+
+
+@app.post("/auth/email/resend")
+async def resend_verification(member: dict = Depends(get_current_member)):
+    """
+    Reenvio do email de verificacao.
+    Requer autenticacao (Bearer token).
+    Rate-limit herdado do middleware de /auth.
+    """
+    from services.member_service import resend_verification_email
+    sent = resend_verification_email(member["sub"])
+    if not sent:
+        raise HTTPException(
+            status_code=400,
+            detail="Email já confirmado ou endereço não cadastrado."
+        )
+    return {"message": "Email de verificação reenviado."}
 
 
 # ============================================================
