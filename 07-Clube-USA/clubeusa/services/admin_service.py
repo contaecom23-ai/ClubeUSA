@@ -5,6 +5,11 @@ from collections import Counter
 
 log = logging.getLogger("admin_service")
 
+# "Cadastro válido" = phone verified via OTP (already enforced by auth flow)
+# + status active + has performed at least one action (click, referral, or profile updated).
+# Re-evaluated as product matures — see DECISOES.md #2026-10-16.
+_VALID_SIGNUP_ACTIONS_MIN = 1
+
 VALID_STATUSES = ("active", "inactive", "banned")
 
 
@@ -55,6 +60,92 @@ def get_metrics() -> dict:
         "deals":      {"pending": pending, "approved": approved, "sent_this_week": sent_week},
         "engagement": {"clicks_this_week": len(clicks_week), "top_category": top_cat},
         "alerts":     {"active": alerts_active, "triggered_this_week": alerts_week},
+    }
+
+
+# ============================================================
+#  ANALYTICS (Fase 0.3)
+# ============================================================
+
+def get_analytics() -> dict:
+    """
+    Analytics básico para o painel do dono.
+    Usa dados já existentes — sem serviço externo.
+
+    "Cadastro válido" (Fase 0.4 protótipo) =
+        status='active' AND (total_clicks >= 1 OR referral_count >= 1)
+    """
+    sb = _supabase()
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    week_ago    = (now - timedelta(days=7)).isoformat()
+    month_ago   = (now - timedelta(days=30)).isoformat()
+
+    # ---- Membros ----
+    members = sb.table("members").select(
+        "plan,status,language,referral_count,total_clicks,created_at,referred_by"
+    ).is_("deleted_at", "null").execute().data
+
+    total_members     = len(members)
+    active_members    = sum(1 for m in members if m["status"] == "active")
+    vip_members       = sum(1 for m in members if m["plan"] == "vip")
+    new_today         = sum(1 for m in members if (m.get("created_at") or "") >= today_start)
+    new_week          = sum(1 for m in members if (m.get("created_at") or "") >= week_ago)
+    new_month         = sum(1 for m in members if (m.get("created_at") or "") >= month_ago)
+    by_language       = Counter(m["language"] for m in members)
+    via_referral      = sum(1 for m in members if m.get("referred_by"))
+
+    # Valid signups: active + at least one engagement action
+    valid_signups = sum(
+        1 for m in members
+        if m["status"] == "active"
+        and (m.get("total_clicks", 0) >= _VALID_SIGNUP_ACTIONS_MIN
+             or m.get("referral_count", 0) >= 1)
+    )
+    valid_pct = round(valid_signups / total_members * 100, 1) if total_members else 0
+
+    # ---- Referrals ----
+    referrals = sb.table("referrals").select(
+        "referrer_id,status,created_at"
+    ).execute().data
+
+    total_referrals = len(referrals)
+    referrals_week  = sum(1 for r in referrals if (r.get("created_at") or "") >= week_ago)
+
+    # Top 5 referrers (anonymized: only member_id + count)
+    ref_counter = Counter(r["referrer_id"] for r in referrals if r.get("referrer_id"))
+    top_referrers = [{"member_id": mid, "count": cnt} for mid, cnt in ref_counter.most_common(5)]
+
+    # ---- Clicks ----
+    clicks_week = sb.table("clicks").select("id").gte("clicked_at", week_ago).execute().data
+    clicks_month = sb.table("clicks").select("id").gte("clicked_at", month_ago).execute().data
+
+    return {
+        "generated_at": now.isoformat(),
+        "members": {
+            "total":          total_members,
+            "active":         active_members,
+            "vip":            vip_members,
+            "new_today":      new_today,
+            "new_this_week":  new_week,
+            "new_this_month": new_month,
+            "by_language":    dict(by_language),
+            "via_referral":   via_referral,
+        },
+        "valid_signups": {
+            "count":   valid_signups,
+            "percent": valid_pct,
+            "definition": "status=active AND (clicks>=1 OR referrals>=1)",
+        },
+        "referrals": {
+            "total":          total_referrals,
+            "this_week":      referrals_week,
+            "top_referrers":  top_referrers,
+        },
+        "engagement": {
+            "clicks_this_week":  len(clicks_week),
+            "clicks_this_month": len(clicks_month),
+        },
     }
 
 

@@ -6,10 +6,14 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- [~] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Cadastro e perfil: ✅ (phone OTP via WhatsApp — identidade verificada)
+  - Email confirmado: ⏳ BLOQUEADO — aguarda decisão de provedor de email (ver DECISOES.md #2026-10-16-A)
+- [x] **0.2** Sistema de REFERRAL rastreável — link `clubeusa.com/i/{CODE}` + cookie 7 dias + atribuição no cadastro via body ou cookie
+- [x] **0.3** Analytics básico — `GET /admin/analytics` (membros, cadastros válidos, referrals, cliques, top referrers)
+- [~] **0.4** Definição de "cadastro válido" verificável + anti-fraude
+  - Definição protótipo: `status=active AND (clicks>=1 OR referrals>=1)` — já calculado em /admin/analytics
+  - Anti-fraude avançado: ⏳ PENDENTE — aguarda decisão sobre definição formal (ver DECISOES.md #2026-10-16-B)
 
 ---
 
@@ -66,4 +70,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-16*
