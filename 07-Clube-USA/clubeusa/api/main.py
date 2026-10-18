@@ -292,7 +292,7 @@ def _otp_verify(phone_hash: str, otp: str) -> tuple:
         sb.table("otp_codes").delete().eq("phone_hash", phone_hash).execute()
         return False, "Muitas tentativas. Solicite novo codigo."
 
-    if record["otp"] != otp:
+    if not hmac.compare_digest(record["otp"], otp):
         sb.table("otp_codes").update({"attempts": record["attempts"] + 1}).eq(
             "phone_hash", phone_hash
         ).execute()
