@@ -2,14 +2,17 @@
 
 > Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
 
+> **Estado em 2026-10-19:** Fase 0 implementada em PR #125 (não mergeada). Nada em main além da base da API.
+> **Ação urgente:** ver DECISOES.md.
+
 ---
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- [ ] **0.1** Cadastro + perfil mínimo + email confirmado *(código pronto em PR #125)*
+- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link) *(código pronto em PR #125)*
+- [ ] **0.3** Analytics básico *(código pronto em PR #125)*
+- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude *(código pronto em PR #125)*
 
 ---
 
@@ -66,4 +69,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-19*
