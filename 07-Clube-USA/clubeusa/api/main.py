@@ -360,6 +360,43 @@ async def request_otp(body: OTPRequest, request: Request):
     return {"message": "Codigo enviado para seu WhatsApp.", "expires_in": 600}
 
 
+@app.post("/auth/email/confirm/request")
+async def request_email_confirmation(member: dict = Depends(get_current_member)):
+    """
+    Reenvia o email de confirmacao para o membro autenticado.
+    Retorna 400 se nao ha email cadastrado ou ja esta confirmado.
+    """
+    from services.member_service import resend_email_confirmation
+    sent = resend_email_confirmation(member["sub"])
+    if not sent:
+        # Pode ser: sem email, ja confirmado, ou erro de envio
+        raise HTTPException(
+            status_code=400,
+            detail="Nao foi possivel reenviar. Verifique se ha email cadastrado e nao confirmado.",
+        )
+    return {"message": "Email de confirmacao reenviado."}
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def confirm_email(token: str):
+    """
+    Verifica o token de confirmacao de email (link clicado pelo usuario).
+    Redireciona para o painel em caso de sucesso, ou retorna erro.
+    """
+    from fastapi.responses import RedirectResponse
+    from services.member_service import confirm_email_token
+
+    if not token or len(token) > 100:
+        raise HTTPException(status_code=400, detail="Token invalido.")
+
+    member_id = confirm_email_token(token)
+    if not member_id:
+        raise HTTPException(status_code=400, detail="Token invalido ou expirado.")
+
+    # Redireciona para o painel com flag de sucesso
+    return RedirectResponse(url=f"{APP_URL}/painel?email_confirmed=1", status_code=303)
+
+
 @app.post("/auth/otp/verify")
 async def verify_otp(body: OTPVerify):
     """Verifica OTP e retorna JWT se valido."""

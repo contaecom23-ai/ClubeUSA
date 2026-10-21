@@ -8,6 +8,9 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+import secrets
+from datetime import timedelta
+
 from utils.security import (
     encrypt, decrypt, hash_pii, hash_ip,
     validate_phone, validate_email, sanitize,
@@ -155,6 +158,16 @@ def register_member(
     # 8. Gerar token JWT
     token = create_token(member_id, member.get("plan", "free"))
 
+    # 9. Confirmacao de email (nao bloqueia o cadastro)
+    email_confirmation_sent = False
+    if email:
+        try:
+            conf_token = generate_email_confirmation(member_id)
+            from services.email_service import send_confirmation_email
+            email_confirmation_sent = send_confirmation_email(email, conf_token, language)
+        except Exception as e:
+            log.warning(f"Falha ao enviar confirmacao de email: {e}")
+
     return {
         "action":      "registered",
         "member_id":   member_id,
@@ -164,6 +177,7 @@ def register_member(
         "referral_code": member["referral_code"],
         "group_invite": group.get("invite_link") if group else None,
         "group_name":   group.get("name") if group else None,
+        "email_confirmation_sent": email_confirmation_sent,
     }
 
 
@@ -250,22 +264,120 @@ def get_member_profile(member_id: str) -> Optional[dict]:
 
     # Descriptografa PII apenas para exibicao
     return {
-        "id":           m["id"],
-        "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
-        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "language":     m["language"],
-        "state":        m["state"],
-        "plan":         m["plan"],
-        "points":       m["points"],
-        "level":        m["level"],
-        "categories":   m["categories"],
-        "referral_code": m["referral_code"],
-        "referral_count": m["referral_count"],
-        "total_clicks": m["total_clicks"],
-        "created_at":   m["created_at"],
-        "vip_expires_at": m.get("vip_expires_at"),
+        "id":               m["id"],
+        "name":             decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":            _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
+        "email":            _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email_confirmed":  m.get("email_confirmed", False),
+        "language":         m["language"],
+        "state":            m["state"],
+        "plan":             m["plan"],
+        "points":           m["points"],
+        "level":            m["level"],
+        "categories":       m["categories"],
+        "referral_code":    m["referral_code"],
+        "referral_count":   m["referral_count"],
+        "total_clicks":     m["total_clicks"],
+        "created_at":       m["created_at"],
+        "vip_expires_at":   m.get("vip_expires_at"),
     }
+
+
+def generate_email_confirmation(member_id: str) -> str:
+    """
+    Cria (ou renova) token de confirmacao de email para o membro.
+    Retorna o token raw (enviado por email); o DB guarda o mesmo valor.
+    Token: secrets.token_urlsafe(32) = 43 chars, 256 bits de entropia.
+    Expira em 24 horas.
+    """
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+
+    sb = _supabase()
+    sb.table("members").update({
+        "email_confirmation_token":      token,
+        "email_confirmation_expires_at": expires_at,
+    }).eq("id", member_id).execute()
+
+    return token
+
+
+def confirm_email_token(token: str) -> Optional[str]:
+    """
+    Verifica o token e confirma o email do membro.
+    Retorna member_id se valido, None se invalido/expirado.
+    Consume o token (invalida apos uso).
+    """
+    from datetime import timezone as _tz
+
+    sb = _supabase()
+    result = (
+        sb.table("members")
+        .select("id,email_confirmed,email_confirmation_expires_at")
+        .eq("email_confirmation_token", token)
+        .execute()
+    )
+
+    if not result.data:
+        return None
+
+    member = result.data[0]
+
+    if member.get("email_confirmed"):
+        # Ja confirmado — invalida token e retorna ok
+        sb.table("members").update({
+            "email_confirmation_token":      None,
+            "email_confirmation_expires_at": None,
+        }).eq("id", member["id"]).execute()
+        return member["id"]
+
+    expires_raw = member.get("email_confirmation_expires_at")
+    if not expires_raw:
+        return None
+
+    expires = datetime.fromisoformat(expires_raw.replace("Z", "+00:00"))
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=_tz.utc)
+    if datetime.now(_tz.utc) > expires:
+        return None
+
+    # Confirma e apaga token
+    sb.table("members").update({
+        "email_confirmed":               True,
+        "email_confirmation_token":      None,
+        "email_confirmation_expires_at": None,
+    }).eq("id", member["id"]).execute()
+
+    _audit("member.email_confirmed", member["id"])
+    log.info(f"Email confirmado para membro {member['id']}")
+    return member["id"]
+
+
+def resend_email_confirmation(member_id: str) -> bool:
+    """
+    Reenvia email de confirmacao.
+    Retorna True se enviado, False se email nao cadastrado ou ja confirmado.
+    """
+    sb = _supabase()
+    result = sb.table("members").select(
+        "email_enc,email_confirmed,language"
+    ).eq("id", member_id).execute()
+
+    if not result.data:
+        return False
+
+    m = result.data[0]
+    if m.get("email_confirmed"):
+        return False  # ja confirmado, nao precisa reenviar
+    if not m.get("email_enc"):
+        return False  # sem email cadastrado
+
+    email = decrypt(m["email_enc"])
+    language = m.get("language", "pt")
+    token = generate_email_confirmation(member_id)
+
+    from services.email_service import send_confirmation_email
+    return send_confirmation_email(email, token, language)
 
 
 def update_member_categories(member_id: str, categories: list) -> dict:
