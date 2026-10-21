@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clube USA — Para Brasileiros nos EUA</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <span class="logo">🇧🇷 Clube USA</span>
+  <nav>
+    <a href="login.html">Entrar</a>
+    <a href="register.html">Cadastrar</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <h1>Sua vida nos EUA, organizada.</h1>
+  <p>Promoções, empregos, moradia e comunidade — tudo em um lugar.</p>
+  <a href="register.html" class="btn">Criar conta grátis</a>
+</section>
+
+<section class="features">
+  <div class="feature-card">
+    <div class="icon">🏷️</div>
+    <h3>Promoções e Achados</h3>
+    <p>Descontos e ofertas selecionados para a comunidade brasileira.</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">💼</div>
+    <h3>Empregos</h3>
+    <p>Vagas perto de você, com filtro por ZIP code.</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">🏠</div>
+    <h3>Moradia</h3>
+    <p>Quartos, roommates e casas para alugar.</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">🤝</div>
+    <h3>Comunidade</h3>
+    <p>Conecte-se com outros brasileiros na sua região.</p>
+  </div>
+</section>
+
+<footer class="page-footer" style="padding: 20px 16px 40px;">
+  <p>&copy; 2026 Clube USA · <a href="#">Privacidade</a> · <a href="#">Termos</a></p>
+</footer>
+
+<script src="assets/app.js"></script>
+<script>
+  // Se já logado, vai direto para o perfil
+  if (Auth.isLoggedIn()) window.location.href = "profile.html";
+</script>
+</body>
+</html>
