@@ -1,11 +1,12 @@
 # ============================================================
 #  services/member_service.py — Clube USA
-#  Cadastro e gestao de membros com seguranca completa
+#  Cadastro e gestão de membros com segurança completa
 # ============================================================
 
 import os
+import secrets
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from utils.security import (
@@ -45,8 +46,8 @@ def _audit(action, target_id, metadata=None, actor_id=None, ip=None):
 
 def register_member(
     phone: str,
+    email: str,             # OBRIGATÓRIO — Fase 0.1
     name: str = None,
-    email: str = None,
     language: str = "pt",
     state: str = None,
     categories: list = None,
@@ -54,13 +55,14 @@ def register_member(
     ip: str = None,
 ) -> dict:
     """
-    Cadastra novo membro com seguranca completa.
+    Cadastra novo membro com segurança completa.
 
     - Valida e normaliza inputs
     - Criptografa PII antes de salvar
     - Verifica duplicatas por hash (sem expor dados)
-    - Atribui ao grupo disponivel
-    - Processa indicacao se houver codigo
+    - Atribui ao grupo disponível
+    - Processa indicação se houver código
+    - Envia email de confirmação
     - Registra no audit log
     """
 
@@ -68,13 +70,14 @@ def register_member(
     try:
         phone = validate_phone(phone)
     except ValueError as e:
-        raise ValueError(f"Telefone invalido: {e}")
+        raise ValueError(f"Telefone inválido: {e}")
 
-    if email:
-        try:
-            email = validate_email(email)
-        except ValueError as e:
-            raise ValueError(f"Email invalido: {e}")
+    if not email:
+        raise ValueError("Email é obrigatório para o cadastro.")
+    try:
+        email = validate_email(email)
+    except ValueError as e:
+        raise ValueError(f"Email inválido: {e}")
 
     name  = sanitize(name or "", 80)
     state = sanitize(state or "", 50)
@@ -90,12 +93,19 @@ def register_member(
         member = existing.data[0]
         if member["status"] == "banned":
             raise PermissionError("Acesso negado.")
-        # Membro ja existe — retorna token sem criar novo
+        # Membro já existe — retorna token sem criar novo
         token = create_token(member["id"])
         _audit("member.login", member["id"], ip=ip)
         return {"action": "login", "member_id": member["id"], "token": token}
 
-    # 3. Resolver indicacao
+    # 3. Verificar duplicata de email
+    email_hash = hash_pii(email)
+    email_existing = sb.table("members").select("id,status").eq("email_hash", email_hash).execute()
+    if email_existing.data:
+        # Email já cadastrado — retornar erro genérico sem vazar existência
+        raise ValueError("Já existe uma conta com este telefone ou email.")
+
+    # 4. Resolver indicação
     referred_by = None
     if referral_code:
         ref_result = (
@@ -108,19 +118,26 @@ def register_member(
         if ref_result.data:
             referred_by = ref_result.data[0]["id"]
 
-    # 4. Inserir com PII criptografado
+    # 5. Gerar token de confirmação de email (TTL 48h)
+    confirm_token = secrets.token_urlsafe(48)
+    confirm_expires = (datetime.utcnow() + timedelta(hours=48)).isoformat()
+
+    # 6. Inserir com PII criptografado
     member_data = {
-        "phone_hash":     phone_hash,
-        "phone_enc":      encrypt(phone),           # criptografado
-        "email_hash":     hash_pii(email) if email else None,
-        "email_enc":      encrypt(email) if email else None,
-        "name_enc":       encrypt(name) if name else None,
-        "language":       language,
-        "state":          state,
-        "categories":     categories,
-        "referred_by":    referred_by,
-        "points":         100,                       # pontos de boas-vindas
-        "referral_code":  generate_referral_code(),
+        "phone_hash":               phone_hash,
+        "phone_enc":                encrypt(phone),
+        "email_hash":               email_hash,
+        "email_enc":                encrypt(email),
+        "name_enc":                 encrypt(name) if name else None,
+        "language":                 language,
+        "state":                    state,
+        "categories":               categories,
+        "referred_by":              referred_by,
+        "points":                   100,
+        "referral_code":            generate_referral_code(),
+        "email_confirmed":          False,
+        "email_confirm_token":      confirm_token,
+        "email_confirm_expires_at": confirm_expires,
     }
 
     result = sb.table("members").insert(member_data).execute()
@@ -130,21 +147,28 @@ def register_member(
     member = result.data[0]
     member_id = member["id"]
 
-    # 5. Atribuir ao grupo WhatsApp
+    # 7. Atribuir ao grupo WhatsApp
     try:
         group = assign_member_to_group(member_id, language)
     except Exception as e:
-        log.warning(f"Nao foi possivel atribuir grupo: {e}")
+        log.warning(f"Não foi possível atribuir grupo: {e}")
         group = None
 
-    # 6. Processar indicacao — pontuar quem indicou
+    # 8. Processar indicação — pontuar quem indicou
     if referred_by:
         try:
             _process_referral(referred_by, member_id)
         except Exception as e:
-            log.warning(f"Erro ao processar indicacao: {e}")
+            log.warning(f"Erro ao processar indicação: {e}")
 
-    # 7. Audit log
+    # 9. Enviar email de confirmação (falha não bloqueia o cadastro)
+    try:
+        from services.email_service import send_confirmation_email
+        send_confirmation_email(email, confirm_token, name, language)
+    except Exception as e:
+        log.warning(f"Falha ao enviar email de confirmação: {e}")
+
+    # 10. Audit log
     _audit("member.created", member_id, {
         "language": language,
         "state": state,
@@ -152,26 +176,27 @@ def register_member(
         "categories": categories,
     }, ip=ip)
 
-    # 8. Gerar token JWT
+    # 11. Gerar token JWT
     token = create_token(member_id, member.get("plan", "free"))
 
     return {
-        "action":      "registered",
-        "member_id":   member_id,
-        "token":       token,
-        "points":      100,
-        "level":       "bronze",
-        "referral_code": member["referral_code"],
-        "group_invite": group.get("invite_link") if group else None,
-        "group_name":   group.get("name") if group else None,
+        "action":         "registered",
+        "member_id":      member_id,
+        "token":          token,
+        "points":         100,
+        "level":          "bronze",
+        "referral_code":  member["referral_code"],
+        "group_invite":   group.get("invite_link") if group else None,
+        "group_name":     group.get("name") if group else None,
+        "email_confirmed": False,
+        "confirm_email_sent": True,
     }
 
 
 def _process_referral(referrer_id: str, referred_id: str):
-    """Registra indicacao e adiciona pontos ao indicador."""
+    """Registra indicação e adiciona pontos ao indicador."""
     sb = _supabase()
 
-    # Registrar indicacao
     sb.table("referrals").insert({
         "referrer_id":    referrer_id,
         "referred_id":    referred_id,
@@ -180,29 +205,26 @@ def _process_referral(referrer_id: str, referred_id: str):
         "confirmed_at":   datetime.utcnow().isoformat(),
     }).execute()
 
-    # Pontuar indicador
     sb.rpc("increment_points", {
         "p_member_id": referrer_id,
         "p_points":    200,
     }).execute()
 
-    # Incrementar contador de indicacoes
     sb.rpc("increment_referral_count", {
         "p_member_id": referrer_id,
     }).execute()
 
     _audit("referral.confirmed", referred_id, {"referrer_id": referrer_id})
-    log.info(f"Indicacao confirmada: {referrer_id} indicou {referred_id}")
+    log.info(f"Indicação confirmada: {referrer_id} indicou {referred_id}")
 
-    # Verifica milestone: 3 indicacoes = 30 dias VIP gratis
     try:
         _check_vip_milestone(referrer_id)
     except Exception as e:
-        log.warning(f"Falha na verificacao de milestone VIP: {e}")
+        log.warning(f"Falha na verificação de milestone VIP: {e}")
 
 
 def _check_vip_milestone(referrer_id: str):
-    """Concede trial VIP 30 dias quando indicador atinge 3 indicacoes."""
+    """Concede trial VIP 30 dias quando indicador atinge 3 indicações."""
     sb = _supabase()
     result = sb.table("members").select(
         "referral_count,plan,vip_trial_used"
@@ -213,7 +235,6 @@ def _check_vip_milestone(referrer_id: str):
 
     m = result.data[0]
     if m["referral_count"] >= 3 and m["plan"] == "free" and not m.get("vip_trial_used", False):
-        from datetime import datetime, timedelta
         sb.table("members").update({
             "plan":           "vip",
             "vip_started_at": datetime.utcnow().isoformat(),
@@ -229,7 +250,7 @@ def _check_vip_milestone(referrer_id: str):
             "metadata":    {"reason": "referral_milestone_3"},
         }).execute()
 
-        log.info(f"VIP trial 30 dias concedido a {referrer_id} por 3 indicacoes")
+        log.info(f"VIP trial 30 dias concedido a {referrer_id} por 3 indicações")
 
 
 # ============================================================
@@ -239,7 +260,7 @@ def _check_vip_milestone(referrer_id: str):
 def get_member_profile(member_id: str) -> Optional[dict]:
     """
     Retorna perfil do membro com PII descriptografado.
-    Usado apenas para exibir no painel do proprio membro.
+    Usado apenas para exibir no painel do próprio membro.
     """
     sb = _supabase()
     result = sb.table("members").select("*").eq("id", member_id).execute()
@@ -248,23 +269,23 @@ def get_member_profile(member_id: str) -> Optional[dict]:
 
     m = result.data[0]
 
-    # Descriptografa PII apenas para exibicao
     return {
-        "id":           m["id"],
-        "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
-        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "language":     m["language"],
-        "state":        m["state"],
-        "plan":         m["plan"],
-        "points":       m["points"],
-        "level":        m["level"],
-        "categories":   m["categories"],
-        "referral_code": m["referral_code"],
-        "referral_count": m["referral_count"],
-        "total_clicks": m["total_clicks"],
-        "created_at":   m["created_at"],
-        "vip_expires_at": m.get("vip_expires_at"),
+        "id":              m["id"],
+        "name":            decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":           _mask_phone(decrypt(m["phone_enc"])),
+        "email":           _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email_confirmed": m.get("email_confirmed", False),
+        "language":        m["language"],
+        "state":           m["state"],
+        "plan":            m["plan"],
+        "points":          m["points"],
+        "level":           m["level"],
+        "categories":      m["categories"],
+        "referral_code":   m["referral_code"],
+        "referral_count":  m["referral_count"],
+        "total_clicks":    m["total_clicks"],
+        "created_at":      m["created_at"],
+        "vip_expires_at":  m.get("vip_expires_at"),
     }
 
 
@@ -277,13 +298,11 @@ def update_member_categories(member_id: str, categories: list) -> dict:
 
 
 def _mask_phone(phone: str) -> str:
-    """Mascara numero — exibe apenas ultimos 4 digitos."""
     if len(phone) <= 4: return phone
     return "*" * (len(phone) - 4) + phone[-4:]
 
 
 def _mask_email(email: str) -> str:
-    """Mascara email — exibe apenas inicio e dominio."""
     if "@" not in email: return email
     local, domain = email.split("@", 1)
     if len(local) <= 2: return email
@@ -297,13 +316,11 @@ def _mask_email(email: str) -> str:
 def track_click(member_id: str, deal_id: str, ip: str = None) -> str:
     """
     Registra clique de membro num deal.
-    Retorna UTM code unico para o link afiliado.
-    Pontua o membro automaticamente.
+    Retorna UTM code único para o link afiliado.
     """
     sb = _supabase()
     utm = generate_utm(member_id, deal_id)
 
-    # Verifica se ja clicou neste deal (idempotente)
     existing = (
         sb.table("clicks")
         .select("id,utm_code")
@@ -312,9 +329,8 @@ def track_click(member_id: str, deal_id: str, ip: str = None) -> str:
         .execute()
     )
     if existing.data:
-        return existing.data[0]["utm_code"]  # retorna UTM existente
+        return existing.data[0]["utm_code"]
 
-    # Registra clique
     sb.table("clicks").insert({
         "member_id": member_id,
         "deal_id":   deal_id,
@@ -322,7 +338,6 @@ def track_click(member_id: str, deal_id: str, ip: str = None) -> str:
         "ip_hash":   hash_ip(ip) if ip else None,
     }).execute()
 
-    # Adiciona 10 pontos pelo clique
     sb.rpc("increment_points", {"p_member_id": member_id, "p_points": 10}).execute()
     sb.rpc("increment_clicks", {"p_member_id": member_id}).execute()
 
