@@ -32,6 +32,8 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  GET  /admin/analytics         — métricas de crescimento e engajamento (admin) [Fase 0.3]
+#  GET  /member/validation-status — status de cadastro válido [Fase 0.4]
 # ============================================================
 
 import hmac
@@ -52,6 +54,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.analytics import router as analytics_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -83,6 +86,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(analytics_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -321,6 +325,15 @@ async def register(body: RegisterRequest, request: Request):
             referral_code = body.referral_code,
             ip            = request.client.host if request.client else None,
         )
+        from services.analytics_service import track
+        from utils.security import hash_ip
+        ip = request.client.host if request.client else "unknown"
+        track(
+            event_type="user.registered",
+            member_id=result.get("member_id"),
+            properties={"language": body.language, "has_email": bool(body.email), "via_referral": bool(body.referral_code)},
+            ip_hash=hash_ip(ip),
+        )
         return result
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -390,6 +403,8 @@ async def verify_otp(body: OTPVerify):
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
     token = create_token(member["id"], member["plan"])
+    from services.analytics_service import track
+    track(event_type="user.login", member_id=member["id"], properties={"plan": member["plan"]})
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
 
 
@@ -673,6 +688,8 @@ def _handle_checkout_completed(session: dict):
     }).execute()
 
     log.info(f"VIP ativado para membro {member_id}")
+    from services.analytics_service import track
+    track(event_type="billing.vip_activated", member_id=member_id)
 
     # Envia mensagem de boas-vindas VIP via WhatsApp
     _send_vip_welcome(member_id)
