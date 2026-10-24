@@ -1,6 +1,20 @@
 # ROADMAP — Clube USA
 
 > Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
+> **ESTADO ATUAL (2026-10-24):** Projeto bloqueado por merge paralysis — ver DECISOES.md D-001.
+
+---
+
+## STATUS REAL DO PROJETO
+
+| Item | Status em branches | Status em main (produção) |
+|------|-------------------|--------------------------|
+| Fase 0.1 Cadastro + email | ✅ Implementado (PR #125) | ❌ NÃO mergeado |
+| Fase 0.2 Referral | ✅ Implementado (PR #125) | ❌ NÃO mergeado |
+| Fase 0.3 Analytics | ✅ Implementado (PR #125) | ❌ NÃO mergeado |
+| Fase 0.4 Cadastro válido | ✅ Implementado (PR #125) | ❌ NÃO mergeado |
+
+**Ação necessária:** Mergear PR #125 → https://github.com/contaecom23-ai/ClubeUSA/pull/125
 
 ---
 
@@ -66,4 +80,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-24*
