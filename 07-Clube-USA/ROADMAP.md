@@ -1,15 +1,28 @@
 # ROADMAP — Clube USA
 
-> Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas.
+> Fonte da verdade do projeto. Marque `[x]` nas tarefas concluídas (mergeadas na `main`).
+
+---
+
+## Estado atual (2026-10-25)
+
+| Branch `main` | Fase 0 — **BLOQUEADA por merge paralysis** |
+|---|---|
+| PRs abertos | ~35 abertos, nenhum mergeado |
+| Próxima ação | Dono deve mergear PR #125 (ver DECISOES.md D-001) |
 
 ---
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
 - [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+  > Código pronto em PRs (ex: #125, #144). Aguarda merge.
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+  > Código pronto em PR #125. Aguarda merge.
 - [ ] **0.3** Analytics básico
+  > Código pronto em PRs (#125, #141). Aguarda merge.
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+  > Código pronto em PRs (#125, #141). Aguarda merge.
 
 ---
 
@@ -66,4 +79,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-25*
