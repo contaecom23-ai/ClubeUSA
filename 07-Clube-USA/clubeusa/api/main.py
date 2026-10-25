@@ -393,6 +393,45 @@ async def verify_otp(body: OTPVerify):
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
 
 
+class EmailConfirmRequest(BaseModel):
+    token: str
+
+
+@app.post("/auth/email/confirm")
+async def confirm_email(body: EmailConfirmRequest):
+    """
+    Confirma o email do membro via token recebido por email.
+    Rota pública — não requer autenticação (o token é a prova).
+    """
+    from services.member_service import confirm_email as svc_confirm_email
+    try:
+        result = svc_confirm_email(body.token)
+        return {"message": "Email confirmado com sucesso!", **result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        log.error(f"Erro ao confirmar email: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
+
+
+@app.post("/auth/email/resend")
+async def resend_email_confirmation(member: dict = Depends(get_current_member)):
+    """
+    Reenvia o email de confirmação para o membro autenticado.
+    Rate-limited: 3 tentativas por hora.
+    """
+    from services.member_service import resend_email_confirmation as svc_resend
+    try:
+        svc_resend(member["sub"])
+        return {"message": "Email de confirmação reenviado. Verifique sua caixa de entrada."}
+    except ValueError as e:
+        status = 429 if "Muitas tentativas" in str(e) else 400
+        raise HTTPException(status_code=status, detail=str(e))
+    except Exception as e:
+        log.error(f"Erro ao reenviar confirmação: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno. Tente novamente.")
+
+
 # ============================================================
 #  ROTAS — MEMBRO
 # ============================================================

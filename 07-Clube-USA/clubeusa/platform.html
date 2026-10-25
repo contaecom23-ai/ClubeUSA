@@ -1105,6 +1105,11 @@ footer a:hover{color:var(--accent-l)}
         <label class="input-label">Seu nome</label>
         <input class="input-field" type="text" id="input-name" placeholder="João Silva" autocomplete="name">
       </div>
+      <div class="input-group name-field" id="email-field-wrap">
+        <label class="input-label">Email <span style="color:var(--muted);font-weight:400">(recomendado)</span></label>
+        <input class="input-field" type="email" id="input-email" placeholder="joao@email.com" autocomplete="email">
+        <div class="input-hint">Para receber alertas de preço e novidades</div>
+      </div>
       <div class="input-group">
         <label class="input-label">WhatsApp (com código do país)</label>
         <input class="input-field" type="tel" id="input-phone" placeholder="+1 (555) 123-4567" autocomplete="tel">
@@ -1190,6 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showDashboard();
   }
   handleVipReturn();
+  handleEmailConfirmReturn();
   initScrollReveal();
   initCountUp();
   initDealCarousel();
@@ -1197,6 +1203,43 @@ document.addEventListener('DOMContentLoaded', () => {
   initGamiTeaser();
   initTilt();
 });
+
+// ============================================================
+//  EMAIL CONFIRMATION — lida com /verify-email?token=...
+// ============================================================
+async function handleEmailConfirmReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (!token) return;
+
+  // Limpar o token da URL sem recarregar
+  window.history.replaceState({}, '', window.location.pathname);
+
+  try {
+    const data = await api('POST', '/auth/email/confirm', { token });
+    if (data.already_confirmed) {
+      showToast('✅ Email já estava confirmado!');
+    } else {
+      showToast('🎉 Email confirmado com sucesso! Obrigado.');
+    }
+  } catch (e) {
+    showToast('❌ ' + (e.message || 'Link inválido ou expirado.'), 'error');
+  }
+}
+
+function showToast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = [
+    'position:fixed', 'bottom:24px', 'left:50%', 'transform:translateX(-50%)',
+    'background:' + (type === 'error' ? '#e53e3e' : '#2d7a3a'),
+    'color:#fff', 'padding:12px 24px', 'border-radius:8px',
+    'font-size:15px', 'font-weight:600', 'z-index:9999',
+    'box-shadow:0 4px 16px rgba(0,0,0,0.3)', 'max-width:90vw', 'text-align:center',
+  ].join(';');
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
 
 // ============================================================
 //  3D TILT (vanilla-tilt via CDN)
@@ -1512,7 +1555,8 @@ async function handlePhoneSubmit() {
   setLoading('btn-phone', true, '📲 Receber código no WhatsApp');
   try {
     if (!_isLogin) {
-      await api('POST', '/auth/register', { phone, name: name || undefined, language: 'pt' });
+      const email = document.getElementById('input-email').value.trim() || undefined;
+      await api('POST', '/auth/register', { phone, name: name || undefined, email, language: 'pt' });
     }
     await api('POST', '/auth/otp/request', { phone });
     showStep('step-otp');
@@ -1583,11 +1627,17 @@ async function loadProfile() {
     document.getElementById('dash-member-name').textContent = name;
     document.getElementById('nav-user-name').textContent   = name;
     document.getElementById('dash-plan-badge').textContent = data.plan === 'vip' ? '⭐ VIP' : 'Plano Free';
+    const emailStatus = data.has_email
+      ? (data.email_confirmed
+          ? `✅ Email confirmado`
+          : `⚠️ Email não confirmado — <a href="#" onclick="resendEmailConfirm(event)" style="color:var(--navy)">reenviar link</a>`)
+      : `<span style="color:var(--muted)">Sem email cadastrado</span>`;
     document.getElementById('profile-info').innerHTML = `
       <strong>Plano:</strong> ${data.plan === 'vip' ? '⭐ VIP' : 'Free'}<br>
       <strong>Pontos:</strong> ${data.points || 0}<br>
       <strong>Nível:</strong> ${data.level || 1}<br>
-      <strong>Indicações:</strong> ${data.referral_count || 0}
+      <strong>Indicações:</strong> ${data.referral_count || 0}<br>
+      <strong>Email:</strong> ${emailStatus}
     `;
     const isVip = data.plan === 'vip';
     document.getElementById('vip-upgrade-box').style.display = isVip ? 'none' : 'block';
@@ -1619,6 +1669,16 @@ function getSelectedCategories() {
   const grid = document.getElementById('niche-grid');
   if (!grid) return [];
   return Array.from(grid.querySelectorAll('input[type=checkbox]:checked')).map(i => i.value);
+}
+
+async function resendEmailConfirm(e) {
+  e.preventDefault();
+  try {
+    await api('POST', '/auth/email/resend', null, true);
+    showToast('📧 Email de confirmação reenviado! Verifique sua caixa de entrada.');
+  } catch (err) {
+    showToast('❌ ' + (err.message || 'Erro ao reenviar. Tente novamente.'), 'error');
+  }
 }
 
 async function saveCategories(selected) {
