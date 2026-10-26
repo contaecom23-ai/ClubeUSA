@@ -23,6 +23,7 @@
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
+#  GET  /admin/analytics         — funil, crescimento diário e engajamento (admin)
 #  GET  /admin/members           — lista membros (admin)
 #  GET  /admin/members/{id}      — perfil completo (admin)
 #  POST /admin/members/{id}/status — alterar status (admin)
@@ -369,9 +370,9 @@ async def request_otp(body: OTPRequest, request: Request):
 
 
 @app.post("/auth/otp/verify")
-async def verify_otp(body: OTPVerify):
+async def verify_otp(body: OTPVerify, request: Request):
     """Verifica OTP e retorna JWT se valido."""
-    from utils.security import validate_phone, hash_pii, create_token
+    from utils.security import validate_phone, hash_pii, create_token, hash_ip
 
     try:
         phone = validate_phone(body.phone)
@@ -398,6 +399,22 @@ async def verify_otp(body: OTPVerify):
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
     token = create_token(member["id"], member["plan"])
+
+    # Fase 0.3: registra evento de login no audit_log para analytics.
+    # Não-bloqueante: falha silenciosa para não impedir o login.
+    try:
+        ip_hash = hash_ip(request.client.host) if request.client else None
+        sb.table("audit_logs").insert({
+            "actor_id":    member["id"],
+            "actor_type":  "member",
+            "action":      "member.login",
+            "target_type": "member",
+            "target_id":   member["id"],
+            "ip_hash":     ip_hash,
+        }).execute()
+    except Exception:
+        pass
+
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
 
 
