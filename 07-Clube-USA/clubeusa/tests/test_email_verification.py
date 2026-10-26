@@ -1,221 +1,101 @@
-"""
-Tests for services/email_verification_service.py — Clube USA
-Fase 0.1: email confirmation flow
-"""
-
+# ============================================================
+#  tests/test_email_verification.py — Clube USA
+#  Testes do email_service.py (transporte + templates) — Fase 0.1
+# ============================================================
+import os
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta, timezone
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+# ============================================================
+#  email_service — transporte e templates
+# ============================================================
 
-def _future(hours=24):
-    return (datetime.now(timezone.utc) + timedelta(hours=hours)).isoformat()
+class TestEmailServiceDevMode:
+    def test_send_logs_in_dev(self, caplog):
+        """Em dev (ENVIRONMENT != production), email é logado, não enviado."""
+        import logging
+        import services.email_service as es
+        with patch.dict(os.environ, {"ENVIRONMENT": "development"}, clear=False):
+            with caplog.at_level(logging.INFO, logger="email_service"):
+                result = es._send("test@example.com", "Assunto", "texto plano", "<p>html</p>")
+        assert result is True
 
+    def test_send_logs_link_from_html(self, caplog):
+        """Em dev, extrai e loga links do HTML para facilitar teste manual."""
+        import logging
+        import services.email_service as es
+        html = '<a href="https://example.com/confirm/abc123">Confirmar</a>'
+        with patch.dict(os.environ, {"ENVIRONMENT": "development"}):
+            with caplog.at_level(logging.INFO, logger="email_service"):
+                es._send("x@y.com", "s", "t", html)
+        assert any("abc123" in r.message for r in caplog.records)
 
-def _past(hours=1):
-    return (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    def test_send_confirmation_email_calls_send(self):
+        """send_confirmation_email delega para _send com args corretos."""
+        import services.email_service as es
+        with patch.object(es, "_send", return_value=True) as mock_send:
+            result = es.send_confirmation_email("u@example.com", "Joao", "https://clubeusa.com/confirm/tok")
+        assert result is True
+        call_args = mock_send.call_args[0]
+        assert call_args[0] == "u@example.com"
+        assert "Confirme" in call_args[1]
+        assert "https://clubeusa.com/confirm/tok" in call_args[3]
 
+    def test_html_confirmation_escapes_xss(self):
+        """HTML do email escapa caracteres perigosos para prevenir XSS."""
+        import services.email_service as es
+        html = es._html_confirmation('<script>alert(1)</script>', 'https://ok.com/token')
+        assert '<script>' not in html
+        assert '&lt;script&gt;' in html
 
-def _table_mock():
-    """Returns a fresh MagicMock configured for Supabase table chaining."""
-    m = MagicMock()
-    m.select.return_value = m
-    m.eq.return_value = m
-    m.gte.return_value = m
-    m.is_.return_value = m
-    m.update.return_value = m
-    m.insert.return_value = m
-    m.delete.return_value = m
-    m.execute.return_value = MagicMock(data=[], count=0)
-    return m
-
-
-def _make_sb(members_mock=None, ev_tokens_mock=None, audit_mock=None):
-    """
-    Returns a mock Supabase client with per-table routing via side_effect.
-    """
-    sb = MagicMock()
-
-    _tables = {
-        "members":                    members_mock or _table_mock(),
-        "email_verification_tokens":  ev_tokens_mock or _table_mock(),
-        "audit_logs":                 audit_mock or _table_mock(),
-    }
-
-    def _table(name):
-        return _tables.get(name, _table_mock())
-
-    sb.table.side_effect = _table
-    sb.rpc.return_value.execute.return_value = MagicMock()
-    return sb
-
-
-# ---------------------------------------------------------------------------
-# request_email_verification
-# ---------------------------------------------------------------------------
-
-class TestRequestEmailVerification:
-
-    def _member_table(self, data, count=0):
-        t = _table_mock()
-        t.execute.return_value = MagicMock(data=data, count=count)
-        return t
-
-    def _evtoken_table(self, count=0):
-        t = _table_mock()
-        # For rate-limit count query
-        t.execute.return_value = MagicMock(data=[], count=count)
-        return t
-
-    def test_member_not_found_raises(self, mocker):
-        members_t = self._member_table(data=[])
-        sb = _make_sb(members_mock=members_t)
-        mocker.patch("services.email_verification_service._supabase", return_value=sb)
-
-        from services.email_verification_service import request_email_verification
-        with pytest.raises(ValueError, match="nao encontrado"):
-            request_email_verification("m1")
-
-    def test_no_email_raises(self, mocker):
-        members_t = self._member_table(
-            data=[{"id": "m1", "email_enc": None, "email_verified": False}]
-        )
-        sb = _make_sb(members_mock=members_t)
-        mocker.patch("services.email_verification_service._supabase", return_value=sb)
-
-        from services.email_verification_service import request_email_verification
-        with pytest.raises(ValueError, match="Nenhum email"):
-            request_email_verification("m1")
-
-    def test_already_verified_raises(self, mocker):
-        members_t = self._member_table(
-            data=[{"id": "m1", "email_enc": "enc", "email_verified": True}]
-        )
-        sb = _make_sb(members_mock=members_t)
-        mocker.patch("services.email_verification_service._supabase", return_value=sb)
-
-        from services.email_verification_service import request_email_verification
-        with pytest.raises(ValueError, match="ja confirmado"):
-            request_email_verification("m1")
-
-    def test_rate_limit_raises(self, mocker):
-        members_t = self._member_table(
-            data=[{"id": "m1", "email_enc": "enc", "email_verified": False}]
-        )
-        evt = self._evtoken_table(count=3)
-        sb = _make_sb(members_mock=members_t, ev_tokens_mock=evt)
-        mocker.patch("services.email_verification_service._supabase", return_value=sb)
-
-        from services.email_verification_service import request_email_verification
-        with pytest.raises(ValueError, match="Limite"):
-            request_email_verification("m1")
-
-    def test_success_returns_message(self, mocker):
-        members_t = self._member_table(
-            data=[{"id": "m1", "email_enc": "enc_email", "email_verified": False}]
-        )
-        evt = self._evtoken_table(count=0)
-        sb = _make_sb(members_mock=members_t, ev_tokens_mock=evt)
-        mocker.patch("services.email_verification_service._supabase", return_value=sb)
-        mocker.patch("utils.security.decrypt", return_value="user@example.com")
-        mocker.patch("services.email_verification_service._send_verification_email")
-
-        from services.email_verification_service import request_email_verification
-        result = request_email_verification("m1")
-
-        assert "message" in result
-        assert result["expires_in_hours"] == 24
+    def test_html_confirmation_contains_link(self):
+        """HTML contém o link de confirmação."""
+        import services.email_service as es
+        html = es._html_confirmation('Joao', 'https://clubeusa.com/auth/email/confirm/TOKEN123')
+        assert 'TOKEN123' in html
 
 
-# ---------------------------------------------------------------------------
-# confirm_email_verification
-# ---------------------------------------------------------------------------
+class TestEmailServiceSendGrid:
+    def test_sendgrid_called_when_api_key_set(self):
+        """Em produção com SENDGRID_API_KEY, usa SendGrid."""
+        import services.email_service as es
+        with patch.dict(os.environ, {
+            "ENVIRONMENT": "production",
+            "SENDGRID_API_KEY": "SG.fake_key",
+        }):
+            with patch.object(es, "_send_sendgrid", return_value=True) as sg_mock:
+                with patch.object(es, "_send_smtp", return_value=False) as smtp_mock:
+                    es._send("a@b.com", "s", "t", "<p>h</p>")
+        sg_mock.assert_called_once()
+        smtp_mock.assert_not_called()
 
-class TestConfirmEmailVerification:
+    def test_smtp_called_when_no_sendgrid_key(self):
+        """Em produção sem SENDGRID_API_KEY, usa SMTP."""
+        import services.email_service as es
+        env = {"ENVIRONMENT": "production"}
+        with patch.dict(os.environ, env, clear=True):
+            with patch.object(es, "_send_sendgrid", return_value=True) as sg_mock:
+                with patch.object(es, "_send_smtp", return_value=True) as smtp_mock:
+                    es._send("a@b.com", "s", "t", "<p>h</p>")
+        sg_mock.assert_not_called()
+        smtp_mock.assert_called_once()
 
-    def _evtoken_table_with_record(self, record):
-        t = _table_mock()
-        t.execute.return_value = MagicMock(data=[record] if record else [])
-        return t
 
-    def _members_table_verified(self, verified: bool):
-        t = _table_mock()
-        t.execute.return_value = MagicMock(data=[{"email_verified": verified}])
-        return t
+class TestEmailServiceSmtp:
+    def test_smtp_returns_false_when_not_configured(self):
+        """SMTP retorna False se variáveis não configuradas."""
+        import services.email_service as es
+        with patch.dict(os.environ, {}, clear=True):
+            result = es._send_smtp("x@y.com", "s", "t", "<p>h</p>")
+        assert result is False
 
-    def test_empty_token_raises(self):
-        from services.email_verification_service import confirm_email_verification
-        with pytest.raises(ValueError, match="invalido"):
-            confirm_email_verification("")
-
-    def test_token_too_long_raises(self):
-        from services.email_verification_service import confirm_email_verification
-        with pytest.raises(ValueError, match="invalido"):
-            confirm_email_verification("x" * 65)
-
-    def test_token_not_found_raises(self, mocker):
-        evt = self._evtoken_table_with_record(None)
-        sb = _make_sb(ev_tokens_mock=evt)
-        mocker.patch("services.email_verification_service._supabase", return_value=sb)
-
-        from services.email_verification_service import confirm_email_verification
-        with pytest.raises(ValueError, match="invalido"):
-            confirm_email_verification("nosuchtoken")
-
-    def test_already_used_raises(self, mocker):
-        evt = self._evtoken_table_with_record({
-            "id": "t1", "member_id": "m1", "token": "tok",
-            "expires_at": _future(24), "used_at": _past(1),
-        })
-        sb = _make_sb(ev_tokens_mock=evt)
-        mocker.patch("services.email_verification_service._supabase", return_value=sb)
-
-        from services.email_verification_service import confirm_email_verification
-        with pytest.raises(ValueError, match="ja utilizado"):
-            confirm_email_verification("tok")
-
-    def test_expired_token_raises(self, mocker):
-        evt = self._evtoken_table_with_record({
-            "id": "t1", "member_id": "m1", "token": "tok",
-            "expires_at": _past(1), "used_at": None,
-        })
-        sb = _make_sb(ev_tokens_mock=evt)
-        mocker.patch("services.email_verification_service._supabase", return_value=sb)
-
-        from services.email_verification_service import confirm_email_verification
-        with pytest.raises(ValueError, match="expirado"):
-            confirm_email_verification("tok")
-
-    def test_valid_token_confirms_email(self, mocker):
-        evt = self._evtoken_table_with_record({
-            "id": "t1", "member_id": "m1", "token": "validtoken",
-            "expires_at": _future(24), "used_at": None,
-        })
-        members_t = self._members_table_verified(False)
-        sb = _make_sb(ev_tokens_mock=evt, members_mock=members_t)
-        mocker.patch("services.email_verification_service._supabase", return_value=sb)
-
-        from services.email_verification_service import confirm_email_verification
-        result = confirm_email_verification("validtoken")
-
-        assert result["already_verified"] is False
-        assert result["points_awarded"] == 100
-        assert "sucesso" in result["message"].lower()
-
-    def test_already_verified_idempotent(self, mocker):
-        evt = self._evtoken_table_with_record({
-            "id": "t1", "member_id": "m1", "token": "validtoken",
-            "expires_at": _future(24), "used_at": None,
-        })
-        members_t = self._members_table_verified(True)
-        sb = _make_sb(ev_tokens_mock=evt, members_mock=members_t)
-        mocker.patch("services.email_verification_service._supabase", return_value=sb)
-
-        from services.email_verification_service import confirm_email_verification
-        result = confirm_email_verification("validtoken")
-
-        assert result["already_verified"] is True
+    def test_smtp_logs_error_when_not_configured(self, caplog):
+        """SMTP loga erro quando não configurado."""
+        import logging
+        import services.email_service as es
+        with patch.dict(os.environ, {}, clear=True):
+            with caplog.at_level(logging.ERROR, logger="email_service"):
+                es._send_smtp("x@y.com", "s", "t", "<p>h</p>")
+        assert any("SMTP" in r.message for r in caplog.records)

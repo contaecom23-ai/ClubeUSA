@@ -27,21 +27,43 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
-### [2026-10-26] Provedor de email para confirmação de email em produção
+### [2026-09-07 / 2026-10-26] Provedor de email transacional para confirmação de conta
 
-**Contexto:** A feature de confirmação de email (Fase 0.1) está implementada. Em desenvolvimento, o link de verificação é apenas logado no console. Em produção, precisa de um provedor SMTP real para enviar os emails. O código já suporta qualquer provedor SMTP padrão via variáveis de ambiente (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`).
+**Contexto:** A infraestrutura de confirmação de email está pronta (migration `db/email_confirmation_migration.sql` + endpoints `POST /auth/email/send-confirmation` e `GET /auth/email/confirm/{token}` + auto-disparo no cadastro). Em desenvolvimento, o link de verificação é apenas logado no console. Em produção, precisa de um provedor configurado. O código suporta:
+- SendGrid (`SENDGRID_API_KEY`, `FROM_EMAIL`)
+- SMTP genérico (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM_EMAIL`)
 
-**Pergunta:** Qual provedor de email usar para envio transacional em produção?
+**Pergunta:** Qual provedor usar em produção?
 
 **Opções:**
-- **Opção A — SendGrid** (sendgrid.com): Tier gratuito de 100 emails/dia. Configurado via SMTP ou SDK. Mais popular, boa reputação de entregabilidade. Pago acima de 100/dia: ~$19.95/mês para 40k emails. Prós: muito confiável, analytics de abertura. Contras: custo após tier grátis.
-- **Opção B — Resend** (resend.com): Tier gratuito de 3.000 emails/mês (100/dia). Interface moderna. Prós: excelente DX, bom gratuito. Contras: mais novo, menos adotado.
-- **Opção C — Amazon SES**: $0.10/1.000 emails. Praticamente gratuito na escala dos primeiros 1.000 usuários (~$0.10 total para 1.000 confirmações). Prós: custo mínimo, alta escala. Contras: precisa de conta AWS, configuração de domínio mais complexa.
-- **Opção D — Brevo** (ex-Sendinblue): 300 emails/dia grátis. Prós: generoso tier gratuito. Contras: menor reputação de entregabilidade.
+- **Resend** (free: 3.000 emails/mês): prós — moderno, developer-friendly, gratuito até 3k/mês (cobre primeiros 1.000 usuários com folga); contras — menor histórico de mercado
+- **SendGrid** (free: 100 emails/dia): prós — mais popular, boa reputação, já no código; contras — free tier apertado (100/dia = ~3.000/mês, mas em burst pode ser insuficiente)
+- **AWS SES** ($0,10/1.000 emails): prós — mais barato em escala; contras — requer conta AWS, configuração mais complexa
+- **Gmail SMTP**: prós — zero custo inicial; contras — 500 emails/dia, reputação ruim para produção
 
-**Recomendação:** Para o lançamento (0–1.000 usuários), **Resend ou SendGrid** free tier são suficientes e têm zero custo. A longo prazo (10k+), Amazon SES é o mais econômico. Sugiro **Resend** para simplicidade: UI boa, 3.000 emails grátis/mês cobre bem os primeiros 3.000 usuários, e migrar depois é fácil (só trocar as vars de ambiente).
+**Recomendação:** **Resend** para começar — gratuito até 3.000 emails/mês, API simples como SendGrid, troca de provedor é trivial (só mudar env vars para SMTP). Se escalar >3k emails/mês, migrar para AWS SES.
 
-**Ação necessária:** Criar conta no provedor escolhido, configurar domínio `clubeusa.com` para envio, e adicionar as variáveis `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` ao ambiente de produção (Render ou onde for deployado).
+**Ação necessária após decisão:**
+1. Criar conta no provedor escolhido e verificar domínio `clubeusa.com`
+2. Aplicar migration `db/email_confirmation_migration.sql` no Supabase (Dashboard → SQL Editor)
+3. Para SendGrid: configurar `SENDGRID_API_KEY=SG.xxx` e `FROM_EMAIL=noreply@clubeusa.com` e `ENVIRONMENT=production` no Render
+4. Para SMTP (Resend/SES): configurar `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM_EMAIL`, `ENVIRONMENT=production` no Render
+
+**Status:** PENDENTE
+
+---
+
+### [2026-09-07] Email deve ser obrigatório ou opcional no cadastro?
+
+**Contexto:** O cadastro atual usa telefone como identificador primário (WhatsApp OTP). Email é opcional mas recomendado para confirmação. "Cadastro válido" (Fase 0.4) = phone confirmado + email confirmado + ≥1 ação real.
+
+**Pergunta:** Tornar o email OBRIGATÓRIO no cadastro para forçar confirmação?
+
+**Opções:**
+- **Manter opcional (status quo):** prós — menor fricção, maior conversão inicial; contras — muitos cadastros sem email, dificulta email marketing e métricas da Fase 0.4
+- **Tornar obrigatório:** prós — base limpa, todos confirmáveis; contras — reduz conversão estimada em ~20-30%
+
+**Recomendação:** Manter opcional agora. Adicionar incentivo pós-cadastro ("confirme seu email e ganhe 50 pontos bônus"). Reavaliar quando atingir 500 cadastros.
 
 **Status:** PENDENTE
 
