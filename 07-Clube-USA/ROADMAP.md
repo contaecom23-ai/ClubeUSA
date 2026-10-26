@@ -8,7 +8,10 @@
 
 - [ ] **0.1** Cadastro + perfil mínimo + email confirmado
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
+- [x] **0.3** Analytics básico
+  - `services/analytics_service.py`: crescimento diário (série 30d), funil de conversão (cadastrado→email→confirmado→1º clique), engajamento por categoria, referrals, top estados
+  - `api/routers/analytics.py`: 6 endpoints admin-only (`/analytics/overview`, `/growth`, `/funnel`, `/engagement`, `/referrals`, `/geographic`)
+  - 18 testes unitários passando
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
 ---

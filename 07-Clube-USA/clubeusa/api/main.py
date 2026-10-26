@@ -32,6 +32,12 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  GET  /analytics/overview      — snapshot completo (admin)
+#  GET  /analytics/growth        — serie diaria de cadastros (admin)
+#  GET  /analytics/funnel        — funil de conversao (admin)
+#  GET  /analytics/engagement    — serie diaria de cliques (admin)
+#  GET  /analytics/referrals     — performance de indicacoes (admin)
+#  GET  /analytics/geographic    — distribuicao por estado (admin)
 # ============================================================
 
 import hmac
@@ -52,6 +58,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.analytics import router as analytics_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -83,6 +90,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(analytics_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
