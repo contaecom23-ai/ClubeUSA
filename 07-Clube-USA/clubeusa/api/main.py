@@ -394,6 +394,106 @@ async def verify_otp(body: OTPVerify):
 
 
 # ============================================================
+#  ROTAS — EMAIL CONFIRMATION (Fase 0.1)
+# ============================================================
+
+@app.post("/auth/email/confirm/request", status_code=202)
+async def request_email_confirmation(member: dict = Depends(get_current_member)):
+    """
+    Envia (ou re-envia) email de confirmacao para o membro autenticado.
+    So funciona se o membro possui email cadastrado e ele ainda nao foi confirmado.
+    """
+    import secrets
+    from datetime import datetime, timedelta
+    from supabase import create_client
+    from services.email_service import send_confirmation_email
+    from utils.security import decrypt
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("members").select(
+        "email_enc,email_confirmed_at"
+    ).eq("id", member["sub"]).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Membro nao encontrado.")
+
+    row = result.data[0]
+
+    if not row.get("email_enc"):
+        raise HTTPException(status_code=400, detail="Nenhum email cadastrado neste perfil.")
+
+    if row.get("email_confirmed_at"):
+        raise HTTPException(status_code=400, detail="Email ja confirmado.")
+
+    email = decrypt(row["email_enc"])
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+
+    # Remove tokens anteriores do mesmo membro
+    sb.table("email_confirmation_tokens").delete().eq("member_id", member["sub"]).execute()
+
+    sb.table("email_confirmation_tokens").insert({
+        "member_id":  member["sub"],
+        "token":      token,
+        "expires_at": expires_at,
+    }).execute()
+
+    confirm_url = f"{APP_URL}/auth/email/confirm/{token}"
+    sent = send_confirmation_email(email, confirm_url)
+
+    if not sent:
+        log.warning(f"Falha ao enviar email de confirmacao para membro {member['sub']}")
+
+    return {"message": "Email de confirmacao enviado.", "expires_in": 86400}
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def confirm_email(token: str):
+    """
+    Confirma o email via token (link do email).
+    Redireciona para o frontend com resultado.
+    """
+    from datetime import datetime, timezone
+    from supabase import create_client
+    from fastapi.responses import RedirectResponse
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("email_confirmation_tokens").select(
+        "id,member_id,expires_at,used_at"
+    ).eq("token", token).execute()
+
+    if not result.data:
+        return RedirectResponse(url=f"{APP_URL}?email_confirmed=false&reason=invalid")
+
+    row = result.data[0]
+
+    if row.get("used_at"):
+        return RedirectResponse(url=f"{APP_URL}?email_confirmed=false&reason=used")
+
+    expires = datetime.fromisoformat(row["expires_at"].replace("Z", "+00:00"))
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+
+    if datetime.now(timezone.utc) > expires:
+        sb.table("email_confirmation_tokens").delete().eq("id", row["id"]).execute()
+        return RedirectResponse(url=f"{APP_URL}?email_confirmed=false&reason=expired")
+
+    # Marca email como confirmado
+    now_iso = datetime.utcnow().isoformat()
+    sb.table("members").update({"email_confirmed_at": now_iso}).eq(
+        "id", row["member_id"]
+    ).execute()
+
+    # Invalida o token
+    sb.table("email_confirmation_tokens").update({"used_at": now_iso}).eq(
+        "id", row["id"]
+    ).execute()
+
+    log.info(f"Email confirmado para membro {row['member_id']}")
+    return RedirectResponse(url=f"{APP_URL}?email_confirmed=true")
+
+
+# ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
 

@@ -6,7 +6,10 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+- [~] **0.1** Cadastro + perfil mínimo + email confirmado
+  - **Backend:** ✅ registration, OTP via WhatsApp, profile, email confirmation flow (migration + endpoints + email service)
+  - **Bloqueio:** escolha do provedor de email (Resend vs SendGrid) — ver DECISOES.md
+  - Em dev: confirmação já funciona (loga a URL). Em prod: precisa de `EMAIL_PROVIDER` + `EMAIL_API_KEY`
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
@@ -66,4 +69,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-27*
