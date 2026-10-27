@@ -27,36 +27,46 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
----
+### [2026-09-07 / 2026-10-26] Provedor de email transacional para confirmação de conta
 
-### [2026-10-27] Provedor de email para confirmação de cadastro (Fase 0.1)
+**Contexto:** A infraestrutura de confirmação de email está pronta (migration `db/email_confirmation_migration.sql` + endpoints `POST /auth/email/send-confirmation` e `GET /auth/email/confirm/{token}` + auto-disparo no cadastro). Em desenvolvimento, o link de verificação é apenas logado no console. Em produção, precisa de um provedor configurado. O código suporta:
+- SendGrid (`SENDGRID_API_KEY`, `FROM_EMAIL`)
+- SMTP genérico (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM_EMAIL`)
 
-**Contexto:**
-A Fase 0.1 implementou o fluxo completo de confirmação de email no backend. O código está pronto e testado. Em `development` funciona sem dependência externa (loga a URL no terminal). Para ativar em `production`, é preciso escolher um provedor e configurar as env vars `EMAIL_PROVIDER`, `EMAIL_API_KEY` e `EMAIL_FROM`.
-
-**Pergunta:**
-Qual provedor de email usar para enviar a confirmação de cadastro?
+**Pergunta:** Qual provedor usar em produção?
 
 **Opções:**
+- **Resend** (free: 3.000 emails/mês): prós — moderno, developer-friendly, gratuito até 3k/mês (cobre primeiros 1.000 usuários com folga); contras — menor histórico de mercado
+- **SendGrid** (free: 100 emails/dia): prós — mais popular, boa reputação, já no código; contras — free tier apertado (100/dia = ~3.000/mês, mas em burst pode ser insuficiente)
+- **AWS SES** ($0,10/1.000 emails): prós — mais barato em escala; contras — requer conta AWS, configuração mais complexa
+- **Gmail SMTP**: prós — zero custo inicial; contras — 500 emails/dia, reputação ruim para produção
 
-| Provedor | Free tier | Custo paid | Prós | Contras |
-|----------|-----------|------------|------|---------|
-| **Resend** | 3.000 emails/mês, 100/dia | USD 20/mês para 50k | API moderna, setup em 5 min, ótima DX, suporte a Next.js/React Email | Mais novo, menor histórico de deliverability |
-| **SendGrid** (Twilio) | 100 emails/dia (grátis sempre) | USD 20/mês para 50k | Líder de mercado, alta deliverability, docs maduras | Interface mais complexa, domínio de verificação pode levar mais tempo |
-| **AWS SES** | 62.000/mês se hospedado na AWS | USD 0,10 por 1.000 | Mais barato em volume | Setup mais complexo (IAM, DNS, sandbox), pior DX |
+**Recomendação:** **Resend** para começar — gratuito até 3.000 emails/mês, API simples como SendGrid, troca de provedor é trivial (só mudar env vars para SMTP). Se escalar >3k emails/mês, migrar para AWS SES.
 
-**Recomendação do Claude:**
-**Resend** — para os primeiros 1.000 usuários o free tier (3k/mês) é suficiente, o setup é <5 minutos, e o código já suporta. Se o volume crescer rapidamente ou deliverability se tornar crítica, migrar para SendGrid é uma mudança de 2 linhas de env var.
-
-**Para ativar:**
-```bash
-EMAIL_PROVIDER=resend
-EMAIL_API_KEY=re_xxxxx   # Criar conta em resend.com, gerar API Key
-EMAIL_FROM=noreply@clubeusa.com  # Verificar domínio clubeusa.com no Resend
-```
+**Ação necessária após decisão:**
+1. Criar conta no provedor escolhido e verificar domínio `clubeusa.com`
+2. Aplicar migration `db/email_confirmation_migration.sql` no Supabase (Dashboard → SQL Editor)
+3. Para SendGrid: configurar `SENDGRID_API_KEY=SG.xxx` e `FROM_EMAIL=noreply@clubeusa.com` e `ENVIRONMENT=production` no Render
+4. Para SMTP (Resend/SES): configurar `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM_EMAIL`, `ENVIRONMENT=production` no Render
 
 **Status:** PENDENTE
 
 ---
 
-*Atualizado em: 2026-10-27*
+### [2026-09-07] Email deve ser obrigatório ou opcional no cadastro?
+
+**Contexto:** O cadastro atual usa telefone como identificador primário (WhatsApp OTP). Email é opcional mas recomendado para confirmação. "Cadastro válido" (Fase 0.4) = phone confirmado + email confirmado + ≥1 ação real.
+
+**Pergunta:** Tornar o email OBRIGATÓRIO no cadastro para forçar confirmação?
+
+**Opções:**
+- **Manter opcional (status quo):** prós — menor fricção, maior conversão inicial; contras — muitos cadastros sem email, dificulta email marketing e métricas da Fase 0.4
+- **Tornar obrigatório:** prós — base limpa, todos confirmáveis; contras — reduz conversão estimada em ~20-30%
+
+**Recomendação:** Manter opcional agora. Adicionar incentivo pós-cadastro ("confirme seu email e ganhe 50 pontos bônus"). Reavaliar quando atingir 500 cadastros.
+
+**Status:** PENDENTE
+
+---
+
+*Atualizado em: 2026-10-26*

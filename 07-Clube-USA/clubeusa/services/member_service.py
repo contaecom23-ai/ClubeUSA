@@ -155,52 +155,53 @@ def register_member(
     # 8. Gerar token JWT
     token = create_token(member_id, member.get("plan", "free"))
 
-    # 9. Disparar confirmacao de email (async fire-and-forget, falha nao bloqueia cadastro)
+    # 9. Disparar confirmacao de email (fire-and-forget, falha nao bloqueia cadastro)
     email_confirmation_sent = False
     if email:
         try:
-            email_confirmation_sent = _send_email_confirmation(member_id, email)
+            _trigger_email_confirmation(member_id, email, name or "")
+            email_confirmation_sent = True
         except Exception as e:
             log.warning(f"Falha ao enviar confirmacao de email: {e}")
 
     return {
-        "action":                   "registered",
-        "member_id":                member_id,
-        "token":                    token,
-        "points":                   100,
-        "level":                    "bronze",
-        "referral_code":            member["referral_code"],
-        "group_invite":             group.get("invite_link") if group else None,
-        "group_name":               group.get("name") if group else None,
-        "email_confirmation_sent":  email_confirmation_sent,
+        "action":                  "registered",
+        "member_id":               member_id,
+        "token":                   token,
+        "points":                  100,
+        "level":                   "bronze",
+        "referral_code":           member["referral_code"],
+        "group_invite":            group.get("invite_link") if group else None,
+        "group_name":              group.get("name") if group else None,
+        "email_confirmation_sent": email_confirmation_sent,
     }
 
 
-def _send_email_confirmation(member_id: str, email: str) -> bool:
+def _trigger_email_confirmation(member_id: str, email: str, name: str = ""):
     """
-    Gera token de confirmacao de email e dispara o envio.
-    Chamado internamente apos cadastro. Retorna True se email foi enviado.
+    Gera token seguro e envia email de confirmacao apos cadastro.
+    Armazena apenas o HASH do token — raw token so viaja no email.
     """
     import secrets
-    from datetime import datetime, timedelta
-    from services.email_service import send_confirmation_email
+    import hashlib
+    from datetime import datetime, timedelta, timezone
+
+    raw_token  = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    expires_at = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
 
     sb = _supabase()
-    token = secrets.token_urlsafe(32)
-    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
-
-    # Remove tokens anteriores do mesmo membro
-    sb.table("email_confirmation_tokens").delete().eq("member_id", member_id).execute()
-
     sb.table("email_confirmation_tokens").insert({
         "member_id":  member_id,
-        "token":      token,
+        "token_hash": token_hash,
         "expires_at": expires_at,
     }).execute()
 
-    app_url = os.environ.get("APP_URL", "https://clubeusa.com")
-    confirm_url = f"{app_url}/auth/email/confirm/{token}"
-    return send_confirmation_email(email, confirm_url)
+    app_url     = os.environ.get("APP_URL", "https://clubeusa.com")
+    confirm_url = f"{app_url}/auth/email/confirm/{raw_token}"
+
+    from services.email_service import send_confirmation_email
+    send_confirmation_email(email, name, confirm_url)
 
 
 def _process_referral(referrer_id: str, referred_id: str):
@@ -286,22 +287,22 @@ def get_member_profile(member_id: str) -> Optional[dict]:
 
     # Descriptografa PII apenas para exibicao
     return {
-        "id":                  m["id"],
-        "name":                decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":               _mask_phone(decrypt(m["phone_enc"])),
-        "email":               _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "email_confirmed":     bool(m.get("email_confirmed_at")),
-        "language":            m["language"],
-        "state":               m["state"],
-        "plan":                m["plan"],
-        "points":              m["points"],
-        "level":               m["level"],
-        "categories":          m["categories"],
-        "referral_code":       m["referral_code"],
-        "referral_count":      m["referral_count"],
-        "total_clicks":        m["total_clicks"],
-        "created_at":          m["created_at"],
-        "vip_expires_at":      m.get("vip_expires_at"),
+        "id":              m["id"],
+        "name":            decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":           _mask_phone(decrypt(m["phone_enc"])),
+        "email":           _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email_confirmed": m.get("email_confirmed", False),
+        "language":        m["language"],
+        "state":           m["state"],
+        "plan":            m["plan"],
+        "points":          m["points"],
+        "level":           m["level"],
+        "categories":      m["categories"],
+        "referral_code":   m["referral_code"],
+        "referral_count":  m["referral_count"],
+        "total_clicks":    m["total_clicks"],
+        "created_at":      m["created_at"],
+        "vip_expires_at":  m.get("vip_expires_at"),
     }
 
 
