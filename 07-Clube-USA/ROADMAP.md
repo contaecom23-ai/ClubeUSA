@@ -6,16 +6,16 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- [ ] **0.1** Cadastro + perfil mínimo + email confirmado *(cadastro funciona via OTP/WhatsApp; falta email confirmation — código pronto em PR #125)*
+- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link) *(`?ref=CODE` funciona; falta `/i/{code}` pretty URL — código pronto em PR #125)*
+- [ ] **0.3** Analytics básico *(GET /admin/metrics existe; falta funil/crescimento — código pronto em PR #125)*
+- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude *(código pronto em PR #125)*
 
 ---
 
 ## FASE 1 — TRAÇÃO (foco em UM produto)
 
-- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
+- [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência) *(sistema de deals parcialmente em main — admin aprova/rejeita; precisa Fase 0 completa primeiro)*
 - [ ] **1.2** Busca por ZIP + raio 1–5 milhas
 - [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
 - [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
@@ -66,4 +66,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-28*
