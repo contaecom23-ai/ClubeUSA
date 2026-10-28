@@ -4,8 +4,9 @@
 # ============================================================
 
 import os
+import secrets
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from utils.security import (
@@ -265,6 +266,7 @@ def get_member_profile(member_id: str) -> Optional[dict]:
         "total_clicks": m["total_clicks"],
         "created_at":   m["created_at"],
         "vip_expires_at": m.get("vip_expires_at"),
+        "email_confirmed": bool(m.get("email_confirmed_at")),
     }
 
 
@@ -288,6 +290,118 @@ def _mask_email(email: str) -> str:
     local, domain = email.split("@", 1)
     if len(local) <= 2: return email
     return local[:2] + "*" * (len(local) - 2) + "@" + domain
+
+
+# ============================================================
+#  CONFIRMACAO DE EMAIL
+# ============================================================
+
+def request_email_confirmation(member_id: str) -> str:
+    """
+    Gera token de confirmação de email com TTL de 24h.
+    Em prod: envia por email. Em dev: loga o token.
+    Retorna o token (para testes e dev).
+    """
+    sb = _supabase()
+    result = sb.table("members").select(
+        "email_enc,email_confirmed_at"
+    ).eq("id", member_id).execute()
+
+    if not result.data:
+        raise ValueError("Membro não encontrado.")
+
+    m = result.data[0]
+    if not m.get("email_enc"):
+        raise ValueError("Nenhum email cadastrado. Adicione um email ao seu perfil.")
+    if m.get("email_confirmed_at"):
+        raise ValueError("Email já confirmado.")
+
+    token = secrets.token_urlsafe(32)
+    expires = datetime.utcnow() + timedelta(hours=24)
+
+    sb.table("members").update({
+        "email_confirmation_token":         token,
+        "email_confirmation_token_expires": expires.isoformat(),
+    }).eq("id", member_id).execute()
+
+    email = decrypt(m["email_enc"])
+
+    if os.environ.get("ENVIRONMENT") == "production":
+        _send_confirmation_email(email, token)
+    else:
+        log.info(f"[DEV] Email confirmation token para {email}: {token}")
+
+    return token
+
+
+def confirm_email(token: str) -> bool:
+    """
+    Confirma email via token. Retorna True se bem-sucedido, False se inválido/expirado.
+    Idempotente: token já confirmado retorna True.
+    """
+    sb = _supabase()
+    result = sb.table("members").select(
+        "id,email_confirmation_token_expires,email_confirmed_at"
+    ).eq("email_confirmation_token", token).execute()
+
+    if not result.data:
+        return False
+
+    m = result.data[0]
+
+    if m.get("email_confirmed_at"):
+        return True
+
+    expires_str = m.get("email_confirmation_token_expires")
+    if not expires_str:
+        return False
+
+    expires = datetime.fromisoformat(expires_str.replace("Z", "+00:00"))
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+
+    if datetime.now(timezone.utc) > expires:
+        return False
+
+    sb.table("members").update({
+        "email_confirmed_at":                datetime.utcnow().isoformat(),
+        "email_confirmation_token":          None,
+        "email_confirmation_token_expires":  None,
+    }).eq("id", m["id"]).execute()
+
+    _audit("member.email_confirmed", m["id"])
+    log.info(f"Email confirmado para membro {m['id']}")
+    return True
+
+
+def _send_confirmation_email(email: str, token: str):
+    """Envia email de confirmação. Requer EMAIL_FROM e EMAIL_API_KEY configurados."""
+    app_url = os.environ.get("APP_URL", "https://clubeusa.com")
+    confirm_url = f"{app_url}/auth/email/confirm/{token}"
+    try:
+        import requests as req
+        req.post(
+            "https://api.sendgrid.com/v3/mail/send",
+            headers={
+                "Authorization": f"Bearer {os.environ['EMAIL_API_KEY']}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "personalizations": [{"to": [{"email": email}]}],
+                "from": {"email": os.environ.get("EMAIL_FROM", "noreply@clubeusa.com")},
+                "subject": "Confirme seu email — Clube USA",
+                "content": [{
+                    "type": "text/plain",
+                    "value": (
+                        f"Clique no link para confirmar seu email:\n\n{confirm_url}\n\n"
+                        "Link válido por 24 horas.\n\nClube USA"
+                    ),
+                }],
+            },
+            timeout=10,
+        )
+    except Exception as e:
+        log.error(f"Falha ao enviar email de confirmação: {e}")
 
 
 # ============================================================

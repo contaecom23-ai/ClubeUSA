@@ -767,6 +767,41 @@ def _send_vip_welcome(member_id: str):
 
 
 # ============================================================
+#  ROTAS — CONFIRMACAO DE EMAIL
+# ============================================================
+
+@app.post("/auth/email/request-confirm")
+async def request_email_confirm(member: dict = Depends(get_current_member)):
+    """Gera e envia token de confirmação de email para o email cadastrado."""
+    from services.member_service import request_email_confirmation
+    try:
+        request_email_confirmation(member["sub"])
+        return {"message": "Email de confirmação enviado. Verifique sua caixa de entrada."}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def confirm_email_token(token: str):
+    """
+    Confirma email via token (link clicado no email).
+    Redireciona para o site com parâmetro de status.
+    Rota pública — sem autenticação.
+    """
+    import re
+    from fastapi.responses import RedirectResponse
+    from services.member_service import confirm_email
+
+    if not re.match(r'^[A-Za-z0-9_\-]{20,60}$', token):
+        raise HTTPException(status_code=400, detail="Token inválido.")
+
+    success = confirm_email(token)
+    if success:
+        return RedirectResponse(f"{APP_URL}?email_confirmed=1", status_code=302)
+    return RedirectResponse(f"{APP_URL}?email_confirm_error=1", status_code=302)
+
+
+# ============================================================
 #  ROTAS — PUBLICAS (sem autenticacao)
 # ============================================================
 
@@ -986,6 +1021,21 @@ def _send_otp_whatsapp(phone: str, otp: str):
 # ============================================================
 #  ROTAS — FRONTEND (serve o site)
 # ============================================================
+
+@app.get("/i/{referral_code}", include_in_schema=False)
+async def referral_redirect(referral_code: str):
+    """
+    Link de indicação curto: clubeusa.com/i/{CODE}
+    Redireciona para o cadastro com o código pré-preenchido.
+    Rota pública — sem autenticação.
+    """
+    import re
+    from fastapi.responses import RedirectResponse
+    code = referral_code.upper()
+    if not re.match(r'^[A-Z0-9]{6,12}$', code):
+        return RedirectResponse(APP_URL, status_code=302)
+    return RedirectResponse(f"{APP_URL}?ref={code}", status_code=302)
+
 
 @app.get("/", include_in_schema=False)
 @app.get("/painel", include_in_schema=False)
