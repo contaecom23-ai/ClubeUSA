@@ -3,9 +3,11 @@
 #  FastAPI com seguranca completa
 #
 #  Endpoints:
-#  POST /auth/register        — cadastro de membro
-#  POST /auth/otp/request     — solicitar OTP por WhatsApp
-#  POST /auth/otp/verify      — verificar OTP e receber JWT
+#  POST /auth/register                   — cadastro de membro
+#  POST /auth/otp/request                — solicitar OTP por WhatsApp
+#  POST /auth/otp/verify                 — verificar OTP e receber JWT
+#  POST /auth/email/send-confirmation    — enviar/reenviar email de confirmacao
+#  GET  /auth/email/confirm/{token}      — confirmar email via link (publico)
 #  GET  /member/profile       — perfil do membro autenticado
 #  GET  /member/deals         — deals da semana por categoria
 #  GET  /member/referral      — link e stats de indicacao
@@ -358,6 +360,39 @@ async def request_otp(body: OTPRequest, request: Request):
         log.info(f"[DEV] OTP para {phone}: {otp}")
 
     return {"message": "Codigo enviado para seu WhatsApp.", "expires_in": 600}
+
+
+@app.post("/auth/email/send-confirmation")
+async def send_email_confirmation(member: dict = Depends(get_current_member)):
+    """
+    Envia (ou reenvia) o email de confirmacao para o membro autenticado.
+    Requer que o membro tenha cadastrado um email.
+    """
+    from services.member_service import resend_email_confirmation
+    try:
+        return resend_email_confirmation(member["sub"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def confirm_email(token: str):
+    """
+    Confirma o email via token recebido por email.
+    Rota publica — chamada ao clicar no link do email de confirmacao.
+    """
+    from services.member_service import confirm_email_token
+    try:
+        result = confirm_email_token(token)
+        already = result.get("already_confirmed", False)
+        return {
+            "confirmed":   True,
+            "message":     "Email ja estava confirmado." if already else "Email confirmado com sucesso!",
+            "member_id":   result["member_id"],
+            "redirect_to": "/painel",
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/auth/otp/verify")

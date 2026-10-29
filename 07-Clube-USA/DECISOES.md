@@ -27,8 +27,33 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
-*(nenhuma ainda — o Claude preencherá aqui conforme avançar)*
+### [2026-10-29] Provedor de email para confirmações (Fase 0.1)
+
+**Contexto:** A confirmação de email (Fase 0.1) está implementada com suporte a SMTP genérico. O código funciona com qualquer provedor SMTP. Em dev, loga o link no servidor (não envia email real). Para produção, precisa de um provedor configurado.
+
+**Pergunta:** Qual provedor de email usar para envio transacional?
+
+**Opções:**
+- **Resend** (resend.com): $0/mês para 3k emails/mês. API moderna, excelente deliverability, setup simples via SMTP ou API. Recomendado para startups.
+- **SendGrid** (sendgrid.com): Free até 100 emails/dia. Mais complexo de configurar. Histórico de problemas de deliverability no free tier.
+- **AWS SES**: $0,10/1000 emails. Mais barato em escala, mas requer conta AWS, verificação de domínio, processo burocrático.
+- **Gmail SMTP** (conta google existente): Gratuito, mas limitado a 500 emails/dia e tem restrições de uso comercial. Não recomendado para produção.
+
+**Env vars necessárias (qualquer provedor):**
+```
+SMTP_HOST=smtp.resend.com         # ou smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=resend                  # ou "apikey" no SendGrid
+SMTP_PASSWORD=re_xxxx             # chave da API do provedor
+FROM_EMAIL=noreply@clubeusa.com   # precisa de domínio verificado
+```
+
+**Recomendação:** **Resend** — melhor custo-benefício para 0–10k usuários, setup em 10 min, deliverability superior. Migrar para AWS SES quando ultrapassar 50k emails/mês.
+
+**Próximo passo do dono:** Criar conta no Resend, verificar domínio clubeusa.com, gerar chave API, adicionar ao `.env` de produção.
+
+**Status:** PENDENTE
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-29*
