@@ -1,271 +1,196 @@
-# ============================================================
-#  tests/test_email_confirmation.py — Fase 0.1
-#  Testa o fluxo de confirmacao de email
-# ============================================================
-
-import os
-import sys
-import secrets
+# tests/test_email_confirmation.py — Fase 0.1: confirmacao de email
+import hashlib
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
-import pytest
-
-ROOT = os.path.join(os.path.dirname(__file__), "..")
-sys.path.insert(0, ROOT)
-sys.path.insert(0, os.path.join(ROOT, "api"))
+_UTC = timezone.utc
 
 
 # ============================================================
-#  utils/email.py
+#  Helpers
 # ============================================================
 
-class TestSendConfirmationEmail:
-    def test_dev_mode_logs_and_returns_false(self, caplog):
-        """Sem SMTP configurado retorna False e loga o link."""
-        from utils.email import send_confirmation_email
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
-        env_clean = {k: v for k, v in os.environ.items() if k not in ("SMTP_HOST", "SMTP_USER")}
-        with patch.dict(os.environ, env_clean, clear=True):
-            import logging
-            with caplog.at_level(logging.INFO, logger="email_sender"):
-                result = send_confirmation_email(
-                    to_email="test@example.com",
-                    token="abc123",
-                    app_url="https://clubeusa.com",
-                    language="pt",
-                )
-
-        assert result is False
-        assert "abc123" in caplog.text
-
-    def test_smtp_sends_email(self):
-        """Com SMTP configurado, envia o email."""
-        import base64
-        from utils.email import send_confirmation_email
-
-        smtp_env = {
-            "SMTP_HOST": "smtp.example.com",
-            "SMTP_PORT": "587",
-            "SMTP_USER": "user@example.com",
-            "SMTP_PASSWORD": "secret",
-            "FROM_EMAIL": "noreply@clubeusa.com",
-        }
-        with patch.dict(os.environ, smtp_env):
-            with patch("smtplib.SMTP") as mock_smtp:
-                instance = MagicMock()
-                mock_smtp.return_value.__enter__ = lambda s: instance
-                mock_smtp.return_value.__exit__ = MagicMock(return_value=False)
-
-                result = send_confirmation_email(
-                    to_email="user@test.com",
-                    token="tok123",
-                    app_url="https://clubeusa.com",
-                    language="pt",
-                )
-
-        assert result is True
-        instance.sendmail.assert_called_once()
-        args = instance.sendmail.call_args[0]
-        assert args[1] == ["user@test.com"]
-        # Body is base64 encoded; token URL must appear in decoded content
-        raw = args[2]
-        b64_token = base64.b64encode(b"tok123").decode()
-        # The token appears in the HTML body which is base64 encoded
-        assert b64_token in raw or "tok123" in raw or "/confirm/" in raw
-
-    def test_smtp_failure_returns_false(self):
-        """Falha de SMTP retorna False sem propagar excecao."""
-        from utils.email import send_confirmation_email
-
-        smtp_env = {
-            "SMTP_HOST": "smtp.example.com",
-            "SMTP_PORT": "587",
-            "SMTP_USER": "user@example.com",
-            "SMTP_PASSWORD": "secret",
-        }
-        with patch.dict(os.environ, smtp_env):
-            with patch("smtplib.SMTP", side_effect=ConnectionRefusedError("refused")):
-                result = send_confirmation_email("x@x.com", "tok", "https://clubeusa.com")
-
-        assert result is False
-
-    def test_spanish_subject(self):
-        """Idioma ES usa subject em espanhol."""
-        from utils.email import send_confirmation_email
-
-        smtp_env = {
-            "SMTP_HOST": "smtp.example.com",
-            "SMTP_PORT": "587",
-            "SMTP_USER": "user@example.com",
-            "SMTP_PASSWORD": "secret",
-        }
-        with patch.dict(os.environ, smtp_env):
-            with patch("smtplib.SMTP") as mock_smtp:
-                instance = MagicMock()
-                mock_smtp.return_value.__enter__ = lambda s: instance
-                mock_smtp.return_value.__exit__ = MagicMock(return_value=False)
-
-                send_confirmation_email("x@x.com", "tok", "https://clubeusa.com", language="es")
-
-        raw_email = instance.sendmail.call_args[0][2]
-        # Subject is RFC2047 encoded-word; check it contains "Club_USA" or decoded form
-        assert "Club_USA" in raw_email or "Club USA" in raw_email or "=?utf-8?" in raw_email
-        # Recipient must be correct
-        assert instance.sendmail.call_args[0][1] == ["x@x.com"]
-
-
-# ============================================================
-#  services/member_service.py — confirmacao de email
-# ============================================================
 
 def _make_sb_mock():
-    return MagicMock()
+    """MagicMock do Supabase com encadeamento fluente."""
+    mock = MagicMock()
+    mock.table.return_value = mock
+    mock.select.return_value = mock
+    mock.insert.return_value = mock
+    mock.update.return_value = mock
+    mock.delete.return_value = mock
+    mock.eq.return_value = mock
+    mock.execute.return_value.data = []
+    return mock
 
 
-class TestConfirmEmailToken:
-    def _make_member_row(self, confirmed=False, expired=False, token="valid_token"):
-        expires = (
-            (datetime.utcnow() - timedelta(hours=1)).isoformat()
-            if expired
-            else (datetime.utcnow() + timedelta(hours=23)).isoformat()
-        )
-        return {
-            "id":                         "member-uuid-001",
-            "email_enc":                  "encrypted_email",
-            "email_confirmed":            confirmed,
-            "email_confirm_expires_at":   expires,
-        }
+# ============================================================
+#  create_confirmation_token
+# ============================================================
 
-    def test_valid_token_confirms_email(self):
-        from services.member_service import confirm_email_token
+def test_create_confirmation_token_inserts_hash_not_raw_token(mocker):
+    """O banco deve receber apenas o hash SHA-256, nunca o token puro."""
+    mocker.patch.dict("os.environ", {
+        "SUPABASE_URL": "http://fake", "SUPABASE_SERVICE_KEY": "key",
+    }, clear=False)
 
-        member_row = self._make_member_row()
-        sb = _make_sb_mock()
-        sb.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [member_row]
-        sb.table.return_value.update.return_value.eq.return_value.execute.return_value.data = [{}]
-        sb.table.return_value.insert.return_value.execute.return_value.data = []  # audit_log
+    inserted = {}
+    mock_sb = _make_sb_mock()
 
-        with patch("services.member_service._supabase", return_value=sb):
-            result = confirm_email_token("valid_token")
+    def capture_insert(data):
+        inserted.update(data)
+        return mock_sb
+    mock_sb.insert.side_effect = capture_insert
 
-        assert result["confirmed"] is True
-        assert result["member_id"] == "member-uuid-001"
+    mocker.patch("services.email_service._supabase", return_value=mock_sb)
 
-    def test_invalid_token_raises(self):
-        from services.member_service import confirm_email_token
+    from services.email_service import create_confirmation_token
+    raw_token = create_confirmation_token("member-uuid-123")
 
-        sb = _make_sb_mock()
-        sb.table.return_value.select.return_value.eq.return_value.execute.return_value.data = []
-
-        with patch("services.member_service._supabase", return_value=sb):
-            with pytest.raises(ValueError, match="invalido ou ja utilizado"):
-                confirm_email_token("wrong_token")
-
-    def test_expired_token_raises(self):
-        from services.member_service import confirm_email_token
-
-        member_row = self._make_member_row(expired=True)
-        sb = _make_sb_mock()
-        sb.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [member_row]
-
-        with patch("services.member_service._supabase", return_value=sb):
-            with pytest.raises(ValueError, match="expirado"):
-                confirm_email_token("expired_token")
-
-    def test_already_confirmed_returns_flag(self):
-        from services.member_service import confirm_email_token
-
-        member_row = self._make_member_row(confirmed=True)
-        sb = _make_sb_mock()
-        sb.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [member_row]
-
-        with patch("services.member_service._supabase", return_value=sb):
-            result = confirm_email_token("valid_token")
-
-        assert result["already_confirmed"] is True
-
-    def test_empty_token_raises(self):
-        from services.member_service import confirm_email_token
-
-        with pytest.raises(ValueError, match="invalido"):
-            confirm_email_token("")
-
-    def test_too_long_token_raises(self):
-        from services.member_service import confirm_email_token
-
-        with pytest.raises(ValueError, match="invalido"):
-            confirm_email_token("x" * 200)
+    # raw_token é urlsafe (~43 chars); hash é hexdigest (64 chars)
+    assert len(raw_token) > 0
+    assert "token_hash" in inserted
+    assert len(inserted["token_hash"]) == 64
+    assert inserted["token_hash"] != raw_token
+    assert inserted["token_hash"] == _hash_token(raw_token)
 
 
-class TestResendEmailConfirmation:
-    def test_no_email_raises(self):
-        from services.member_service import resend_email_confirmation
+def test_create_confirmation_token_invalidates_previous(mocker):
+    """Tokens anteriores do mesmo membro devem ser deletados antes de criar novo."""
+    mocker.patch.dict("os.environ", {
+        "SUPABASE_URL": "http://fake", "SUPABASE_SERVICE_KEY": "key",
+    }, clear=False)
 
-        sb = _make_sb_mock()
-        sb.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [{
-            "email_enc": None,
-            "email_confirmed": False,
-            "language": "pt",
-        }]
+    mock_sb = _make_sb_mock()
+    mocker.patch("services.email_service._supabase", return_value=mock_sb)
 
-        with patch("services.member_service._supabase", return_value=sb):
-            with pytest.raises(ValueError, match="Nenhum email"):
-                resend_email_confirmation("member-id")
+    from services.email_service import create_confirmation_token
+    create_confirmation_token("member-uuid-123")
 
-    def test_already_confirmed_raises(self):
-        from services.member_service import resend_email_confirmation
-
-        sb = _make_sb_mock()
-        sb.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [{
-            "email_enc": "encrypted",
-            "email_confirmed": True,
-            "language": "pt",
-        }]
-
-        with patch("services.member_service._supabase", return_value=sb):
-            with pytest.raises(ValueError, match="ja confirmado"):
-                resend_email_confirmation("member-id")
-
-    def test_sends_and_returns_result(self):
-        from services.member_service import resend_email_confirmation
-
-        sb = _make_sb_mock()
-        sb.table.return_value.select.return_value.eq.return_value.execute.return_value.data = [{
-            "email_enc": "encrypted",
-            "email_confirmed": False,
-            "language": "pt",
-        }]
-        # For update (save token) and insert (audit_log)
-        sb.table.return_value.update.return_value.eq.return_value.execute.return_value.data = [{}]
-        sb.table.return_value.insert.return_value.execute.return_value.data = []
-
-        with patch("services.member_service._supabase", return_value=sb), \
-             patch("services.member_service.decrypt", return_value="user@example.com"), \
-             patch("utils.email.send_confirmation_email", return_value=True) as mock_send:
-            result = resend_email_confirmation("member-id")
-
-        assert "sent" in result
-        mock_send.assert_called_once()
+    mock_sb.delete.assert_called()
 
 
-class TestDispatchEmailConfirmation:
-    def test_generates_token_and_saves_to_db(self):
-        from services.member_service import _dispatch_email_confirmation
+# ============================================================
+#  verify_confirmation_token
+# ============================================================
 
-        sb = _make_sb_mock()
-        sb.table.return_value.update.return_value.eq.return_value.execute.return_value.data = [{}]
-        sb.table.return_value.insert.return_value.execute.return_value.data = []
+def test_verify_confirmation_token_invalid_token(mocker):
+    """Token nao encontrado no banco retorna None."""
+    mocker.patch.dict("os.environ", {
+        "SUPABASE_URL": "http://fake", "SUPABASE_SERVICE_KEY": "key",
+    }, clear=False)
 
-        with patch("services.member_service._supabase", return_value=sb), \
-             patch("utils.email.send_confirmation_email", return_value=False) as mock_send:
-            result = _dispatch_email_confirmation("member-id", "user@test.com", "pt")
+    mock_sb = _make_sb_mock()
+    mock_sb.execute.return_value.data = []
+    mocker.patch("services.email_service._supabase", return_value=mock_sb)
 
-        update_call = sb.table.return_value.update.call_args
-        saved_data = update_call[0][0]
-        assert "email_confirm_token" in saved_data
-        assert len(saved_data["email_confirm_token"]) > 20
-        assert "email_confirm_expires_at" in saved_data
+    from services.email_service import verify_confirmation_token
+    result = verify_confirmation_token("token-invalido")
+    assert result is None
 
-        mock_send.assert_called_once_with("user@test.com", saved_data["email_confirm_token"],
-                                          os.environ.get("APP_URL", "https://clubeusa.com"), "pt")
+
+def test_verify_confirmation_token_expired(mocker):
+    """Token expirado retorna None e e deletado."""
+    mocker.patch.dict("os.environ", {
+        "SUPABASE_URL": "http://fake", "SUPABASE_SERVICE_KEY": "key",
+    }, clear=False)
+
+    import secrets
+    token = secrets.token_urlsafe(32)
+    expired_time = (datetime.now(_UTC) - timedelta(hours=1)).isoformat()
+
+    mock_sb = _make_sb_mock()
+    mock_sb.execute.return_value.data = [{
+        "id": "row-1", "member_id": "m-1", "expires_at": expired_time,
+    }]
+    mocker.patch("services.email_service._supabase", return_value=mock_sb)
+
+    from services.email_service import verify_confirmation_token
+    result = verify_confirmation_token(token)
+
+    assert result is None
+    mock_sb.delete.assert_called()
+
+
+def test_verify_confirmation_token_valid(mocker):
+    """Token valido retorna member_id e deleta token (uso unico)."""
+    mocker.patch.dict("os.environ", {
+        "SUPABASE_URL": "http://fake", "SUPABASE_SERVICE_KEY": "key",
+    }, clear=False)
+
+    import secrets
+    token = secrets.token_urlsafe(32)
+    future_time = (datetime.now(_UTC) + timedelta(hours=20)).isoformat()
+
+    mock_sb = _make_sb_mock()
+    mock_sb.execute.return_value.data = [{
+        "id": "row-1", "member_id": "member-uuid-abc", "expires_at": future_time,
+    }]
+    mocker.patch("services.email_service._supabase", return_value=mock_sb)
+
+    from services.email_service import verify_confirmation_token
+    result = verify_confirmation_token(token)
+
+    assert result == "member-uuid-abc"
+    mock_sb.delete.assert_called()
+
+
+def test_verify_confirmation_token_empty(mocker):
+    """Token vazio retorna None sem acessar o banco."""
+    from services.email_service import verify_confirmation_token
+    result = verify_confirmation_token("")
+    assert result is None
+
+
+def test_verify_confirmation_token_too_long(mocker):
+    """Token muito longo retorna None sem acessar o banco."""
+    from services.email_service import verify_confirmation_token
+    result = verify_confirmation_token("x" * 300)
+    assert result is None
+
+
+# ============================================================
+#  Isolamento multi-tenant
+# ============================================================
+
+def test_verify_confirmation_token_member_id_from_server(mocker):
+    """
+    O member_id retornado vem SEMPRE do banco (servidor), nunca do token em si.
+    Nao ha como usar token de outro membro: o banco retorna o membro certo.
+    """
+    mocker.patch.dict("os.environ", {
+        "SUPABASE_URL": "http://fake", "SUPABASE_SERVICE_KEY": "key",
+    }, clear=False)
+
+    import secrets
+    token = secrets.token_urlsafe(32)
+    future_time = (datetime.now(_UTC) + timedelta(hours=20)).isoformat()
+
+    mock_sb = _make_sb_mock()
+    mock_sb.execute.return_value.data = [{
+        "id": "row-1", "member_id": "m-correto", "expires_at": future_time,
+    }]
+    mocker.patch("services.email_service._supabase", return_value=mock_sb)
+
+    from services.email_service import verify_confirmation_token
+    result = verify_confirmation_token(token)
+
+    assert result == "m-correto"
+
+
+# ============================================================
+#  send_confirmation_email (dev mode)
+# ============================================================
+
+def test_send_confirmation_email_dev_mode_returns_true(mocker):
+    """Em dev (ENVIRONMENT != production), retorna True sem enviar email."""
+    mocker.patch.dict("os.environ", {
+        "ENVIRONMENT": "development",
+    }, clear=False)
+
+    from services.email_service import send_confirmation_email
+    result = send_confirmation_email("user@example.com", "https://clubeusa.com/auth/email/confirm/abc")
+    assert result is True
