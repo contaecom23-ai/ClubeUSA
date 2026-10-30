@@ -155,6 +155,19 @@ def register_member(
     # 8. Gerar token JWT
     token = create_token(member_id, member.get("plan", "free"))
 
+    # 9. Enviar verificacao de email se fornecido
+    email_verification_sent = False
+    if email:
+        try:
+            email_verification_sent = _send_email_verification(
+                member_id=member_id,
+                email=email,
+                name=name,
+                language=language,
+            )
+        except Exception as e:
+            log.warning(f"Falha ao enviar verificacao de email: {e}")
+
     return {
         "action":      "registered",
         "member_id":   member_id,
@@ -164,6 +177,7 @@ def register_member(
         "referral_code": member["referral_code"],
         "group_invite": group.get("invite_link") if group else None,
         "group_name":   group.get("name") if group else None,
+        "email_verification_sent": email_verification_sent,
     }
 
 
@@ -253,7 +267,8 @@ def get_member_profile(member_id: str) -> Optional[dict]:
         "id":           m["id"],
         "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
         "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
-        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email":          _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "email_verified": m.get("email_verified", False),
         "language":     m["language"],
         "state":        m["state"],
         "plan":         m["plan"],
@@ -274,6 +289,119 @@ def update_member_categories(member_id: str, categories: list) -> dict:
     if not result.data:
         raise ValueError("Membro não encontrado.")
     return {"categories": result.data[0]["categories"]}
+
+
+# ============================================================
+#  VERIFICACAO DE EMAIL
+# ============================================================
+
+def _send_email_verification(member_id: str, email: str, name: str, language: str) -> bool:
+    """
+    Gera token de verificacao, persiste hash no banco, envia email.
+    Retorna True se o email foi enviado (ou logado em dev).
+    """
+    from services.email_service import (
+        generate_email_verification_token,
+        send_verification_email,
+    )
+    sb = _supabase()
+
+    # Invalida tokens anteriores nao usados para este membro
+    sb.table("email_verification_tokens").delete().eq(
+        "member_id", member_id
+    ).is_("used_at", "null").execute()
+
+    token_plain, token_hash, expires_at = generate_email_verification_token()
+
+    sb.table("email_verification_tokens").insert({
+        "member_id":  member_id,
+        "token_hash": token_hash,
+        "expires_at": expires_at.isoformat(),
+    }).execute()
+
+    sent = send_verification_email(
+        to_email=email,
+        token=token_plain,
+        name=name,
+        language=language,
+    )
+    _audit("email.verification_sent", member_id)
+    return sent
+
+
+def verify_email_token(token: str) -> dict:
+    """
+    Verifica token de email. Retorna {"ok": True, "member_id": ...} ou lanca ValueError.
+    """
+    from services.email_service import hash_token
+    from datetime import datetime
+
+    sb = _supabase()
+    token_hash = hash_token(token)
+
+    result = sb.table("email_verification_tokens").select(
+        "id,member_id,expires_at,used_at"
+    ).eq("token_hash", token_hash).execute()
+
+    if not result.data:
+        raise ValueError("Token invalido.")
+
+    row = result.data[0]
+
+    if row.get("used_at"):
+        raise ValueError("Token ja utilizado.")
+
+    expires_str = row["expires_at"]
+    # Supabase retorna com timezone, normalize
+    expires_at = datetime.fromisoformat(expires_str.replace("Z", "+00:00"))
+    if datetime.utcnow().replace(tzinfo=expires_at.tzinfo) > expires_at:
+        raise ValueError("Token expirado.")
+
+    member_id = row["member_id"]
+
+    # Marcar token como usado
+    sb.table("email_verification_tokens").update({
+        "used_at": datetime.utcnow().isoformat(),
+    }).eq("id", row["id"]).execute()
+
+    # Marcar email como verificado
+    sb.table("members").update({
+        "email_verified": True,
+    }).eq("id", member_id).execute()
+
+    _audit("email.verified", member_id)
+    log.info(f"Email verificado para membro {member_id}")
+
+    return {"ok": True, "member_id": member_id}
+
+
+def resend_email_verification(member_id: str) -> bool:
+    """
+    Reenvio do email de verificacao. Rate-limit: 3 tentativas por hora (verificado pelo chamador).
+    Retorna True se enviado.
+    """
+    sb = _supabase()
+
+    result = sb.table("members").select(
+        "email_enc,email_verified,name_enc,language"
+    ).eq("id", member_id).execute()
+
+    if not result.data:
+        raise ValueError("Membro nao encontrado.")
+
+    m = result.data[0]
+    if m.get("email_verified"):
+        raise ValueError("Email ja verificado.")
+
+    from utils.security import decrypt
+    email = decrypt(m["email_enc"]) if m.get("email_enc") else None
+    if not email:
+        raise ValueError("Nenhum email cadastrado.")
+
+    name = decrypt(m["name_enc"]) if m.get("name_enc") else ""
+    language = m.get("language", "pt")
+
+    return _send_email_verification(member_id, email, name, language)
 
 
 def _mask_phone(phone: str) -> str:

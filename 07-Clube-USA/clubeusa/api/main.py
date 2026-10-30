@@ -6,6 +6,8 @@
 #  POST /auth/register        — cadastro de membro
 #  POST /auth/otp/request     — solicitar OTP por WhatsApp
 #  POST /auth/otp/verify      — verificar OTP e receber JWT
+#  GET  /auth/email/verify    — confirmar email via token (publica)
+#  POST /auth/email/resend    — reenviar email de verificacao (autenticada)
 #  GET  /member/profile       — perfil do membro autenticado
 #  GET  /member/deals         — deals da semana por categoria
 #  GET  /member/referral      — link e stats de indicacao
@@ -391,6 +393,48 @@ async def verify_otp(body: OTPVerify):
 
     token = create_token(member["id"], member["plan"])
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
+
+
+# ============================================================
+#  ROTAS — EMAIL VERIFICATION (Fase 0.1)
+# ============================================================
+
+@app.get("/auth/email/verify")
+async def verify_email(token: str):
+    """
+    Confirma email via token recebido por email.
+    Rota publica — nao exige JWT.
+    """
+    if not token or len(token) > 200:
+        raise HTTPException(status_code=400, detail="Token invalido.")
+    try:
+        from services.member_service import verify_email_token
+        result = verify_email_token(token)
+        return {"ok": True, "message": "Email confirmado com sucesso!"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/auth/email/resend")
+async def resend_email_verification(
+    request: Request,
+    member: dict = Depends(get_current_member),
+):
+    """
+    Reenvio do email de verificacao. Autenticado.
+    Rate limit extra: 3 reenvios por hora por membro.
+    """
+    from utils.security import check_rate_limit
+    member_id = member["sub"]
+    if not check_rate_limit(f"email_resend:{member_id}", max_req=3, window_sec=3600):
+        raise HTTPException(status_code=429, detail="Limite de reenvios atingido. Tente em 1 hora.")
+
+    try:
+        from services.member_service import resend_email_verification
+        sent = resend_email_verification(member_id)
+        return {"ok": True, "sent": sent}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ============================================================
