@@ -21,6 +21,9 @@
 #  GET  /alerts              — listar alertas ativos (plano pago)
 #  DELETE /alerts/{id}       — cancelar alerta (plano pago)
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
+#  POST /auth/email/send-confirmation — enviar link de confirmacao de email (autenticado)
+#  GET  /auth/email/confirm/{token}   — confirmar email via link (publico)
+#  PATCH /member/email                — atualizar email do membro (autenticado)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
 #  GET  /admin/members           — lista membros (admin)
@@ -52,6 +55,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.email_confirmation import router as email_confirmation_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -83,6 +87,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(email_confirmation_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -427,6 +432,50 @@ async def update_profile_categories(body: UpdateCategoriesRequest, member: dict 
         return update_member_categories(member["sub"], body.categories)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+class UpdateEmailRequest(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_field(cls, v):
+        from utils.security import validate_email
+        try:
+            return validate_email(v)
+        except ValueError:
+            raise ValueError("Email invalido.")
+
+
+@app.patch("/member/email", status_code=200)
+async def update_member_email(
+    body: UpdateEmailRequest,
+    member: dict = Depends(get_current_member),
+):
+    """
+    Atualiza ou adiciona email ao perfil do membro.
+    Após atualizar, chame POST /auth/email/send para confirmar.
+    Nota: alterar o email redefine email_confirmed para FALSE.
+    """
+    from supabase import create_client
+    from utils.security import hash_pii, encrypt, validate_email
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+
+    email_hash = hash_pii(body.email)
+
+    # Verifica se email já está em uso por outro membro
+    existing = sb.table("members").select("id").eq("email_hash", email_hash).execute()
+    if existing.data and existing.data[0]["id"] != member["sub"]:
+        raise HTTPException(status_code=409, detail="Email ja cadastrado por outro membro.")
+
+    sb.table("members").update({
+        "email_hash":      email_hash,
+        "email_enc":       encrypt(body.email),
+        "email_confirmed": False,
+    }).eq("id", member["sub"]).execute()
+
+    return {"message": "Email atualizado. Confirme seu email via POST /auth/email/send."}
 
 
 @app.get("/member/deals")
