@@ -271,11 +271,12 @@ def get_member_profile(member_id: str) -> Optional[dict]:
         "points":       m["points"],
         "level":        m["level"],
         "categories":   m["categories"],
-        "referral_code": m["referral_code"],
-        "referral_count": m["referral_count"],
-        "total_clicks": m["total_clicks"],
-        "created_at":   m["created_at"],
-        "vip_expires_at": m.get("vip_expires_at"),
+        "referral_code":   m["referral_code"],
+        "referral_count":  m["referral_count"],
+        "total_clicks":    m["total_clicks"],
+        "email_confirmed": m.get("email_confirmed", False),
+        "created_at":      m["created_at"],
+        "vip_expires_at":  m.get("vip_expires_at"),
     }
 
 
