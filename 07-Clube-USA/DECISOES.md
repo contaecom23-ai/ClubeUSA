@@ -27,8 +27,41 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
-*(nenhuma ainda — o Claude preencherá aqui conforme avançar)*
+---
+
+### [2026-10-30] Provedor de email para confirmação de cadastro
+
+**Contexto:**
+A Fase 0.1 adicionou fluxo de confirmação de email. A infraestrutura está pronta (`utils/email.py`) com suporte a Resend, SMTP genérico e modo dev (log). Em prod, o `EMAIL_PROVIDER` precisa ser configurado — sem ele, os emails NÃO são enviados.
+
+**Pergunta:**
+Qual provedor de email usar para envio transacional (confirmação de cadastro, futuramente alertas de preço)?
+
+**Opções:**
+
+- **Resend** (`EMAIL_PROVIDER=resend`, variável `RESEND_API_KEY`)
+  - Pros: API simples, free tier 3.000 emails/mês, excelente deliverability, muito developer-friendly
+  - Contras: serviço externo pago a partir de escala ($20/mês após free tier)
+  - Recomendado para começar
+
+- **Amazon SES** (`EMAIL_PROVIDER=smtp` + credenciais SES)
+  - Pros: muito barato em escala ($0,10/1.000 emails), boa deliverability
+  - Contras: setup mais complexo (verificar domínio, sair do sandbox), custo incremental, requer conta AWS
+
+- **SendGrid**
+  - Pros: free tier 100/dia, robusto
+  - Contras: free tier baixo, pricing cresce rápido
+
+**Recomendação:** Resend para os primeiros 1.000 usuários. Free tier suficiente para validação do produto. Migrar para SES quando escalar (>3k emails/mês).
+
+**Ação necessária pelo dono:**
+1. Criar conta em resend.com
+2. Verificar domínio clubeusa.com
+3. Criar API key
+4. Adicionar no Render: `EMAIL_PROVIDER=resend`, `RESEND_API_KEY=re_...`, `EMAIL_FROM=Clube USA <noreply@clubeusa.com>`
+
+**Status:** PENDENTE
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-10-30*
