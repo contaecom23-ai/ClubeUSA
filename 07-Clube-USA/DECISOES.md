@@ -25,6 +25,32 @@ Formato de cada entrada:
 
 ---
 
+## BLOQUEIO CRITICO — ACAO NECESSARIA DO DONO [2026-10-30]
+
+**Situacao:** Ha 30+ PRs abertos no repositorio, NENHUM foi merged em main ate hoje.
+O builder autonomo continua criando PRs novos a cada rodada, mas como nenhum entra em main,
+cada sessao re-implementa as mesmas features. Fase 0.1 (email confirmation) aparece em
+pelo menos 5 PRs diferentes: #148, #147, #115, #106, #75. Isso e desperdicio de recursos.
+
+**Acao imediata recomendada (escolha UMA):**
+1. MERGEAR os PRs mais limpos (veja abaixo), ou
+2. FECHAR os PRs duplicados e manter so 1 de cada feature, ou
+3. INSTRUIR o builder a parar de criar PRs ate que o dono revise — adicionar essa instrucao ao prompt do scheduler
+
+**PRs prioritarios para review (top 5, mais recentes e limpos):**
+- PR #148 — `feat/fase-0.1-email-confirm` — confirmacao de email (IMPLEMENTAR PRIMEIRO)
+- PR #117 — `feat/fase-0.2-referral-link-rastreavel` — referral URL /i/{code}
+- PR #116 — `feat/fase-1.3-influencer-tiers` — tracking de influenciadores
+- PR #113 — `feat/fase-1.1-promocoes-comunidade` — submit de promocoes
+- PR #109 — `feat/fase-0.3-analytics-growth` — analytics de crescimento
+
+**O que o builder NAO consegue fazer sozinho:** mergear PRs, deployar em producao,
+criar contas em servicos externos (SMTP, Stripe live), aprovar gastos.
+
+**Status: PENDENTE — requer acao do dono**
+
+---
+
 ## Decisões Pendentes
 
 ### [2026-09-07 / 2026-10-26] Provedor de email transacional para confirmação de conta
