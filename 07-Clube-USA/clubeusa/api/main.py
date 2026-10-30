@@ -880,6 +880,40 @@ async def health():
 
 
 # ============================================================
+#  ROTAS — CONFIRMAÇÃO DE EMAIL (Fase 0.1)
+# ============================================================
+
+@app.post("/auth/email/confirm-request", status_code=202)
+async def email_confirm_request(member: dict = Depends(get_current_member)):
+    """
+    Solicita (re)envio do link de confirmação de email.
+    Retorna 202 mesmo se o membro não tiver email, para não vazar informação.
+    """
+    from services.email_confirm_service import request_email_confirmation
+    try:
+        request_email_confirmation(member["sub"])
+    except ValueError:
+        pass  # membro não encontrado ou sem email — silencioso
+    except Exception as e:
+        log.error(f"Erro ao solicitar confirmação de email: {e}")
+    return {"message": "Se o email estiver cadastrado, um link de confirmação foi enviado."}
+
+
+@app.get("/auth/email/confirm")
+async def email_confirm(token: str):
+    """
+    Confirma email via link enviado por email.
+    Rota pública — sem autenticação (usuário clica no link).
+    """
+    from services.email_confirm_service import verify_email_confirmation
+    try:
+        result = verify_email_confirmation(token)
+        return {"ok": True, "message": "Email confirmado com sucesso!"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============================================================
 #  ROTAS — ALERTAS DE PRECO
 # ============================================================
 
