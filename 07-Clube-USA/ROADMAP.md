@@ -66,4 +66,10 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+---
+
+## STATUS ATUAL (2026-10-31)
+
+**BLOQUEIO:** `main` está na versão de junho/2026. Há 145 branches remotas com código funcional para as Fases 0–2 implementado — mas NENHUM foi mergeado. Ver `DECISOES.md` para o plano de desbloqueio.
+
+*Atualizado em: 2026-10-31*
