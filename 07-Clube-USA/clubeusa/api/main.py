@@ -6,7 +6,11 @@
 #  POST /auth/register        — cadastro de membro
 #  POST /auth/otp/request     — solicitar OTP por WhatsApp
 #  POST /auth/otp/verify      — verificar OTP e receber JWT
+#  POST /auth/email/verify-request — solicitar confirmação de email (auth)
+#  POST /auth/email/verify    — confirmar token de email (público)
 #  GET  /member/profile       — perfil do membro autenticado
+#  PATCH /member/profile      — atualizar categorias
+#  PATCH /member/profile/basic — atualizar nome e estado
 #  GET  /member/deals         — deals da semana por categoria
 #  GET  /member/referral      — link e stats de indicacao
 #  POST /member/click         — registrar clique em deal
@@ -52,6 +56,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.auth_email import router as auth_email_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -83,6 +88,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(auth_email_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -107,7 +113,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_CORS_ORIGINS,
     allow_credentials=_CORS_ORIGINS != ["*"],  # browser rejects credentials=true with wildcard origin
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "DELETE", "PATCH"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -248,6 +254,42 @@ class StatusUpdate(BaseModel):
     def validate_status(cls, v):
         if v not in ("active", "inactive", "banned"):
             raise ValueError("Status inválido. Use: active, inactive, banned.")
+        return v
+
+
+class UpdateCategoriesRequest(BaseModel):
+    categories: list[str]
+
+    @field_validator("categories")
+    @classmethod
+    def validate_categories(cls, v):
+        valid = {"all","electronics","kitchen","baby","fitness",
+                 "beauty","tools","pets","fashion","automotive","books"}
+        cleaned = [c for c in v if c in valid]
+        return cleaned or ["all"]
+
+
+class UpdateProfileBasicRequest(BaseModel):
+    """Atualiza nome e estado do membro (campos não-PII sensível)."""
+    name:  Optional[str] = None
+    state: Optional[str] = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v):
+        if v is not None:
+            from utils.security import sanitize
+            v = sanitize(v.strip(), 80)
+            if not v:
+                raise ValueError("Nome não pode ser vazio.")
+        return v
+
+    @field_validator("state")
+    @classmethod
+    def validate_state(cls, v):
+        if v is not None:
+            from utils.security import sanitize
+            v = sanitize(v.strip(), 50)
         return v
 
 
@@ -407,18 +449,6 @@ async def get_profile(member: dict = Depends(get_current_member)):
     return profile
 
 
-class UpdateCategoriesRequest(BaseModel):
-    categories: list[str]
-
-    @field_validator("categories")
-    @classmethod
-    def validate_categories(cls, v):
-        valid = {"all","electronics","kitchen","baby","fitness",
-                 "beauty","tools","pets","fashion","automotive","books"}
-        cleaned = [c for c in v if c in valid]
-        return cleaned or ["all"]
-
-
 @app.patch("/member/profile")
 async def update_profile_categories(body: UpdateCategoriesRequest, member: dict = Depends(get_current_member)):
     """Atualiza os nichos (categorias) de interesse do membro."""
@@ -427,6 +457,30 @@ async def update_profile_categories(body: UpdateCategoriesRequest, member: dict 
         return update_member_categories(member["sub"], body.categories)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.patch("/member/profile/basic")
+async def update_profile_basic(
+    body: UpdateProfileBasicRequest,
+    member: dict = Depends(get_current_member),
+):
+    """Atualiza nome e estado do membro autenticado."""
+    from utils.security import encrypt
+    from supabase import create_client
+
+    updates: dict = {}
+    if body.name is not None:
+        updates["name_enc"] = encrypt(body.name)
+    if body.state is not None:
+        updates["state"] = body.state
+    if not updates:
+        raise HTTPException(status_code=422, detail="Nenhum campo para atualizar.")
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("members").update(updates).eq("id", member["sub"]).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Membro não encontrado.")
+    return {"updated": True}
 
 
 @app.get("/member/deals")
