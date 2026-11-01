@@ -7,6 +7,13 @@
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
 - [ ] **0.1** Cadastro + perfil mínimo + email confirmado
+  - PR aberto: `fase-0.1-email-confirm`
+  - Implementado: migração DB (email_confirmed + email_verification_tokens),
+    serviço de confirmação por email (SendGrid/SMTP), endpoints
+    POST /auth/email/verify-request e POST /auth/email/verify,
+    PATCH /member/profile/basic (nome/estado), email_confirmed no perfil,
+    testes unitários completos.
+  - Pendente aprovação e merge do dono + configurar EMAIL_PROVIDER em produção (ver DECISOES.md).
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
@@ -66,4 +73,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-11-01*
