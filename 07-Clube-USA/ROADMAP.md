@@ -66,4 +66,12 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+---
+
+## ESTADO REAL (2026-11-03)
+
+> ⚠️ Todas as fases abaixo têm implementações em PRs abertos, mas nenhum foi mergeado na `main`.
+> O código na `main` ainda reflete o estado de junho/2026.
+> Veja **`MERGE_GUIDE.md`** para desbloquear.
+
+*Atualizado em: 2026-11-03*
