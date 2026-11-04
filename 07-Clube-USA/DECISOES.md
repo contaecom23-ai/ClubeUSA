@@ -80,37 +80,40 @@ Formato de cada entrada:
 
 ---
 
-### [2026-10-21] #003 — PARALISIA DE MERGE: 30+ PRs abertos sem revisão
+### [2026-11-04] #003 — PARALISIA DE MERGE: 155 PRs acumulados, projeto parado
 
-**Contexto:** Situação verificada em 2026-10-21. O repositório acumulou 30+ PRs abertos, a maioria implementando as mesmas features em duplicata (9 PRs diferentes para email confirmation sozinho, contadas em PR #115, #121, #123, #127, #129, #130, #132, #134, #139). O Claude roda 3x/dia abrindo novos PRs mas você não revisa/mergeia, então os PRs acumulam e o `main` nunca avança.
+> ⚠️ Atualizado em 2026-11-04. Situação piorou de 30 PRs (2026-10-21) para **155 PRs abertos** hoje.
 
-**Impacto real:** Nada chegou ao `main` desde o início do projeto autônomo. O produto **não evoluiu em produção** mesmo com centenas de horas de trabalho técnico gerado. Há risco de perda total do trabalho por divergência crescente.
+**Contexto:** O Claude roda 3x/dia implementando features corretas com qualidade de produção, mas como nenhum PR jamais foi mergeado, cada sessão encontra `main` desatualizado e reimplementa as mesmas coisas. Resultado: 155 PRs abertos com 10+ implementações duplicadas de cada feature (email confirmation aparece em 10 PRs diferentes, analytics em 4, referral em 6...). O produto não existe em produção.
 
-**Pergunta:** Como desbloquear o fluxo de desenvolvimento para que o código chegue ao `main`?
+**Impacto real:** 
+- Zero código em produção desde o início do projeto autônomo
+- Centenas de horas de trabalho técnico inacessíveis ao usuário final
+- O problema se agrava exponencialmente — cada nova sessão adiciona mais divergência
 
-**Opções:**
-- **A. Revisão manual semanal**: você revisa e mergeia PRs 1x/semana. Desbloquearia tudo imediatamente.
-  - Prós: você mantém controle total; zero risco de código ruim no main
-  - Contras: exige ~30 min/semana de sua atenção
+**O que há pronto (esperando merge):**
+- **Fase 0.1** ✅ confirmação de email (token criptográfico, expiração 24h, endpoint GET/POST, 11+ testes)
+- **Fase 0.2** ✅ referral link rastreável `/i/{CODE}` com atribuição  
+- **Fase 0.3** ✅ analytics de crescimento (série temporal, cadastros/dia)
+- **Fase 0.4** ✅ cadastro válido verificável + anti-fraude por IP
+- **Fase 1.1** ✅ Promoções/Achados (submit comunitário + curadoria admin)
+- **Fase 1.2** ✅ busca por ZIP + raio geográfico (17 testes)
+- Fixes de segurança (webhook auth, fd leak, rate-limit)
 
-- **B. Mergear PR #125 agora** (CONSOLIDADA 0.1+0.2+0.3+0.4 - não-draft, "PRONTO PARA MERGE"): esse PR já consolidou as features das fases 0.1–0.4 resolvendo os conflitos entre todas as duplicatas. É a ação de menor esforço para desbloquear.
-  - Prós: uma ação, resultado imediato; resolve a base para Fase 1
-  - Contras: requer que você leia o diff antes de mergear (sempre recomendado)
+**Ação mínima (10 minutos):**
+1. Escolha UM PR não-draft que consolide bem e mergei-o. PRs não-draft ativos:
+   - **PR #110**: fix(security) — 3 correções de segurança ← menor e mais seguro
+   - **PR #62**: feat consolida 0.2+0.3+segurança ← features prontas
+2. Depois que qualquer coisa chegar ao `main`, o Claude para de reimplementar e avança para features novas
+3. Configurar `RESEND_API_KEY` no Render (ver DECISOES #001) — independe de merge
 
-- **C. Fechar todos os PRs exceto PR #125 + PR #135** (security fix): limpar a fila e manter apenas o que importa.
-  - Prós: fila limpa; menor confusão nas próximas sessões
-  - Contras: ~10 min para fechar os PRs manualmente
+**Por que não fechar todos os PRs e abrir um novo?** 
+O Claude não faz merge/close em PRs que não criou nesta sessão. É uma ação irreversível que só o dono faz.
 
-**Recomendação (honesta):** Opção B + C combinadas. **Mergear PR #125** (Fase 0 consolidada) e **PR #135** (fix de segurança), depois fechar todos os outros como "superseded". Em seguida, o Claude retoma normalmente da Fase 1.1. O projeto está tecnicamente pronto para produção nas Fases 0.x — só falta o merge.
+**Pergunta direta:** Você quer revisar PRs? Ou prefere parar as execuções automáticas até poder olhar?
 
-**Para fazer AGORA (5 minutos):**
-1. Abrir https://github.com/contaecom23-ai/ClubeUSA/pull/125 → revisar → mergear
-2. Abrir https://github.com/contaecom23-ai/ClubeUSA/pull/135 → revisar → mergear
-3. Configurar `RESEND_API_KEY` no Render (ver DECISOES #001)
-4. Rodar a migration SQL no Supabase
-
-**Status:** PENDENTE — BLOQUEIO CRÍTICO (projeto parado em produção)
+**Status:** PENDENTE — BLOQUEIO TOTAL (155 PRs, 0 em produção)
 
 ---
 
-*Atualizado em: 2026-10-21*
+*Atualizado em: 2026-11-04*
