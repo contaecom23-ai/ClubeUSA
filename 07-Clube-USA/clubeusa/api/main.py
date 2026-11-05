@@ -124,6 +124,14 @@ async def security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"]         = "1; mode=block"
     response.headers["Referrer-Policy"]           = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"]        = "geolocation=(), microphone=()"
+    response.headers["Content-Security-Policy"]   = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none';"
+    )
     return response
 
 
@@ -292,7 +300,7 @@ def _otp_verify(phone_hash: str, otp: str) -> tuple:
         sb.table("otp_codes").delete().eq("phone_hash", phone_hash).execute()
         return False, "Muitas tentativas. Solicite novo codigo."
 
-    if record["otp"] != otp:
+    if not hmac.compare_digest(record["otp"], otp):
         sb.table("otp_codes").update({"attempts": record["attempts"] + 1}).eq(
             "phone_hash", phone_hash
         ).execute()
@@ -355,7 +363,8 @@ async def request_otp(body: OTPRequest, request: Request):
     if os.environ.get("ENVIRONMENT") == "production":
         _send_otp_whatsapp(phone, otp)
     else:
-        log.info(f"[DEV] OTP para {phone}: {otp}")
+        # Nunca logar phone (PII) nem OTP em texto claro
+        log.info(f"[DEV] OTP gerado para hash={phone_hash[:8]}...")
 
     return {"message": "Codigo enviado para seu WhatsApp.", "expires_in": 600}
 
