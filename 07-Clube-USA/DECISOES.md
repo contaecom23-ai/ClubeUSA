@@ -27,8 +27,49 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
-*(nenhuma ainda — o Claude preencherá aqui conforme avançar)*
+---
+
+### [2026-11-06] Serviço de email para verificação de conta
+
+**Contexto:** A fase 0.1 (email confirmado) está implementada. O backend suporta envio via SMTP genérico. Em dev, o link de verificação é logado no console. Em produção, precisa de um provedor SMTP real. Sem isso, nenhum usuário consegue verificar o email.
+
+**Pergunta:** Qual provedor de email usar para o Clube USA?
+
+**Opções:**
+
+- **Opção A — Resend (resend.com)**
+  - Prós: simples, $0 até 3.000 emails/mês, SDK moderno, excelente deliverability, dashboard limpo
+  - Contras: serviço externo; requer domínio verificado (SPF/DKIM no clubeusa.com)
+  - Custo estimado: $0 até ~3k membros; $20/mês até 50k/mês
+
+- **Opção B — SendGrid (sendgrid.com)**
+  - Prós: líder de mercado, $0 até 100 emails/dia (free), $20/mês 100k/mês
+  - Contras: painel mais complexo, free tier muito restrito para crescimento inicial
+
+- **Opção C — AWS SES**
+  - Prós: $0,10/1.000 emails, escala infinita, confiável
+  - Contras: requer conta AWS, configuração mais complexa, sandbox inicial (pedir saída)
+
+- **Opção D — Zoho Mail / domínio próprio (SMTP)**
+  - Prós: já pode ter no plano do domínio
+  - Contras: deliverability inferior, não recomendado para transacional
+
+**Recomendação do Claude:** **Opção A (Resend)** para começar — grátis até 3k emails/mês, que cobre bem os primeiros 1.000 cadastros. Migrar para SES quando volume justificar. Requer configurar SPF/DKIM no DNS do clubeusa.com.
+
+**O que você precisa fazer:**
+1. Criar conta em resend.com
+2. Verificar domínio clubeusa.com (adicionar registros DNS)
+3. Adicionar no .env de produção:
+   ```
+   SMTP_HOST=smtp.resend.com
+   SMTP_PORT=587
+   SMTP_USER=resend
+   SMTP_PASS=<sua-api-key>
+   EMAIL_FROM=noreply@clubeusa.com
+   ```
+
+**Status:** PENDENTE
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-11-06*
