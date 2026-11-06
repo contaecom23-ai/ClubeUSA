@@ -6,11 +6,13 @@
 #  POST /auth/register        — cadastro de membro
 #  POST /auth/otp/request     — solicitar OTP por WhatsApp
 #  POST /auth/otp/verify      — verificar OTP e receber JWT
+#  GET  /auth/confirm-email/{token} — confirmar email via link (publico)
 #  GET  /member/profile       — perfil do membro autenticado
 #  GET  /member/deals         — deals da semana por categoria
 #  GET  /member/referral      — link e stats de indicacao
 #  POST /member/click         — registrar clique em deal
 #  GET  /member/leaderboard   — ranking de pontos
+#  POST /member/resend-confirmation — reenviar email de confirmacao
 #  POST /billing/subscribe    — assinar VIP via Stripe
 #  POST /billing/portal       — portal de gestao da assinatura
 #  POST /billing/webhook      — webhook Stripe (pagamento confirmado)
@@ -394,6 +396,26 @@ async def verify_otp(body: OTPVerify):
 
 
 # ============================================================
+#  ROTAS — CONFIRMAÇÃO DE EMAIL  (pública — sem auth)
+# ============================================================
+
+@app.get("/auth/confirm-email/{token}")
+async def confirm_email(token: str):
+    """
+    Confirma o email do membro via token recebido por email.
+    Rota pública — sem autenticação (o token É a credencial).
+    Retorna resposta genérica para não vazar existência de tokens.
+    """
+    from services.member_service import confirm_email as _confirm
+    result = _confirm(token)
+    if result.get("confirmed"):
+        return {"message": "Email confirmado com sucesso!"}
+    if result.get("expired"):
+        raise HTTPException(status_code=410, detail="Link expirado. Solicite um novo email de confirmação.")
+    raise HTTPException(status_code=400, detail="Link inválido ou já utilizado.")
+
+
+# ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
 
@@ -417,6 +439,24 @@ class UpdateCategoriesRequest(BaseModel):
                  "beauty","tools","pets","fashion","automotive","books"}
         cleaned = [c for c in v if c in valid]
         return cleaned or ["all"]
+
+
+@app.post("/member/resend-confirmation")
+async def resend_confirmation(member: dict = Depends(get_current_member)):
+    """Reenvia o email de confirmação ao membro autenticado."""
+    from services.member_service import resend_confirmation as _resend
+    result = _resend(member["sub"])
+    if result.get("sent"):
+        return {"message": "Email de confirmação reenviado."}
+    reason = result.get("reason", "unknown")
+    if reason == "already_confirmed":
+        return {"message": "Email já confirmado."}
+    if reason == "no_email":
+        raise HTTPException(status_code=400, detail="Nenhum email cadastrado.")
+    if reason == "cooldown":
+        retry_in = result.get("retry_in_seconds", 300)
+        raise HTTPException(status_code=429, detail=f"Aguarde {retry_in}s antes de reenviar.")
+    raise HTTPException(status_code=500, detail="Erro ao reenviar. Tente novamente.")
 
 
 @app.patch("/member/profile")
