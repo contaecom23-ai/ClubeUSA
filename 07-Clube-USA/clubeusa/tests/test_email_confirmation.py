@@ -1,8 +1,26 @@
 # tests/test_email_confirmation.py
 # FASE 0.1 — testes de confirmação de email
 
+import sys
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
+
+# cryptography nao disponivel neste ambiente de CI — mock no nivel do modulo
+# antes de qualquer import de services.member_service
+_mock_sec = MagicMock()
+_mock_sec.encrypt.side_effect = lambda x: f"enc({x})"
+_mock_sec.decrypt.side_effect = lambda x: x.replace("enc(", "").rstrip(")")
+_mock_sec.hash_pii.return_value = "hashed"
+_mock_sec.hash_ip.return_value = "hashed_ip"
+_mock_sec.validate_phone.side_effect = lambda x: x
+_mock_sec.validate_email.side_effect = lambda x: x
+_mock_sec.sanitize.side_effect = lambda x, *_: x
+_mock_sec.generate_referral_code.return_value = "ABCD1234"
+_mock_sec.generate_utm.return_value = "utm123"
+_mock_sec.create_token.return_value = "jwt-token"
+sys.modules.setdefault("utils.security", _mock_sec)
+sys.modules.setdefault("supabase", MagicMock())
+sys.modules.setdefault("services.group_manager", MagicMock())
 
 
 # ---------------------------------------------------------------------------

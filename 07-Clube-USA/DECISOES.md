@@ -47,4 +47,4 @@ Formato de cada entrada:
 
 ---
 
-*Atualizado em: 2026-10-24*
+*Atualizado em: 2026-11-06*
