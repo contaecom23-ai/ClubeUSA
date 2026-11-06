@@ -66,4 +66,12 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+---
+
+## Estado Real (2026-11-06)
+
+**Atenção:** As fases abaixo refletem o que está em **main** (produção).
+158 PRs estão abertos com implementações das fases 0.1–0.4 e 1.x, mas nenhum foi merged.
+Veja DECISOES.md D-001 para ação imediata.
+
+*Atualizado em: 2026-11-06*
