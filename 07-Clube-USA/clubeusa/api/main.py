@@ -329,10 +329,12 @@ async def request_email_verification(member: dict = Depends(get_current_member))
     """
     Envia link de confirmacao de email para o email cadastrado do membro.
     Requer autenticacao. O membro deve ter um email no perfil.
+    Alias de /auth/email/resend para compatibilidade.
     """
-    from services.email_service import request_email_verification as svc_request
+    from services.member_service import resend_email_confirmation
     try:
-        return svc_request(member["sub"])
+        resend_email_confirmation(member["sub"])
+        return {"message": "Link de confirmação enviado.", "expires_in_hours": 24}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -342,17 +344,16 @@ async def verify_email(token: str):
     """
     Confirma email via token (link recebido por email).
     Rota publica — o token e a autenticacao.
+    Alias de /auth/email/confirm para compatibilidade com links antigos.
     """
-    from services.email_service import verify_email_token
+    from services.member_service import confirm_member_email
+    from fastapi.responses import RedirectResponse
     try:
-        result = verify_email_token(token)
-        # Redireciona para o painel com flag de sucesso
-        from fastapi.responses import RedirectResponse
+        confirm_member_email(token)
         return RedirectResponse(url=f"{APP_URL}/painel?email_confirmed=1", status_code=302)
     except ValueError as e:
-        from fastapi.responses import RedirectResponse
         return RedirectResponse(
-            url=f"{APP_URL}/painel?email_error=1&msg={str(e)}", status_code=302
+            url=f"{APP_URL}/painel?email_error=1", status_code=302
         )
 
 
