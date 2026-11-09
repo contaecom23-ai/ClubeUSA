@@ -184,6 +184,9 @@ class OTPVerify(BaseModel):
     phone: str
     otp:   str
 
+class EmailConfirmResendRequest(BaseModel):
+    email: str
+
 class ClickRequest(BaseModel):
     deal_id: str
 
@@ -391,6 +394,102 @@ async def verify_otp(body: OTPVerify):
 
     token = create_token(member["id"], member["plan"])
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
+
+
+# ============================================================
+#  ROTAS — EMAIL CONFIRMATION (Fase 0.1)
+# ============================================================
+
+@app.post("/auth/email/confirm-request")
+async def resend_email_confirmation(
+    body: EmailConfirmResendRequest,
+    member: dict = Depends(get_current_member),
+):
+    """
+    Reenvia email de confirmacao para o membro autenticado.
+    Rate-limitado pelo middleware global (/auth prefix).
+    """
+    from utils.security import validate_email, decrypt, encrypt, hash_pii
+    from services.email_service import send_email_confirmation
+    import secrets
+    from datetime import datetime, timedelta
+
+    try:
+        email = validate_email(body.email)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Email invalido.")
+
+    sb_client = __import__("supabase", fromlist=["create_client"]).create_client(
+        os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"]
+    )
+    result = sb_client.table("members").select(
+        "id,name_enc,language,email_confirmed_at"
+    ).eq("id", member["sub"]).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=404)
+
+    m = result.data[0]
+
+    if m.get("email_confirmed_at"):
+        return {"message": "Email ja confirmado.", "already_confirmed": True}
+
+    confirm_token   = secrets.token_urlsafe(32)
+    confirm_expires = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+
+    sb_client.table("members").update({
+        "email_hash":            hash_pii(email),
+        "email_enc":             encrypt(email),
+        "email_confirm_token":   confirm_token,
+        "email_confirm_expires": confirm_expires,
+    }).eq("id", member["sub"]).execute()
+
+    name = decrypt(m["name_enc"]) if m.get("name_enc") else ""
+    sent = send_email_confirmation(
+        to_email=email,
+        member_name=name,
+        token=confirm_token,
+        language=m.get("language", "pt"),
+    )
+
+    if not sent:
+        raise HTTPException(status_code=503, detail="Falha ao enviar email. Tente novamente.")
+
+    return {"message": "Email de confirmacao enviado.", "expires_in": 86400}
+
+
+@app.get("/auth/email/confirm/{token}", include_in_schema=False)
+async def confirm_email(token: str):
+    """
+    Verifica token de confirmacao de email e redireciona o usuario.
+    Acesso publico (o link e enviado por email, sem autenticacao previa).
+    """
+    if not token or len(token) > 128:
+        raise HTTPException(status_code=400, detail="Token invalido.")
+
+    from supabase import create_client
+    sb_client = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+
+    rpc_result = sb_client.rpc("confirm_member_email", {"p_token": token}).execute()
+
+    if not rpc_result.data or not rpc_result.data[0].get("success"):
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(
+            content=_email_confirm_error_html(),
+            status_code=400,
+        )
+
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"{APP_URL}/?email_confirmed=1", status_code=302)
+
+
+def _email_confirm_error_html() -> str:
+    return """<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Link expirado — Clube USA</title></head>
+<body style="font-family:Arial,sans-serif;text-align:center;padding:60px 20px;">
+  <h2 style="color:#C0392B;">Link inválido ou expirado</h2>
+  <p>Faça login em <a href="https://clubeusa.com">clubeusa.com</a> e solicite um novo link.</p>
+</body></html>"""
 
 
 # ============================================================
