@@ -1,115 +1,73 @@
 # ============================================================
-#  routers/analytics.py — Clube USA
-#  Endpoints de analytics básico (admin-only)
-#
-#  GET /admin/analytics              — overview completo
-#  GET /admin/analytics/registrations?days=30   — série temporal cadastros
-#  GET /admin/analytics/engagement?days=30      — série temporal cliques
-#  GET /admin/analytics/funnel                  — funil de conversão
-#  GET /admin/analytics/top-deals?limit=10      — top deals por cliques
-#  GET /admin/analytics/distribution            — estados + categorias
-#  GET /admin/analytics/referrals               — stats do programa de indicações
+#  api/routers/analytics.py — Clube USA
+#  Endpoints de analytics (admin-only) — Fase 0.3
 # ============================================================
 
-import logging
-from typing import Annotated
+from fastapi import APIRouter, Depends, Query
+from deps import require_admin
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-
-log = logging.getLogger("analytics_router")
-
-router = APIRouter(prefix="/admin/analytics", tags=["analytics"])
+router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
-def _require_admin():
-    from deps import require_admin
-    return require_admin
-
-
-@router.get("")
-async def analytics_overview(admin=Depends(_require_admin())):
-    """Snapshot ampliado com funil, engajamento e referrals."""
-    try:
-        from services.analytics_service import get_overview
-        return get_overview()
-    except Exception as e:
-        log.error("analytics_overview falhou: %s", e)
-        raise HTTPException(status_code=500, detail="Erro ao calcular analytics.")
-
-
-@router.get("/registrations")
-async def analytics_registrations(
-    days: Annotated[int, Query(ge=1, le=90)] = 30,
-    admin=Depends(_require_admin()),
+@router.get("/growth")
+async def analytics_growth(
+    days: int = Query(default=30, ge=1, le=90),
+    _=Depends(require_admin),
 ):
-    """Cadastros por dia nos últimos `days` dias (máx. 90)."""
-    try:
-        from services.analytics_service import get_registrations_by_day
-        return {"series": get_registrations_by_day(days), "days": days}
-    except Exception as e:
-        log.error("analytics_registrations falhou: %s", e)
-        raise HTTPException(status_code=500, detail="Erro ao calcular cadastros por dia.")
+    """Serie diaria de novos cadastros — [{date, registrations}]. Janela: 1-90 dias."""
+    from services.analytics_service import get_growth
+    return get_growth(days)
+
+
+@router.get("/funnel")
+async def analytics_funnel(_=Depends(require_admin)):
+    """
+    Funil de conversao:
+    cadastros → logins → email confirmado → 1° clique → VIP.
+    """
+    from services.analytics_service import get_funnel
+    return get_funnel()
 
 
 @router.get("/engagement")
 async def analytics_engagement(
-    days: Annotated[int, Query(ge=1, le=90)] = 30,
-    admin=Depends(_require_admin()),
+    days: int = Query(default=7, ge=1, le=90),
+    _=Depends(require_admin),
 ):
-    """Cliques por dia nos últimos `days` dias (máx. 90)."""
-    try:
-        from services.analytics_service import get_clicks_by_day
-        return {"series": get_clicks_by_day(days), "days": days}
-    except Exception as e:
-        log.error("analytics_engagement falhou: %s", e)
-        raise HTTPException(status_code=500, detail="Erro ao calcular engajamento por dia.")
-
-
-@router.get("/funnel")
-async def analytics_funnel(admin=Depends(_require_admin())):
-    """Funil de conversão: cadastro → email confirmado → ação → VIP."""
-    try:
-        from services.analytics_service import get_funnel
-        return get_funnel()
-    except Exception as e:
-        log.error("analytics_funnel falhou: %s", e)
-        raise HTTPException(status_code=500, detail="Erro ao calcular funil.")
-
-
-@router.get("/top-deals")
-async def analytics_top_deals(
-    limit: Annotated[int, Query(ge=1, le=50)] = 10,
-    admin=Depends(_require_admin()),
-):
-    """Top deals ordenados por número de cliques."""
-    try:
-        from services.analytics_service import get_top_deals
-        return {"deals": get_top_deals(limit), "limit": limit}
-    except Exception as e:
-        log.error("analytics_top_deals falhou: %s", e)
-        raise HTTPException(status_code=500, detail="Erro ao calcular top deals.")
-
-
-@router.get("/distribution")
-async def analytics_distribution(admin=Depends(_require_admin())):
-    """Distribuição geográfica e por categoria (sem PII)."""
-    try:
-        from services.analytics_service import get_members_by_state, get_members_by_category
-        return {
-            "by_state":    get_members_by_state(),
-            "by_category": get_members_by_category(),
-        }
-    except Exception as e:
-        log.error("analytics_distribution falhou: %s", e)
-        raise HTTPException(status_code=500, detail="Erro ao calcular distribuição.")
+    """Cliques por periodo e top 5 categorias."""
+    from services.analytics_service import get_engagement
+    return get_engagement(days)
 
 
 @router.get("/referrals")
-async def analytics_referrals(admin=Depends(_require_admin())):
-    """Estatísticas do programa de indicações."""
-    try:
-        from services.analytics_service import get_referral_stats
-        return get_referral_stats()
-    except Exception as e:
-        log.error("analytics_referrals falhou: %s", e)
-        raise HTTPException(status_code=500, detail="Erro ao calcular referrals.")
+async def analytics_referrals(_=Depends(require_admin)):
+    """Performance agregada do programa de indicacao."""
+    from services.analytics_service import get_referral_stats
+    return get_referral_stats()
+
+
+@router.get("/top-referrers")
+async def analytics_top_referrers(
+    limit: int = Query(default=10, ge=1, le=50),
+    _=Depends(require_admin),
+):
+    """Top indicadores por numero de indicacoes confirmadas."""
+    from services.analytics_service import get_top_referrers
+    return get_top_referrers(limit)
+
+
+@router.get("/geographic")
+async def analytics_geographic(_=Depends(require_admin)):
+    """Distribuicao geografica dos membros por estado (top 10)."""
+    from services.analytics_service import get_geographic_breakdown
+    return get_geographic_breakdown()
+
+
+@router.get("/overview")
+async def analytics_overview(_=Depends(require_admin)):
+    """
+    Snapshot completo: funil, crescimento 30d, top referrers,
+    engajamento 7d e distribuicao geografica.
+    """
+    from services.analytics_service import get_overview
+    return get_overview()
