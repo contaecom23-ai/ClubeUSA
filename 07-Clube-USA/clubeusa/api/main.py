@@ -394,6 +394,179 @@ async def verify_otp(body: OTPVerify):
 
 
 # ============================================================
+#  ROTAS — EMAIL VERIFICATION (Fase 0.1)
+# ============================================================
+
+@app.post("/auth/email/request")
+async def request_email_verification(member: dict = Depends(get_current_member)):
+    """
+    Envia email de verificacao para o endereco cadastrado pelo membro.
+    Requer autenticacao. Rate limit: 5 req/min (compartilhado com /auth).
+
+    Regras:
+    - Membro deve ter email cadastrado
+    - Email nao pode ja estar verificado
+    - Token unico, valido por 1h, invalidado apos uso
+    - Apenas o hash do token e armazenado no banco
+    """
+    from supabase import create_client
+    from utils.security import decrypt
+    from utils.email import hash_token, send_verification_email
+    from datetime import datetime, timedelta, timezone
+    import secrets
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    result = sb.table("members").select(
+        "email_enc,email_verified"
+    ).eq("id", member["sub"]).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Membro nao encontrado.")
+
+    m = result.data[0]
+
+    if not m.get("email_enc"):
+        raise HTTPException(
+            status_code=400,
+            detail="Nenhum email cadastrado. Atualize seu perfil com um email primeiro."
+        )
+
+    if m.get("email_verified"):
+        raise HTTPException(status_code=400, detail="Email ja confirmado.")
+
+    email = decrypt(m["email_enc"])
+
+    # Invalida tokens anteriores do mesmo membro (evita acumulo)
+    sb.table("email_verification_tokens").delete().eq("member_id", member["sub"]).execute()
+
+    # Gera token seguro — somente hash vai para o banco
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hash_token(raw_token)
+    expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+
+    sb.table("email_verification_tokens").insert({
+        "member_id":  member["sub"],
+        "token_hash": token_hash,
+        "expires_at": expires_at,
+    }).execute()
+
+    sent = send_verification_email(email, raw_token)
+    if not sent:
+        raise HTTPException(status_code=502, detail="Falha ao enviar email. Tente novamente.")
+
+    log.info(f"Email de verificacao solicitado por membro {member['sub'][:8]}...")
+    return {"message": "Email de verificacao enviado. Verifique sua caixa de entrada.", "expires_in": 3600}
+
+
+@app.get("/auth/email/verify", include_in_schema=False)
+async def verify_email_token(token: str):
+    """
+    Verifica token de email (usuario clica no link do email).
+    Rota publica — sem autenticacao.
+    Retorna pagina HTML simples (sucesso ou erro).
+    """
+    from fastapi.responses import HTMLResponse
+    from supabase import create_client
+    from utils.email import hash_token
+    from datetime import datetime, timezone
+
+    def _html_response(success: bool, message: str) -> HTMLResponse:
+        color = "#22c55e" if success else "#ef4444"
+        icon  = "&#10003;" if success else "&#10007;"
+        app_url = os.environ.get("APP_URL", "https://clubeusa.com")
+        body_text = (
+            "Seu email foi confirmado com sucesso. "
+            "Sua conta agora e um cadastro valido no Clube USA."
+            if success else
+            "O link pode ter expirado ou ja foi usado. "
+            "Solicite um novo link no seu painel."
+        )
+        button_text = "Ir para o Painel" if success else "Voltar"
+        html = (
+            "<!DOCTYPE html>"
+            '<html lang="pt-BR">'
+            "<head>"
+            '<meta charset="UTF-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            "<title>Clube USA - Verificacao de Email</title>"
+            "<style>"
+            "body{font-family:Arial,sans-serif;background:#f4f4f4;display:flex;"
+            "align-items:center;justify-content:center;min-height:100vh;margin:0}"
+            ".card{background:#fff;border-radius:12px;padding:40px 32px;max-width:420px;"
+            "text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.1)}"
+            f"h2{{color:{color};margin:0 0 16px}}"
+            "p{color:#555;line-height:1.6;margin:0 0 24px}"
+            "a{display:inline-block;background:#1a73e8;color:#fff;padding:12px 28px;"
+            "border-radius:6px;text-decoration:none;font-weight:bold}"
+            "</style>"
+            "</head>"
+            "<body>"
+            '<div class="card">'
+            f'<div style="font-size:48px">{icon}</div>'
+            f"<h2>{message}</h2>"
+            f"<p>{body_text}</p>"
+            f'<a href="{app_url}/painel">{button_text}</a>'
+            "</div>"
+            "</body>"
+            "</html>"
+        )
+        return HTMLResponse(content=html, status_code=200)
+
+    if not token:
+        return _html_response(False, "Token invalido")
+
+    sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+    token_hash = hash_token(token)
+
+    result = sb.table("email_verification_tokens").select("*").eq("token_hash", token_hash).execute()
+
+    if not result.data:
+        return _html_response(False, "Link invalido ou expirado")
+
+    record = result.data[0]
+
+    if record.get("used_at"):
+        return _html_response(False, "Link ja utilizado")
+
+    expires = datetime.fromisoformat(record["expires_at"].replace("Z", "+00:00"))
+    if expires.tzinfo is None:
+        from datetime import timezone as _tz
+        expires = expires.replace(tzinfo=_tz.utc)
+
+    if datetime.now(timezone.utc) > expires:
+        sb.table("email_verification_tokens").delete().eq("id", record["id"]).execute()
+        return _html_response(False, "Link expirado")
+
+    member_id = record["member_id"]
+
+    # Verifica que o membro ainda nao confirmou (idempotencia)
+    member_res = sb.table("members").select("email_verified").eq("id", member_id).execute()
+    if member_res.data and member_res.data[0].get("email_verified"):
+        sb.table("email_verification_tokens").delete().eq("id", record["id"]).execute()
+        return _html_response(True, "Email ja confirmado!")
+
+    # Marca token como usado e confirma email
+    sb.table("email_verification_tokens").update({
+        "used_at": datetime.now(timezone.utc).isoformat()
+    }).eq("id", record["id"]).execute()
+
+    sb.table("members").update({"email_verified": True}).eq("id", member_id).execute()
+
+    # Audit log
+    sb.table("audit_logs").insert({
+        "actor_type":  "member",
+        "actor_id":    member_id,
+        "action":      "member.email_verified",
+        "target_type": "member",
+        "target_id":   member_id,
+        "metadata":    {},
+    }).execute()
+
+    log.info(f"Email verificado para membro {member_id[:8]}...")
+    return _html_response(True, "Email confirmado!")
+
+
+# ============================================================
 #  ROTAS — MEMBRO
 # ============================================================
 
