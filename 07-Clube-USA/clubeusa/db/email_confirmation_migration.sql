@@ -1,67 +1,35 @@
 -- ============================================================
---  email_confirmation_migration.sql — Clube USA  Fase 0.1
+--  email_confirmation_migration.sql — Clube USA
+--  Adiciona confirmação de email aos membros
 --
---  Adiciona suporte a confirmacao de email nos membros:
---    - email_confirmed_at: timestamp de quando o email foi confirmado
---    - email_confirm_token: token UUID para o link de confirmacao
---    - email_confirm_expires_at: validade do token (24h)
---
---  COMO RODAR:
---    No Supabase SQL Editor, execute este script inteiro.
---    E idempotente: usa IF NOT EXISTS / ADD COLUMN IF NOT EXISTS.
+--  Aplicar via Supabase Dashboard > SQL Editor
+--  Idempotente: usa IF NOT EXISTS / ADD COLUMN IF NOT EXISTS
 -- ============================================================
 
--- Adiciona colunas novas em members (nao destrutivo — sem DROP)
+-- 1. Colunas na tabela members
 ALTER TABLE members
-    ADD COLUMN IF NOT EXISTS email_confirmed_at     TIMESTAMPTZ,
-    ADD COLUMN IF NOT EXISTS email_confirm_token    TEXT,
-    ADD COLUMN IF NOT EXISTS email_confirm_expires  TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS email_confirmed     BOOLEAN    NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS email_confirmed_at  TIMESTAMPTZ;
 
--- Index para lookup rapido do token na hora da confirmacao
-CREATE INDEX IF NOT EXISTS idx_members_confirm_token
-    ON members (email_confirm_token)
-    WHERE email_confirm_token IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_members_email_confirmed
+    ON members (email_confirmed)
+    WHERE email_confirmed = FALSE;
 
--- ============================================================
---  Funcao RPC — confirmar email via token
---  Chamada pelo backend apos validar o token.
---  Limpa o token apos uso (one-time-use).
--- ============================================================
-CREATE OR REPLACE FUNCTION confirm_member_email(p_token TEXT)
-RETURNS TABLE (member_id UUID, email_enc TEXT, success BOOLEAN) AS $$
-DECLARE
-    v_member RECORD;
-BEGIN
-    SELECT id, email_enc, email_confirmed_at, email_confirm_expires
-    INTO v_member
-    FROM members
-    WHERE email_confirm_token = p_token
-      AND deleted_at IS NULL
-    LIMIT 1;
+-- 2. Tabela de tokens de confirmação
+-- Segurança: armazena apenas o HASH do token, nunca o raw.
+-- Token raw é enviado no link de email e nunca toca o banco.
+CREATE TABLE IF NOT EXISTS email_confirmation_tokens (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    member_id   UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    token_hash  TEXT NOT NULL UNIQUE,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used_at     TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-    IF NOT FOUND THEN
-        RETURN QUERY SELECT NULL::UUID, NULL::TEXT, FALSE;
-        RETURN;
-    END IF;
+CREATE INDEX IF NOT EXISTS idx_ect_member  ON email_confirmation_tokens (member_id);
+CREATE INDEX IF NOT EXISTS idx_ect_token   ON email_confirmation_tokens (token_hash);
+CREATE INDEX IF NOT EXISTS idx_ect_expires ON email_confirmation_tokens (expires_at);
 
-    IF v_member.email_confirmed_at IS NOT NULL THEN
-        -- Ja confirmado — OK idempotente
-        RETURN QUERY SELECT v_member.id, v_member.email_enc, TRUE;
-        RETURN;
-    END IF;
-
-    IF v_member.email_confirm_expires < NOW() THEN
-        RETURN QUERY SELECT NULL::UUID, NULL::TEXT, FALSE;
-        RETURN;
-    END IF;
-
-    -- Confirma e limpa o token
-    UPDATE members
-    SET email_confirmed_at    = NOW(),
-        email_confirm_token   = NULL,
-        email_confirm_expires = NULL
-    WHERE id = v_member.id;
-
-    RETURN QUERY SELECT v_member.id, v_member.email_enc, TRUE;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Limpeza periódica de tokens expirados (sugestão: rodar via Supabase cron diariamente)
+-- DELETE FROM email_confirmation_tokens WHERE expires_at < NOW();

@@ -16,6 +16,7 @@ cryptography
 # Integracoes externas
 requests
 stripe
+sendgrid  # email transacional (requer SENDGRID_API_KEY env var)
 
 # Scanner de deals (dealscanner2)
 feedparser

@@ -6,16 +6,13 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [~] **0.1** Cadastro + perfil mínimo + email confirmado
-  - [x] DB migration: `email_confirmed_at`, `email_confirm_token`, `email_confirm_expires` em `members`
-  - [x] RPC `confirm_member_email(token)` — one-time-use, verifica expiração
-  - [x] `services/email_service.py` — Resend (3k/mês free), HTML PT+ES, dev mode sem envio real
-  - [x] `POST /auth/email/confirm-request` — reenvio de confirmação (autenticado)
-  - [x] `GET /auth/email/confirm/{token}` — link do email, redireciona ao site
-  - [x] `email_confirmed: bool` exposto no `GET /member/profile`
-  - [x] Testes unitários em `tests/test_email_confirmation.py`
-  - [ ] **BLOQUEADO**: precisa de `RESEND_API_KEY` + domínio verificado (ver DECISOES.md)
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Cadastro por telefone + OTP WhatsApp: pronto
+  - Perfil mínimo (nome, idioma, estado, categorias): pronto
+  - Email confirmado: infraestrutura pronta (migration `db/email_confirmation_migration.sql` + endpoints `POST /auth/email/send-confirmation` e `GET /auth/email/confirm/{token}` + auto-disparo no cadastro). **Requer aplicar a migration no Supabase (ver DECISOES.md) e configurar provedor SMTP/SendGrid em produção.**
+- [x] **0.2** Sistema de REFERRAL rastreável — link único por pessoa + atribuição de qual cadastro veio de qual link
+  - `referral_code` único por membro; link `?ref=CODE`; tabela `referrals` rastreia cada indicação; pontuação automática; trial VIP após 3 indicações. Endpoint `GET /member/referral` retorna link + stats.
+  - Nota: formato `/i/nome` (vanity URL) é UX plus — pode ser feito em iteração futura sem urgência.
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
@@ -74,4 +71,4 @@
 
 ---
 
-*Atualizado em: 2026-11-09*
+*Atualizado em: 2026-10-26*

@@ -29,34 +29,40 @@ Formato de cada entrada:
 
 ---
 
-### [2026-11-09] Provedor de email transacional para confirmação de conta (Fase 0.1)
+### [2026-09-07 / 2026-11-09] Provedor de email transacional para confirmação de conta
 
-**Contexto:**
-O backend de confirmação de email (Fase 0.1) está implementado e pronto. O único bloqueio
-para colocar em produção é a escolha e configuração do provedor de email. Sem isso,
-o sistema funciona mas não envia emails reais (em dev, loga o link no console).
+**Contexto:** A infraestrutura de confirmação de email está pronta (migration `db/email_confirmation_migration.sql` + endpoints `POST /auth/email/send-confirmation` e `GET /auth/email/confirm/{token}` + auto-disparo no cadastro). Em desenvolvimento, o link de verificação é apenas logado no console. O código suporta múltiplos provedores: Resend (env `EMAIL_PROVIDER=resend EMAIL_API_KEY=...`), SendGrid (`SENDGRID_API_KEY`), ou SMTP genérico.
 
-**Pergunta:**
-Qual provedor de email usar para os emails transacionais (confirmação de conta, futuros
-alertas de preço)?
+**Pergunta:** Qual provedor de email configurar em produção no Render?
 
 **Opções:**
+- **Resend** (free: 3.000 emails/mês): prós — moderno, developer-friendly, gratuito até 3k/mês (cobre primeiros 1.000 usuários); contras — menor histórico de mercado
+- **SendGrid** (free: 100 emails/dia): prós — mais popular, boa reputação; contras — free tier limitado (burst pode ser insuficiente)
+- **AWS SES** ($0,10/1.000 emails): prós — mais barato em escala; contras — requer conta AWS, configuração mais complexa
+- **Gmail SMTP**: prós — zero custo inicial; contras — 500 emails/dia, reputação ruim para produção
 
-| Provedor | Custo | Setup | Escala até 1M |
-|---|---|---|---|
-| **Resend** (já no código) | 3.000/mês free, depois $20/mês até 50k | 10 min (API key + DNS) | Sim, sem mudar código |
-| **SendGrid** | 100/dia free (~3k/mês), depois $19.95/mês | 20 min | Sim, mudaria 1 arquivo |
-| **AWS SES** | $0.10/1.000 emails (mais barato em escala) | 1-2h (AWS account + DNS) | Mais barato mas complexo |
+**Recomendação:** **Resend** para começar — gratuito até 3.000 emails/mês, API simples, troca trivial via env vars. Se escalar >3k emails/mês, migrar para AWS SES.
 
-**Recomendação:** Resend — plano free suficiente para os primeiros 3.000 usuários,
-API mais simples, já está integrado no código. Troca para AWS SES quando passar de
-50k emails/mês (~10k usuários ativos).
+**Ação necessária após decisão:**
+1. Criar conta no provedor escolhido e verificar domínio `clubeusa.com`
+2. Aplicar migration `db/email_confirmation_migration.sql` no Supabase (Dashboard → SQL Editor)
+3. No Render, configurar: `ENVIRONMENT=production`, `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY=re_...`, `FROM_EMAIL=noreply@clubeusa.com`
 
-**O que você precisa fazer:**
-1. Criar conta em resend.com (grátis)
-2. Verificar domínio `clubeusa.com` (adicionar 2 registros DNS)
-3. Criar API key em Account → API Keys
-4. Adicionar ao Render (ou .env): `RESEND_API_KEY=re_...` e `EMAIL_FROM=noreply@clubeusa.com`
+**Status:** PENDENTE
+
+---
+
+### [2026-09-07] Email deve ser obrigatório ou opcional no cadastro?
+
+**Contexto:** O cadastro atual usa telefone como identificador primário (WhatsApp OTP). Email é opcional mas recomendado para confirmação. "Cadastro válido" (Fase 0.4) = phone confirmado + email confirmado + ≥1 ação real.
+
+**Pergunta:** Tornar o email OBRIGATÓRIO no cadastro para forçar confirmação?
+
+**Opções:**
+- **Manter opcional (status quo):** prós — menor fricção, maior conversão inicial; contras — muitos cadastros sem email, dificulta email marketing e métricas da Fase 0.4
+- **Tornar obrigatório:** prós — base limpa, todos confirmáveis; contras — reduz conversão estimada em ~20-30%
+
+**Recomendação:** Manter opcional agora. Adicionar incentivo pós-cadastro ("confirme seu email e ganhe 50 pontos bônus"). Reavaliar quando atingir 500 cadastros.
 
 **Status:** PENDENTE
 
