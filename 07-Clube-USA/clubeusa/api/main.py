@@ -1187,3 +1187,9 @@ async def admin_send_deals(_=Depends(require_admin)):
 async def admin_list_alerts(_=Depends(require_admin)):
     from services.admin_service import list_admin_alerts
     return list_admin_alerts()
+
+
+@app.get("/admin/analytics")
+async def admin_analytics(days: int = 30, _=Depends(require_admin)):
+    from services.admin_service import get_analytics
+    return get_analytics(days_back=days)

@@ -59,6 +59,78 @@ def get_metrics() -> dict:
 
 
 # ============================================================
+#  ANALYTICS (Fase 0.3)
+# ============================================================
+
+def get_analytics(days_back: int = 30) -> dict:
+    """
+    Retorna métricas de crescimento para o painel de analytics do admin.
+
+    Usa RPCs do Supabase para agregações eficientes (não carrega linhas
+    individuais — funciona bem de 1k a 1M+ membros).
+
+    Pré-requisito: executar analytics_migration.sql no Supabase.
+    """
+    sb = _supabase()
+    days_back = max(7, min(days_back, 90))  # clampeia entre 7 e 90 dias
+
+    # 1. Série diária de cadastros (via RPC SQL)
+    daily_raw = sb.rpc("get_daily_registrations", {"p_days_back": days_back}).execute()
+    daily = [{"date": r["reg_date"], "count": r["cnt"]} for r in (daily_raw.data or [])]
+
+    # 2. Funil de conversão (via RPC SQL)
+    funnel_raw = sb.rpc("get_conversion_funnel", {}).execute()
+    funnel = {r["stage"]: r["cnt"] for r in (funnel_raw.data or [])}
+
+    # 3. Top 10 referrers (query simples, apenas membros com indicações)
+    top_refs_raw = (
+        sb.table("members")
+        .select("referral_code,referral_count")
+        .gt("referral_count", 0)
+        .order("referral_count", desc=True)
+        .limit(10)
+        .execute()
+    )
+    top_referrers = top_refs_raw.data or []
+
+    # 4. Total de cliques em links de referral (audit_logs)
+    referral_clicks_raw = (
+        sb.table("audit_logs")
+        .select("id", count="exact")
+        .eq("action", "referral.link_clicked")
+        .execute()
+    )
+    referral_link_clicks = referral_clicks_raw.count or 0
+
+    # 5. Resumo de período (soma da série diária)
+    period_new = sum(d["count"] for d in daily)
+    registered  = funnel.get("registered", 0)
+    email_ver   = funnel.get("email_verified", 0)
+    vip         = funnel.get("vip", 0)
+
+    email_rate = round(email_ver / registered, 3) if registered else 0
+    vip_rate   = round(vip / registered, 3)       if registered else 0
+
+    return {
+        "period_days": days_back,
+        "summary": {
+            "total_members":          registered,
+            "new_in_period":          period_new,
+            "email_verified":         email_ver,
+            "email_verified_rate":    email_rate,
+            "vip":                    vip,
+            "vip_rate":               vip_rate,
+            "referred_members":       funnel.get("referred", 0),
+            "had_click":              funnel.get("had_click", 0),
+            "referral_link_clicks":   referral_link_clicks,
+        },
+        "funnel":          funnel,
+        "daily_signups":   daily,
+        "top_referrers":   top_referrers,
+    }
+
+
+# ============================================================
 #  MEMBROS
 # ============================================================
 
