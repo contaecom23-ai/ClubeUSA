@@ -1,167 +1,240 @@
-"""Tests for Fase 0.3 — Analytics endpoint and service."""
+# tests/test_analytics.py — Fase 0.3: Analytics básico
+import sys
+import os
+import unittest
 from unittest.mock import MagicMock, patch
-from fastapi.testclient import TestClient
+from datetime import datetime, timedelta, timezone
+
+ROOT = os.path.join(os.path.dirname(__file__), "..")
+sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, "api"))
+
+os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
+os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-key")
+os.environ.setdefault("JWT_SECRET", "test-secret-at-least-32-chars-long")
+os.environ.setdefault("ENCRYPTION_KEY", "test-encryption-key-32bytes-okay!")
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-_ADMIN_SECRET = "test-admin-secret-fixed"
-
-
-def _make_app():
-    import os
-    os.environ.setdefault("SUPABASE_URL", "https://fake.supabase.co")
-    os.environ.setdefault("SUPABASE_SERVICE_KEY", "fake-key")
-    os.environ.setdefault("ENCRYPTION_KEY", "test-encryption-key-32-chars-pad")
-    os.environ.setdefault("JWT_SECRET", "test-jwt-secret")
-    os.environ.setdefault("STRIPE_SECRET_KEY", "")
-    os.environ.setdefault("STRIPE_WEBHOOK_SECRET", "")
-    os.environ.setdefault("STRIPE_VIP_PRICE_ID", "")
-    os.environ["ADMIN_SECRET"] = _ADMIN_SECRET
-    from api.main import app
-    return app
-
-
-def _admin_header() -> dict:
-    return {"Authorization": f"Bearer {_ADMIN_SECRET}"}
-
-
-# ---------------------------------------------------------------------------
-# Service-level unit tests
-# ---------------------------------------------------------------------------
-
-FAKE_DAILY = [{"reg_date": "2026-11-01", "cnt": 5}, {"reg_date": "2026-11-02", "cnt": 3}]
-FAKE_FUNNEL = [
-    {"stage": "registered",     "cnt": 100},
-    {"stage": "email_verified", "cnt": 80},
-    {"stage": "had_click",      "cnt": 60},
-    {"stage": "referred",       "cnt": 20},
-    {"stage": "vip",            "cnt": 10},
-]
-FAKE_TOP_REFS = [{"referral_code": "ABC123", "referral_count": 7}]
-
-
-def _mock_sb(daily=FAKE_DAILY, funnel=FAKE_FUNNEL, top_refs=FAKE_TOP_REFS, ref_clicks=42):
+def _make_sb(data_map: dict):
+    """Cria mock de cliente Supabase que retorna dados conforme a tabela."""
     sb = MagicMock()
 
-    daily_result = MagicMock()
-    daily_result.data = daily
-    sb.rpc.return_value.execute.return_value = daily_result
+    def make_query(rows):
+        q = MagicMock()
+        q.select.return_value = q
+        q.eq.return_value = q
+        q.gte.return_value = q
+        q.gt.return_value = q
+        q.is_.return_value = q
+        q.in_.return_value = q
+        q.order.return_value = q
+        q.limit.return_value = q
+        r = MagicMock()
+        r.data = rows
+        r.count = len(rows)
+        q.execute.return_value = r
+        return q
 
-    # second rpc call (funnel) needs different data — use side_effect
-    funnel_result = MagicMock()
-    funnel_result.data = funnel
-
-    sb.rpc.side_effect = [
-        MagicMock(**{"execute.return_value": daily_result}),
-        MagicMock(**{"execute.return_value": funnel_result}),
-    ]
-
-    # top referrers query chain
-    top_chain = MagicMock()
-    top_chain.execute.return_value.data = top_refs
-    sb.table.return_value.select.return_value.gt.return_value.order.return_value.limit.return_value = top_chain
-
-    # referral link clicks (count query)
-    clicks_result = MagicMock()
-    clicks_result.count = ref_clicks
-    sb.table.return_value.select.return_value.eq.return_value.execute.return_value = clicks_result
-
+    sb.table.side_effect = lambda name: make_query(data_map.get(name, []))
     return sb
 
 
-def test_get_analytics_summary_values():
-    with patch("services.admin_service._supabase", return_value=_mock_sb()):
-        from services.admin_service import get_analytics
-        result = get_analytics(days_back=30)
+class TestGetFunnel(unittest.TestCase):
 
-    s = result["summary"]
-    assert s["total_members"] == 100
-    assert s["new_in_period"] == 8   # 5 + 3
-    assert s["email_verified"] == 80
-    assert s["email_verified_rate"] == 0.8
-    assert s["vip"] == 10
-    assert s["vip_rate"] == 0.1
-    assert s["referred_members"] == 20
+    @patch("services.analytics_service._supabase")
+    def test_empty_db_returns_zeros(self, mock_fn):
+        mock_fn.return_value = _make_sb({})
+        from services.analytics_service import get_funnel
+        r = get_funnel()
+        f = r["funnel"]
+        self.assertEqual(f["registrations_total"], 0)
+        self.assertEqual(f["vip_subscribers"], 0)
+        self.assertEqual(f["referral_conversion_rate"], 0.0)
+        self.assertEqual(f["logins_last_7d"], 0)
+        self.assertEqual(f["deal_clicks_last_7d"], 0)
 
+    @patch("services.analytics_service._supabase")
+    def test_no_zero_division_with_no_members(self, mock_fn):
+        mock_fn.return_value = _make_sb({
+            "referrals": [{"status": "confirmed"}, {"status": "confirmed"}],
+        })
+        from services.analytics_service import get_funnel
+        r = get_funnel()
+        self.assertEqual(r["funnel"]["referral_conversion_rate"], 0.0)
 
-def test_get_analytics_daily_signups_passthrough():
-    with patch("services.admin_service._supabase", return_value=_mock_sb()):
-        from services.admin_service import get_analytics
-        result = get_analytics(days_back=30)
+    @patch("services.analytics_service._supabase")
+    def test_counts_vip_and_referrals(self, mock_fn):
+        now = datetime.now(timezone.utc)
+        members = [
+            {"id": "1", "plan": "vip",  "created_at": now.isoformat(), "referred_by": None,
+             "email_enc": "e", "email_confirmed": True, "total_clicks": 1, "referral_count": 0},
+            {"id": "2", "plan": "free", "created_at": now.isoformat(), "referred_by": "1",
+             "email_enc": None, "email_confirmed": False, "total_clicks": 0, "referral_count": 0},
+            {"id": "3", "plan": "free", "created_at": (now - timedelta(days=40)).isoformat(), "referred_by": None,
+             "email_enc": None, "email_confirmed": False, "total_clicks": 0, "referral_count": 0},
+        ]
+        referrals = [{"status": "confirmed"}, {"status": "pending"}]
+        mock_fn.return_value = _make_sb({"members": members, "referrals": referrals})
+        from services.analytics_service import get_funnel
+        f = get_funnel()["funnel"]
+        self.assertEqual(f["registrations_total"], 3)
+        self.assertEqual(f["vip_subscribers"], 1)
+        self.assertEqual(f["referral_conversions_total"], 1)
+        self.assertEqual(f["referral_conversions_pending"], 1)
+        self.assertAlmostEqual(f["referral_conversion_rate"], 0.3333, places=3)
 
-    assert result["daily_signups"] == [
-        {"date": "2026-11-01", "count": 5},
-        {"date": "2026-11-02", "count": 3},
-    ]
+    @patch("services.analytics_service._supabase")
+    def test_registrations_7d_and_30d(self, mock_fn):
+        now = datetime.now(timezone.utc)
+        members = [
+            {"id": "1", "plan": "free", "created_at": now.isoformat(), "referred_by": None,
+             "email_enc": None, "email_confirmed": False, "total_clicks": 0, "referral_count": 0},
+            {"id": "2", "plan": "free", "created_at": (now - timedelta(days=10)).isoformat(), "referred_by": None,
+             "email_enc": None, "email_confirmed": False, "total_clicks": 0, "referral_count": 0},
+            {"id": "3", "plan": "free", "created_at": (now - timedelta(days=40)).isoformat(), "referred_by": None,
+             "email_enc": None, "email_confirmed": False, "total_clicks": 0, "referral_count": 0},
+        ]
+        mock_fn.return_value = _make_sb({"members": members, "referrals": []})
+        from services.analytics_service import get_funnel
+        f = get_funnel()["funnel"]
+        self.assertEqual(f["registrations_total"], 3)
+        self.assertEqual(f["registrations_last_7d"], 1)
+        self.assertEqual(f["registrations_last_30d"], 2)
 
-
-def test_get_analytics_days_clamped_low():
-    """days_back < 7 should be clamped to 7."""
-    with patch("services.admin_service._supabase", return_value=_mock_sb()) as mock_sb_func:
-        from services.admin_service import get_analytics
-        result = get_analytics(days_back=1)
-    assert result["period_days"] == 7
-
-
-def test_get_analytics_days_clamped_high():
-    """days_back > 90 should be clamped to 90."""
-    with patch("services.admin_service._supabase", return_value=_mock_sb()):
-        from services.admin_service import get_analytics
-        result = get_analytics(days_back=999)
-    assert result["period_days"] == 90
-
-
-def test_get_analytics_zero_registered_no_division():
-    """Should not raise when registered == 0 (avoid ZeroDivisionError)."""
-    funnel_zero = [{"stage": "registered", "cnt": 0}, {"stage": "email_verified", "cnt": 0},
-                   {"stage": "had_click", "cnt": 0}, {"stage": "referred", "cnt": 0}, {"stage": "vip", "cnt": 0}]
-    with patch("services.admin_service._supabase", return_value=_mock_sb(funnel=funnel_zero)):
-        from services.admin_service import get_analytics
-        result = get_analytics(days_back=30)
-    assert result["summary"]["email_verified_rate"] == 0
-    assert result["summary"]["vip_rate"] == 0
-
-
-def test_get_analytics_top_referrers():
-    with patch("services.admin_service._supabase", return_value=_mock_sb()):
-        from services.admin_service import get_analytics
-        result = get_analytics(days_back=30)
-    assert result["top_referrers"] == FAKE_TOP_REFS
-
-
-# ---------------------------------------------------------------------------
-# API endpoint tests
-# ---------------------------------------------------------------------------
-
-def _build_client():
-    app = _make_app()
-    return TestClient(app, raise_server_exceptions=True)
-
-
-def test_admin_analytics_requires_auth():
-    client = _build_client()
-    resp = client.get("/admin/analytics")
-    assert resp.status_code in (401, 403)
-
-
-def test_admin_analytics_returns_200():
-    with patch("services.admin_service._supabase", return_value=_mock_sb()):
-        client = _build_client()
-        resp = client.get("/admin/analytics", headers=_admin_header())
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "summary" in body
-    assert "daily_signups" in body
-    assert "funnel" in body
-    assert "top_referrers" in body
+    @patch("services.analytics_service._supabase")
+    def test_email_funnel_fields(self, mock_fn):
+        now = datetime.now(timezone.utc)
+        members = [
+            {"id": "1", "plan": "free", "created_at": now.isoformat(), "referred_by": None,
+             "email_enc": "enc", "email_confirmed": True,  "total_clicks": 1, "referral_count": 0},
+            {"id": "2", "plan": "free", "created_at": now.isoformat(), "referred_by": None,
+             "email_enc": "enc", "email_confirmed": False, "total_clicks": 0, "referral_count": 0},
+            {"id": "3", "plan": "free", "created_at": now.isoformat(), "referred_by": None,
+             "email_enc": None,  "email_confirmed": False, "total_clicks": 0, "referral_count": 0},
+        ]
+        mock_fn.return_value = _make_sb({"members": members, "referrals": []})
+        from services.analytics_service import get_funnel
+        f = get_funnel()["funnel"]
+        self.assertEqual(f["email_set"], 2)
+        self.assertEqual(f["email_confirmed"], 1)
+        self.assertEqual(f["email_confirmed_pct"], 50.0)
+        self.assertEqual(f["made_first_click"], 1)
+        self.assertAlmostEqual(f["engagement_pct"], 33.3, places=0)
 
 
-def test_admin_analytics_days_param_forwarded():
-    with patch("services.admin_service._supabase", return_value=_mock_sb()):
-        client = _build_client()
-        resp = client.get("/admin/analytics?days=14", headers=_admin_header())
-    assert resp.status_code == 200
-    assert resp.json()["period_days"] == 14
+class TestGetGrowth(unittest.TestCase):
+
+    @patch("services.analytics_service._supabase")
+    def test_returns_exactly_n_days(self, mock_fn):
+        mock_fn.return_value = _make_sb({"members": []})
+        from services.analytics_service import get_growth
+        result = get_growth(days=30)
+        self.assertEqual(len(result), 30)
+
+    @patch("services.analytics_service._supabase")
+    def test_each_entry_has_date_and_registrations(self, mock_fn):
+        mock_fn.return_value = _make_sb({"members": []})
+        from services.analytics_service import get_growth
+        result = get_growth(days=7)
+        for entry in result:
+            self.assertIn("date", entry)
+            self.assertIn("registrations", entry)
+            self.assertIsInstance(entry["registrations"], int)
+
+    @patch("services.analytics_service._supabase")
+    def test_counts_today_registrations(self, mock_fn):
+        now = datetime.now(timezone.utc)
+        today = now.strftime("%Y-%m-%d")
+        members = [{"created_at": now.isoformat()}, {"created_at": now.isoformat()}]
+        mock_fn.return_value = _make_sb({"members": members})
+        from services.analytics_service import get_growth
+        result = get_growth(days=7)
+        today_entry = next((d for d in result if d["date"] == today), None)
+        self.assertIsNotNone(today_entry)
+        self.assertEqual(today_entry["registrations"], 2)
+
+    @patch("services.analytics_service._supabase")
+    def test_days_in_chronological_order(self, mock_fn):
+        mock_fn.return_value = _make_sb({"members": []})
+        from services.analytics_service import get_growth
+        result = get_growth(days=10)
+        dates = [entry["date"] for entry in result]
+        self.assertEqual(dates, sorted(dates))
+
+
+class TestGetTopReferrers(unittest.TestCase):
+
+    @patch("services.analytics_service._supabase")
+    def test_empty_returns_empty_list(self, mock_fn):
+        mock_fn.return_value = _make_sb({"members": []})
+        from services.analytics_service import get_top_referrers
+        result = get_top_referrers()
+        self.assertEqual(result, [])
+
+    @patch("services.analytics_service._supabase")
+    def test_returns_referral_code_and_count(self, mock_fn):
+        mock_fn.return_value = _make_sb({
+            "members": [{"name_enc": None, "referral_code": "ABC123", "referral_count": 5}]
+        })
+        from services.analytics_service import get_top_referrers
+        result = get_top_referrers(limit=1)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["referral_code"], "ABC123")
+        self.assertEqual(result[0]["referral_count"], 5)
+
+
+class TestGetEngagement(unittest.TestCase):
+
+    @patch("services.analytics_service._supabase")
+    def test_no_clicks_returns_zeros(self, mock_fn):
+        mock_fn.return_value = _make_sb({"clicks": []})
+        from services.analytics_service import get_engagement
+        result = get_engagement()
+        self.assertEqual(result["clicks_last_7d"], 0)
+        self.assertEqual(result["top_categories"], [])
+
+    @patch("services.analytics_service._supabase")
+    def test_counts_clicks_and_top_categories(self, mock_fn):
+        clicks = [{"deal_id": "deal-1"}, {"deal_id": "deal-1"}, {"deal_id": "deal-2"}]
+        deals  = [{"id": "deal-1", "category": "electronics"}, {"id": "deal-2", "category": "kitchen"}]
+        mock_fn.return_value = _make_sb({"clicks": clicks, "deals": deals})
+        from services.analytics_service import get_engagement
+        result = get_engagement()
+        self.assertEqual(result["clicks_last_7d"], 3)
+        self.assertEqual(len(result["top_categories"]), 2)
+        self.assertEqual(result["top_categories"][0]["category"], "electronics")
+        self.assertEqual(result["top_categories"][0]["clicks"], 2)
+
+
+class TestLogEvent(unittest.TestCase):
+
+    @patch("services.analytics_service._supabase")
+    def test_silent_on_db_error(self, mock_fn):
+        """log_event não propaga exceção se DB falha."""
+        mock_fn.return_value.table.return_value.insert.return_value.execute.side_effect = Exception("DB down")
+        from services.analytics_service import log_event
+        log_event("uuid-123", "member.registered", {"test": True})
+
+    @patch("services.analytics_service._supabase")
+    def test_inserts_correct_data(self, mock_fn):
+        mock_sb = MagicMock()
+        mock_fn.return_value = mock_sb
+        from services.analytics_service import log_event
+        log_event("uuid-abc", "email.confirmed", {"source": "link"})
+        insert_call = mock_sb.table.return_value.insert.call_args[0][0]
+        self.assertEqual(insert_call["member_id"], "uuid-abc")
+        self.assertEqual(insert_call["event_type"], "email.confirmed")
+        self.assertEqual(insert_call["metadata"]["source"], "link")
+
+    @patch("services.analytics_service._supabase")
+    def test_defaults_empty_metadata(self, mock_fn):
+        mock_sb = MagicMock()
+        mock_fn.return_value = mock_sb
+        from services.analytics_service import log_event
+        log_event("uuid-xyz", "deal.clicked")
+        insert_call = mock_sb.table.return_value.insert.call_args[0][0]
+        self.assertEqual(insert_call["metadata"], {})
+
+
+if __name__ == "__main__":
+    unittest.main()

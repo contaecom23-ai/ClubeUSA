@@ -1185,20 +1185,6 @@ let _pollTimers = {};
 //  INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-  // Captura código de indicação da URL (?ref=CODE) e persiste por 7 dias
-  (function captureRef() {
-    const param = new URLSearchParams(window.location.search).get('ref');
-    if (param && /^[A-Z0-9]{6,12}$/.test(param.toUpperCase())) {
-      localStorage.setItem('cu_ref', param.toUpperCase());
-    }
-    // Limpa ?ref= da URL sem recarregar (URL mais limpa)
-    if (param) {
-      const u = new URL(window.location.href);
-      u.searchParams.delete('ref');
-      window.history.replaceState({}, '', u.toString());
-    }
-  })();
-
   loadGroups();
   if (_token && _member) {
     showDashboard();
@@ -1526,13 +1512,7 @@ async function handlePhoneSubmit() {
   setLoading('btn-phone', true, '📲 Receber código no WhatsApp');
   try {
     if (!_isLogin) {
-      const _refCode = localStorage.getItem('cu_ref') || undefined;
-      await api('POST', '/auth/register', {
-        phone,
-        name: name || undefined,
-        language: 'pt',
-        referral_code: _refCode,
-      });
+      await api('POST', '/auth/register', { phone, name: name || undefined, language: 'pt' });
     }
     await api('POST', '/auth/otp/request', { phone });
     showStep('step-otp');
@@ -1559,7 +1539,6 @@ async function handleOTPSubmit() {
     _member = { id: data.member_id, plan: data.plan };
     localStorage.setItem('cu_token', _token);
     localStorage.setItem('cu_member', JSON.stringify(_member));
-    localStorage.removeItem('cu_ref');  // referral já processado no cadastro
     showStep('step-success');
   } catch (e) {
     showError('modal-err-otp', e.message);

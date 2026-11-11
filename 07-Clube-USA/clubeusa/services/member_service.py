@@ -14,7 +14,6 @@ from utils.security import (
     generate_referral_code, generate_utm, create_token
 )
 from services.group_manager import assign_member_to_group
-from services.email_service import send_email_confirmation
 
 log = logging.getLogger("member_service")
 
@@ -153,26 +152,29 @@ def register_member(
         "categories": categories,
     }, ip=ip)
 
-    # 8. Disparar confirmacao de email (nao bloqueante)
-    if email:
-        try:
-            _send_email_confirmation_token(member_id, email, language)
-        except Exception as e:
-            log.warning(f"Nao foi possivel enviar email de confirmacao: {e}")
-
-    # 9. Gerar token JWT
+    # 8. Gerar token JWT
     token = create_token(member_id, member.get("plan", "free"))
 
+    # 9. Log analytics event
+    try:
+        from services.analytics_service import log_event
+        log_event(member_id, "member.registered", {
+            "language": language,
+            "has_email": bool(email),
+            "has_referral": bool(referred_by),
+        })
+    except Exception as exc:
+        log.warning("analytics log_event falhou: %s", exc)
+
     return {
-        "action":         "registered",
-        "member_id":      member_id,
-        "token":          token,
-        "points":         100,
-        "level":          "bronze",
-        "referral_code":  member["referral_code"],
-        "group_invite":   group.get("invite_link") if group else None,
-        "group_name":     group.get("name") if group else None,
-        "email_confirm_sent": bool(email),
+        "action":      "registered",
+        "member_id":   member_id,
+        "token":       token,
+        "points":      100,
+        "level":       "bronze",
+        "referral_code": member["referral_code"],
+        "group_invite": group.get("invite_link") if group else None,
+        "group_name":   group.get("name") if group else None,
     }
 
 
@@ -259,21 +261,20 @@ def get_member_profile(member_id: str) -> Optional[dict]:
 
     # Descriptografa PII apenas para exibicao
     return {
-        "id":             m["id"],
-        "name":           decrypt(m["name_enc"]) if m.get("name_enc") else "",
-        "phone":          _mask_phone(decrypt(m["phone_enc"])),
-        "email":          _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
-        "email_verified": m.get("email_verified", False),
-        "language":       m["language"],
-        "state":          m["state"],
-        "plan":           m["plan"],
-        "points":         m["points"],
-        "level":          m["level"],
-        "categories":     m["categories"],
-        "referral_code":  m["referral_code"],
+        "id":           m["id"],
+        "name":         decrypt(m["name_enc"]) if m.get("name_enc") else "",
+        "phone":        _mask_phone(decrypt(m["phone_enc"])),  # mascara parcial
+        "email":        _mask_email(decrypt(m["email_enc"])) if m.get("email_enc") else "",
+        "language":     m["language"],
+        "state":        m["state"],
+        "plan":         m["plan"],
+        "points":       m["points"],
+        "level":        m["level"],
+        "categories":   m["categories"],
+        "referral_code": m["referral_code"],
         "referral_count": m["referral_count"],
-        "total_clicks":   m["total_clicks"],
-        "created_at":     m["created_at"],
+        "total_clicks": m["total_clicks"],
+        "created_at":   m["created_at"],
         "vip_expires_at": m.get("vip_expires_at"),
     }
 
@@ -284,98 +285,6 @@ def update_member_categories(member_id: str, categories: list) -> dict:
     if not result.data:
         raise ValueError("Membro não encontrado.")
     return {"categories": result.data[0]["categories"]}
-
-
-# ============================================================
-#  EMAIL CONFIRMATION
-# ============================================================
-
-def _send_email_confirmation_token(member_id: str, email: str, language: str = "pt"):
-    """Cria token de confirmacao e envia email."""
-    import secrets
-    from datetime import timedelta
-    sb = _supabase()
-    token = secrets.token_urlsafe(32)
-    expires = (datetime.utcnow() + timedelta(hours=24)).isoformat()
-
-    # Remove tokens anteriores nao usados deste membro
-    sb.table("email_confirm_tokens").delete().eq("member_id", member_id).is_("used_at", "null").execute()
-
-    sb.table("email_confirm_tokens").insert({
-        "member_id":  member_id,
-        "token":      token,
-        "expires_at": expires,
-    }).execute()
-
-    send_email_confirmation(email, token, language)
-    log.info(f"Email de confirmacao enviado para membro {member_id}")
-
-
-def confirm_email(token: str) -> dict:
-    """
-    Confirma email via token.
-    Retorna {"ok": True, "member_id": ...} ou lanca ValueError.
-    """
-    from datetime import timezone
-    sb = _supabase()
-
-    result = sb.table("email_confirm_tokens").select("*").eq("token", token).execute()
-    if not result.data:
-        raise ValueError("Token invalido ou expirado.")
-
-    record = result.data[0]
-
-    if record.get("used_at"):
-        raise ValueError("Token ja utilizado.")
-
-    expires = datetime.fromisoformat(record["expires_at"].replace("Z", "+00:00"))
-    if expires.tzinfo is None:
-        expires = expires.replace(tzinfo=timezone.utc)
-    if datetime.now(timezone.utc) > expires:
-        raise ValueError("Token expirado. Solicite um novo link.")
-
-    member_id = record["member_id"]
-
-    # Marcar token como usado
-    sb.table("email_confirm_tokens").update({
-        "used_at": datetime.utcnow().isoformat(),
-    }).eq("id", record["id"]).execute()
-
-    # Marcar email como verificado
-    sb.table("members").update({"email_verified": True}).eq("id", member_id).execute()
-
-    _audit("member.email_confirmed", member_id)
-    log.info(f"Email confirmado para membro {member_id}")
-
-    return {"ok": True, "member_id": member_id}
-
-
-def resend_email_confirmation(member_id: str) -> dict:
-    """
-    Reenvia email de confirmacao se o email ainda nao foi verificado.
-    Anti-spam: max 3 envios por hora (controlado por rate_limit na API).
-    """
-    sb = _supabase()
-    result = sb.table("members").select(
-        "id,email_enc,email_verified,language"
-    ).eq("id", member_id).execute()
-
-    if not result.data:
-        raise ValueError("Membro nao encontrado.")
-
-    m = result.data[0]
-
-    if m.get("email_verified"):
-        raise ValueError("Email ja confirmado.")
-
-    if not m.get("email_enc"):
-        raise ValueError("Nenhum email cadastrado.")
-
-    email    = decrypt(m["email_enc"])
-    language = m.get("language", "pt")
-
-    _send_email_confirmation_token(member_id, email, language)
-    return {"ok": True, "message": "Email de confirmacao reenviado."}
 
 
 def _mask_phone(phone: str) -> str:
@@ -427,5 +336,14 @@ def track_click(member_id: str, deal_id: str, ip: str = None) -> str:
     # Adiciona 10 pontos pelo clique
     sb.rpc("increment_points", {"p_member_id": member_id, "p_points": 10}).execute()
     sb.rpc("increment_clicks", {"p_member_id": member_id}).execute()
+
+    # Log primeiro clique para funil de analytics
+    member_row = sb.table("members").select("total_clicks").eq("id", member_id).limit(1).execute().data
+    if member_row and (member_row[0].get("total_clicks") or 0) == 1:
+        try:
+            from services.analytics_service import log_event
+            log_event(member_id, "deal.clicked", {"deal_id": deal_id, "first_click": True})
+        except Exception as exc:
+            log.warning("analytics log_event falhou: %s", exc)
 
     return utm

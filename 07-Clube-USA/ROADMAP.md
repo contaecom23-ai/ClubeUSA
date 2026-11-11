@@ -6,11 +6,14 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [x] **0.1** Cadastro + perfil mínimo + email confirmado
-  - Cadastro + perfil já existiam. Adicionado: `email_verified`, tabela `email_confirm_tokens`, endpoints `GET /auth/email/confirm` e `POST /auth/email/resend`, `email_service.py` (SMTP + dev-stub). PR: feat/fase-0.1-email-confirmado. Provedor SMTP: ver DECISOES.md.
+- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
 - [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [x] **0.3** Analytics básico
-  - SQL RPCs `get_daily_registrations` e `get_conversion_funnel` em `db/analytics_migration.sql`. Serviço `get_analytics()` em `services/admin_service.py`. Endpoint `GET /admin/analytics?days=N` (admin-only). 9 testes passando. PR: feat/fase-0.3-analytics. Pré-requisito: executar `analytics_migration.sql` no Supabase SQL Editor.
+  - `services/analytics_service.py`: funil completo (registros→logins→email_set→confirmado→1º clique→VIP), crescimento diário (30d), top referrers, engajamento por categoria, stats de referral, top estados
+  - `api/routers/analytics.py`: endpoints admin-only (`/analytics/overview`, `/growth`, `/funnel`, `/engagement`, `/referrals`, `/top-referrers`, `/geographic`)
+  - `log_event(member_id, type, metadata)` — silencioso em falha, pronto para fase 0.4
+  - `db/analytics_migration.sql` — tabela `events` + índices em `audit_logs` — **Ação necessária:** aplicar no Supabase (Dashboard → SQL Editor)
+  - 30+ testes unitários passando; sem PII exposto, dados agregados e anonimizados
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
 ---
@@ -68,4 +71,4 @@
 
 ---
 
-*Atualizado em: 2026-11-11*
+*Atualizado em: 2026-11-09*
