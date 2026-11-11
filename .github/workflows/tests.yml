@@ -1,0 +1,49 @@
+# ============================================================
+#  tests.yml — CI de testes do Clube USA
+#  Roda pytest nas duas suites (07-Clube-USA/tests e clubeusa/tests)
+#  em todo PR e push na main. PR só deve ser mergeado verde.
+# ============================================================
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r "07-Clube-USA/clubeusa/requirements.txt" httpx
+
+      - name: Suite externa (07-Clube-USA/tests)
+        working-directory: 07-Clube-USA
+        env:
+          SUPABASE_URL: https://fake.supabase.co
+          SUPABASE_SERVICE_KEY: fake
+          ENCRYPTION_KEY: test-encryption-key-32-chars-pad
+          JWT_SECRET: test
+          STRIPE_SECRET_KEY: ""
+          STRIPE_WEBHOOK_SECRET: ""
+          STRIPE_VIP_PRICE_ID: ""
+        run: python -m pytest tests/ -q
+
+      - name: Suite interna (clubeusa/tests)
+        working-directory: 07-Clube-USA/clubeusa
+        env:
+          SUPABASE_URL: https://fake.supabase.co
+          SUPABASE_SERVICE_KEY: fake
+          ENCRYPTION_KEY: test-encryption-key-32-chars-pad
+          JWT_SECRET: test
+          STRIPE_SECRET_KEY: ""
+          STRIPE_WEBHOOK_SECRET: ""
+          STRIPE_VIP_PRICE_ID: ""
+        run: python -m pytest tests/ -q
