@@ -36,6 +36,7 @@
 
 import hmac
 import os
+import re
 import logging
 import subprocess
 import sys
@@ -44,7 +45,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -904,6 +905,64 @@ async def health():
         "service": "clube-usa-api",
         "version": "1.0.0",
     }
+
+
+# ============================================================
+#  ROTA — REFERRAL REDIRECT
+#  /r/{code} → /?ref={code}  (Fase 0.2)
+# ============================================================
+
+_REFERRAL_CODE_RE = re.compile(r'^[A-Z0-9]{6,12}$')
+
+@app.get("/r/{referral_code}", include_in_schema=False)
+async def referral_redirect(referral_code: str, request: Request):
+    """
+    Redireciona /r/{code} para a landing page com o código de referral
+    pré-carregado (?ref=CODE). Registra o clique no audit_log para
+    rastrear atribuição (qual cadastro veio de qual link).
+    """
+    code = referral_code.strip().upper()
+
+    # Rejeita formato inválido — redireciona para home sem parâmetro
+    if not _REFERRAL_CODE_RE.match(code):
+        return RedirectResponse("/", status_code=302)
+
+    # Registra o clique para rastreamento de atribuição (falha silenciosa)
+    try:
+        from supabase import create_client
+        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+        member = (
+            sb.table("members")
+            .select("id")
+            .eq("referral_code", code)
+            .eq("status", "active")
+            .execute()
+        )
+        if member.data:
+            sb.table("audit_logs").insert({
+                "actor_type": "system",
+                "action":     "referral.link_clicked",
+                "target_type": "member",
+                "target_id":   member.data[0]["id"],
+                "metadata":    {
+                    "referral_code": code,
+                    "user_agent": request.headers.get("user-agent", "")[:200],
+                },
+            }).execute()
+    except Exception as e:
+        log.debug(f"Referral click log falhou (nao critico): {e}")
+
+    response = RedirectResponse(f"/?ref={code}", status_code=302)
+    # Cookie de 7 dias como fallback para multi-step journeys
+    response.set_cookie(
+        key="cu_ref",
+        value=code,
+        max_age=7 * 24 * 3600,
+        httponly=False,  # precisa ser lido pelo JS de registro
+        samesite="lax",
+        secure=(os.environ.get("ENVIRONMENT") == "production"),
+    )
+    return response
 
 
 # ============================================================
