@@ -27,32 +27,23 @@ Formato de cada entrada:
 
 ## Decisões Pendentes
 
----
+### [2026-11-02] Provedor de email transacional para confirmação de email (Fase 0.1)
+**Contexto:** O sistema envia emails de confirmação via SMTP. O `email_service.py` já está pronto e aceita qualquer provedor SMTP via env vars (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`). Em dev, só loga o link.
 
-### [2026-11-05] Email confirmation para fechar Fase 0.1
-
-**Contexto:**
-O cadastro atual é 100% via telefone (WhatsApp OTP). Email é campo opcional sem verificação. Para completar a Fase 0.1 ("email confirmado") e a definição de "cadastro válido" da Fase 0.4, precisamos de verificação de email.
-
-**Pergunta:**
-Qual serviço de email usar para enviar links de confirmação?
+**Pergunta:** Qual provedor usar em produção?
 
 **Opções:**
-- **A — Resend (resend.com):** gratuito até 3.000 emails/mês, fácil integração, boa entregabilidade. Exige criar conta + API key.
-- **B — SendGrid:** gratuito até 100 emails/dia (plano free). Mais complexo de configurar. Muito usado, boa reputação.
-- **C — AWS SES:** centavos por 1.000 emails, escala bem, mas exige conta AWS + configuração de domínio.
-- **D — Adiar:** tratar email como opcional permanentemente; "cadastro válido" = apenas telefone verificado (OTP WhatsApp) + ≥1 ação real. Simplifica mas perde o canal de email.
+- **A — Resend** (resend.com): UI moderna, free até 3k/mês, SDK Python simples, excelente deliverability. Exige domínio verificado. ~$20/mês acima de 100k/mês. **Recomendação: melhor escolha para este estágio.**
+- **B — SendGrid** (sendgrid.com): Mais robusto, free até 100/dia (muito pouco), $19.95/mês para 50k. Overkill para fase 0.
+- **C — AWS SES**: $0.10 por 1000 emails, escala ilimitada, mas setup mais complexo (domínio + DKIM + sandbox release). Ótimo se já usa AWS.
+- **D — Mailgun**: Free 1k/mês por 3 meses depois pago. Similar ao Resend.
 
-**Prós/Contras:**
-- A e B: fáceis, prontos em <1 hora, mas dependem de conta externa gratuita (limite)
-- C: barato em escala, mas setup mais demorado
-- D: elimina dependência externa — para os primeiros 1.000 usuários, o WhatsApp já é canal suficiente. Risco: perde email como canal de retargeting/retenção.
+**Recomendação:** Resend — melhor DX, free tier suficiente para os primeiros 1k usuários, muda só as env vars (SMTP é padrão). Não requer mudança de código.
 
-**Recomendação do Claude:**
-**Opção D (curto prazo) + A (médio prazo).** Para os primeiros 1.000 usuários, o WhatsApp já é o canal principal — email é secundário. Avançar na Fase 1 (tração) é mais urgente do que email confirmation. Quando o produto estiver em produção e os primeiros usuários chegarem, criar uma conta Resend e implementar a confirmação em 2-3h. Registrar aqui quando isso for prioridade.
+**O que fazer:** Criar conta, verificar domínio `clubeusa.com`, pegar credenciais SMTP e adicionar ao Render/Supabase env vars. Custo: $0 até ~3k emails/mês.
 
-**Status:** PENDENTE — aguardando decisão do dono
+**Status:** PENDENTE
 
 ---
 
-*Atualizado em: 2026-11-05*
+*Atualizado em: 2026-06-23*
