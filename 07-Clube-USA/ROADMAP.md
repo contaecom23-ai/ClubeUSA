@@ -6,8 +6,9 @@
 
 ## FASE 0 — PRÉ-LANÇAMENTO (base invisível)
 
-- [ ] **0.1** Cadastro + perfil mínimo + email confirmado
-- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/r/CODIGO + atribuição de qual cadastro veio de qual link)
+- [x] **0.1** Cadastro + perfil mínimo + email confirmado
+  - Cadastro + perfil já existiam. Adicionado: `email_verified`, tabela `email_confirm_tokens`, endpoints `GET /auth/email/confirm` e `POST /auth/email/resend`, `email_service.py` (SMTP + dev-stub). PR: feat/fase-0.1-email-confirmado. Provedor SMTP: ver DECISOES.md.
+- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
@@ -66,4 +67,4 @@
 
 ---
 
-*Atualizado em: 2026-11-05*
+*Atualizado em: 2026-06-23*
