@@ -23,6 +23,7 @@
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
+#  GET  /admin/analytics         — funil, crescimento diário e engajamento (admin)
 #  GET  /admin/members           — lista membros (admin)
 #  GET  /admin/members/{id}      — perfil completo (admin)
 #  POST /admin/members/{id}/status — alterar status (admin)
@@ -32,11 +33,16 @@
 #  POST /admin/deals/scan        — disparar varredura (admin)
 #  POST /admin/deals/send        — enviar aprovados (admin)
 #  GET  /admin/alerts            — listar alertas (admin)
+#  GET  /analytics/overview      — snapshot completo (admin)
+#  GET  /analytics/growth        — serie diaria de cadastros (admin)
+#  GET  /analytics/funnel        — funil de conversao (admin)
+#  GET  /analytics/engagement    — serie diaria de cliques (admin)
+#  GET  /analytics/referrals     — performance de indicacoes (admin)
+#  GET  /analytics/geographic    — distribuicao por estado (admin)
 # ============================================================
 
 import hmac
 import os
-import re
 import logging
 import subprocess
 import sys
@@ -45,7 +51,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -53,6 +59,7 @@ from deps import get_current_member, require_vip, require_paid_plan, require_adm
 from routers.news import router as news_router
 from routers.forum import router as forum_router
 from routers.assistant import router as assistant_router
+from routers.analytics import router as analytics_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("api")
@@ -84,6 +91,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(forum_router)
 app.include_router(assistant_router)
+app.include_router(analytics_router)
 
 _ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets")
 app.mount("/assets", StaticFiles(directory=_ASSETS_DIR), name="assets")
@@ -370,37 +378,10 @@ async def request_otp(body: OTPRequest, request: Request):
     return {"message": "Codigo enviado para seu WhatsApp.", "expires_in": 600}
 
 
-@app.get("/auth/email/confirm")
-async def confirm_email_route(token: str):
-    """
-    Confirma email via token recebido por email.
-    Chamado quando o usuario clica no link de confirmacao.
-    Redireciona para o painel com status de sucesso/erro.
-    """
-    from fastapi.responses import RedirectResponse
-    from services.member_service import confirm_email
-    try:
-        confirm_email(token)
-        return RedirectResponse(url=f"{APP_URL}/painel?email_confirmed=1", status_code=302)
-    except ValueError as e:
-        safe_msg = str(e).replace(" ", "+")
-        return RedirectResponse(url=f"{APP_URL}/painel?email_error={safe_msg}", status_code=302)
-
-
-@app.post("/auth/email/resend")
-async def resend_email_confirm(member: dict = Depends(get_current_member)):
-    """Reenvia email de confirmacao. Rate-limit: 3/hora (via middleware global)."""
-    from services.member_service import resend_email_confirmation
-    try:
-        return resend_email_confirmation(member["sub"])
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
 @app.post("/auth/otp/verify")
-async def verify_otp(body: OTPVerify):
+async def verify_otp(body: OTPVerify, request: Request):
     """Verifica OTP e retorna JWT se valido."""
-    from utils.security import validate_phone, hash_pii, create_token
+    from utils.security import validate_phone, hash_pii, create_token, hash_ip
 
     try:
         phone = validate_phone(body.phone)
@@ -427,6 +408,22 @@ async def verify_otp(body: OTPVerify):
         raise HTTPException(status_code=403, detail="Acesso negado.")
 
     token = create_token(member["id"], member["plan"])
+
+    # Fase 0.3: registra evento de login no audit_log para analytics.
+    # Não-bloqueante: falha silenciosa para não impedir o login.
+    try:
+        ip_hash = hash_ip(request.client.host) if request.client else None
+        sb.table("audit_logs").insert({
+            "actor_id":    member["id"],
+            "actor_type":  "member",
+            "action":      "member.login",
+            "target_type": "member",
+            "target_id":   member["id"],
+            "ip_hash":     ip_hash,
+        }).execute()
+    except Exception:
+        pass
+
     return {"token": token, "member_id": member["id"], "plan": member["plan"]}
 
 
@@ -917,64 +914,6 @@ async def health():
 
 
 # ============================================================
-#  ROTA — REFERRAL REDIRECT
-#  /r/{code} → /?ref={code}  (Fase 0.2)
-# ============================================================
-
-_REFERRAL_CODE_RE = re.compile(r'^[A-Z0-9]{6,12}$')
-
-@app.get("/r/{referral_code}", include_in_schema=False)
-async def referral_redirect(referral_code: str, request: Request):
-    """
-    Redireciona /r/{code} para a landing page com o código de referral
-    pré-carregado (?ref=CODE). Registra o clique no audit_log para
-    rastrear atribuição (qual cadastro veio de qual link).
-    """
-    code = referral_code.strip().upper()
-
-    # Rejeita formato inválido — redireciona para home sem parâmetro
-    if not _REFERRAL_CODE_RE.match(code):
-        return RedirectResponse("/", status_code=302)
-
-    # Registra o clique para rastreamento de atribuição (falha silenciosa)
-    try:
-        from supabase import create_client
-        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
-        member = (
-            sb.table("members")
-            .select("id")
-            .eq("referral_code", code)
-            .eq("status", "active")
-            .execute()
-        )
-        if member.data:
-            sb.table("audit_logs").insert({
-                "actor_type": "system",
-                "action":     "referral.link_clicked",
-                "target_type": "member",
-                "target_id":   member.data[0]["id"],
-                "metadata":    {
-                    "referral_code": code,
-                    "user_agent": request.headers.get("user-agent", "")[:200],
-                },
-            }).execute()
-    except Exception as e:
-        log.debug(f"Referral click log falhou (nao critico): {e}")
-
-    response = RedirectResponse(f"/?ref={code}", status_code=302)
-    # Cookie de 7 dias como fallback para multi-step journeys
-    response.set_cookie(
-        key="cu_ref",
-        value=code,
-        max_age=7 * 24 * 3600,
-        httponly=False,  # precisa ser lido pelo JS de registro
-        samesite="lax",
-        secure=(os.environ.get("ENVIRONMENT") == "production"),
-    )
-    return response
-
-
-# ============================================================
 #  ROTAS — ALERTAS DE PRECO
 # ============================================================
 
@@ -1087,7 +1026,6 @@ def _send_otp_whatsapp(phone: str, otp: str):
 @app.get("/vip", include_in_schema=False)
 @app.get("/vip/sucesso", include_in_schema=False)
 @app.get("/vip/cancelado", include_in_schema=False)
-@app.get("/email/confirmar", include_in_schema=False)
 async def serve_site():
     """Serve o site (platform.html) em qualquer rota do frontend."""
     html_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "platform.html")
@@ -1196,3 +1134,9 @@ async def admin_send_deals(_=Depends(require_admin)):
 async def admin_list_alerts(_=Depends(require_admin)):
     from services.admin_service import list_admin_alerts
     return list_admin_alerts()
+
+
+@app.get("/admin/analytics")
+async def admin_analytics(_=Depends(require_admin)):
+    from services.analytics_service import get_overview
+    return get_overview()
