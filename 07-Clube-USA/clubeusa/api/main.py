@@ -505,7 +505,7 @@ async def get_referral(member: dict = Depends(get_current_member)):
         raise HTTPException(status_code=404)
 
     m = result.data[0]
-    referral_link = f"{APP_URL}?ref={m['referral_code']}"
+    referral_link = f"{APP_URL}/i/{m['referral_code']}"
 
     # Historico de indicacoes
     refs = sb.table("referrals").select(
@@ -791,6 +791,88 @@ def _send_vip_welcome(member_id: str):
         )
     except Exception as e:
         log.warning(f"Falha ao enviar boas-vindas VIP: {e}")
+
+
+# ============================================================
+#  ROTAS — REFERRAL (publicas)
+# ============================================================
+
+@app.get("/i/{code}", include_in_schema=False)
+async def referral_redirect(code: str, request: Request):
+    """
+    URL rastreavel de indicacao: clubeusa.com/i/{code}
+    Loga o clique (sem PII) e redireciona para /?ref={code}.
+    O frontend le o ?ref= e passa no cadastro.
+    """
+    from fastapi.responses import RedirectResponse
+    from utils.security import hash_ip
+    import re
+
+    # Valida formato do codigo (8-12 chars alfanumericos — evita path traversal)
+    if not re.match(r'^[A-Z0-9]{4,12}$', code.upper()):
+        return RedirectResponse(url=APP_URL, status_code=302)
+
+    code = code.upper()
+
+    # Log assíncrono sem bloquear o redirect
+    try:
+        from supabase import create_client
+        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+
+        # Verifica se o codigo existe (evita flood de codigos invalidos no DB)
+        exists = sb.table("members").select("id").eq("referral_code", code).execute()
+        if exists.data:
+            ip = request.client.host if request.client else "unknown"
+            ua = request.headers.get("user-agent", "")
+            sb.table("referral_clicks").insert({
+                "referral_code": code,
+                "ip_hash":       hash_ip(ip),
+                "ua_hash":       hash_ip(ua) if ua else None,
+            }).execute()
+    except Exception as e:
+        log.warning(f"Falha ao registrar clique referral {code}: {e}")
+
+    return RedirectResponse(url=f"{APP_URL}?ref={code}", status_code=302)
+
+
+@app.get("/public/referral/{code}")
+async def public_referral_preview(code: str):
+    """
+    Preview publico de um link de indicacao.
+    Retorna nome mascarado do indicador para exibir 'Fulano te convidou'.
+    Sem autenticacao, sem PII exposto.
+    """
+    import re
+    if not re.match(r'^[A-Z0-9]{4,12}$', code.upper()):
+        raise HTTPException(status_code=404, detail="Link invalido.")
+
+    try:
+        from supabase import create_client
+        from utils.security import decrypt
+        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+        result = sb.table("members").select(
+            "name_enc,referral_count,level"
+        ).eq("referral_code", code.upper()).eq("status", "active").execute()
+
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Link nao encontrado.")
+
+        m = result.data[0]
+        raw_name = decrypt(m["name_enc"]) if m.get("name_enc") else ""
+        # Exibe apenas primeiro nome, sem sobrenome
+        first_name = raw_name.strip().split()[0] if raw_name.strip() else "Alguem"
+
+        return {
+            "referrer_name":  first_name,
+            "referral_count": m["referral_count"],
+            "level":          m["level"],
+            "valid":          True,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Erro ao buscar preview referral {code}: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno.")
 
 
 # ============================================================

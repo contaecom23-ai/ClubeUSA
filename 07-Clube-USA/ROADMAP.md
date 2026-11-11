@@ -8,7 +8,8 @@
 
 - [x] **0.1** Cadastro + perfil mínimo + email confirmado
   - Cadastro + perfil já existiam. Adicionado: `email_verified`, tabela `email_confirm_tokens`, endpoints `GET /auth/email/confirm` e `POST /auth/email/resend`, `email_service.py` (SMTP + dev-stub). PR: feat/fase-0.1-email-confirmado. Provedor SMTP: ver DECISOES.md.
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+  - URL bonita `GET /i/{code}` → redirect para `/?ref={code}` + log de clique. Tabela `referral_clicks` (ip_hash, ua_hash, converted_member). Preview público `GET /public/referral/{code}` para landing page. Conversão marcada no click log ao registrar. Link em `/member/referral` atualizado para `/i/{code}`.
 - [ ] **0.3** Analytics básico
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 

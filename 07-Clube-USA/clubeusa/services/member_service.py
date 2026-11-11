@@ -145,6 +145,13 @@ def register_member(
         except Exception as e:
             log.warning(f"Erro ao processar indicacao: {e}")
 
+        # Marcar conversao no click log (melhor esforco)
+        if referral_code:
+            try:
+                _mark_referral_click_converted(referral_code.upper(), member_id)
+            except Exception as e:
+                log.warning(f"Falha ao marcar conversao referral: {e}")
+
     # 7. Audit log
     _audit("member.created", member_id, {
         "language": language,
@@ -239,6 +246,19 @@ def _check_vip_milestone(referrer_id: str):
         }).execute()
 
         log.info(f"VIP trial 30 dias concedido a {referrer_id} por 3 indicacoes")
+
+
+def _mark_referral_click_converted(referral_code: str, member_id: str):
+    """Atualiza o registro de clique mais recente do codigo com o membro convertido."""
+    sb = _supabase()
+    # Pega o clique nao convertido mais recente deste codigo
+    result = sb.table("referral_clicks").select("id").eq(
+        "referral_code", referral_code
+    ).is_("converted_member", "null").order("clicked_at", desc=True).limit(1).execute()
+    if result.data:
+        sb.table("referral_clicks").update({
+            "converted_member": member_id,
+        }).eq("id", result.data[0]["id"]).execute()
 
 
 # ============================================================
