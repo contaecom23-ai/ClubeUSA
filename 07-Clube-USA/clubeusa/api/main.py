@@ -360,6 +360,33 @@ async def request_otp(body: OTPRequest, request: Request):
     return {"message": "Codigo enviado para seu WhatsApp.", "expires_in": 600}
 
 
+@app.get("/auth/email/confirm")
+async def confirm_email_route(token: str):
+    """
+    Confirma email via token recebido por email.
+    Chamado quando o usuario clica no link de confirmacao.
+    Redireciona para o painel com status de sucesso/erro.
+    """
+    from fastapi.responses import RedirectResponse
+    from services.member_service import confirm_email
+    try:
+        confirm_email(token)
+        return RedirectResponse(url=f"{APP_URL}/painel?email_confirmed=1", status_code=302)
+    except ValueError as e:
+        safe_msg = str(e).replace(" ", "+")
+        return RedirectResponse(url=f"{APP_URL}/painel?email_error={safe_msg}", status_code=302)
+
+
+@app.post("/auth/email/resend")
+async def resend_email_confirm(member: dict = Depends(get_current_member)):
+    """Reenvia email de confirmacao. Rate-limit: 3/hora (via middleware global)."""
+    from services.member_service import resend_email_confirmation
+    try:
+        return resend_email_confirmation(member["sub"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.post("/auth/otp/verify")
 async def verify_otp(body: OTPVerify):
     """Verifica OTP e retorna JWT se valido."""
@@ -992,6 +1019,7 @@ def _send_otp_whatsapp(phone: str, otp: str):
 @app.get("/vip", include_in_schema=False)
 @app.get("/vip/sucesso", include_in_schema=False)
 @app.get("/vip/cancelado", include_in_schema=False)
+@app.get("/email/confirmar", include_in_schema=False)
 async def serve_site():
     """Serve o site (platform.html) em qualquer rota do frontend."""
     html_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "platform.html")
