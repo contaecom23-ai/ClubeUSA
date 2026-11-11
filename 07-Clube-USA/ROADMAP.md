@@ -8,8 +8,10 @@
 
 - [x] **0.1** Cadastro + perfil mínimo + email confirmado
   - Cadastro + perfil já existiam. Adicionado: `email_verified`, tabela `email_confirm_tokens`, endpoints `GET /auth/email/confirm` e `POST /auth/email/resend`, `email_service.py` (SMTP + dev-stub). PR: feat/fase-0.1-email-confirmado. Provedor SMTP: ver DECISOES.md.
-- [ ] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
-- [ ] **0.3** Analytics básico
+- [x] **0.2** Sistema de REFERRAL rastreável (link único por pessoa ex: clubeusa.com/i/joao + atribuição de qual cadastro veio de qual link)
+  - Rota `GET /r/{code}` → redirect 302 para `/?ref={code}`. Cookie `cu_ref` (7 dias) como fallback. Clique registrado em audit_log para atribuição. Formato validado. PR: feat/fase-0.2-referral-redirect.
+- [x] **0.3** Analytics básico
+  - `GET /admin/analytics/growth?days=N` (1–90, padrão 30): série temporal diária de novos membros + funil (email_verification_rate, registered_via_referral, referral_conversions, referral_link_clicks). Integra métricas das Fases 0.1 e 0.2. PR: feat/fase-0.3-analytics-basico.
 - [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
 
 ---
