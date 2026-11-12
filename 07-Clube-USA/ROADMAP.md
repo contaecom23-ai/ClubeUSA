@@ -10,7 +10,7 @@
   - Cadastro + perfil já existiam. Adicionado: `email_verified`, tabela `email_confirm_tokens`, endpoints `GET /auth/email/confirm` e `POST /auth/email/resend`, `email_service.py` (SMTP + dev-stub). PR: feat/fase-0.1-email-confirmado. Provedor SMTP: ver DECISOES.md.
 - [x] **0.2** Sistema de REFERRAL rastreável — redirect `/r/{code}` → `/?ref=CODE`, cookie 7 dias, captura no cadastro e clique logado em audit_log (PR #157, mergeado 2026-11-11)
 - [ ] **0.3** Analytics básico
-- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + ≥1 ação real) + anti-fraude
+- [ ] **0.4** Definição de "cadastro válido" verificável (email confirmado + >=1 ação real) + anti-fraude
 
 ---
 
@@ -18,7 +18,7 @@
 
 - [ ] **1.1** PROMOÇÕES/ACHADOS = carro-chefe (curadoria, urgência)
 - [ ] **1.2** Busca por ZIP + raio 1–5 milhas
-- [ ] **1.3** Programa de influenciadores PAGO POR RESULTADO (pagar por cadastro válido para todos, com teto de orçamento; selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000; opcional bônus mensal pro 1º lugar)
+- [~] **1.3** Programa de influenciadores PAGO POR RESULTADO — infraestrutura de tier implementada (`/member/influencer` com rank, `/admin/influencers` paginado); comissões/teto aguardam D-006 em DECISOES.md (selos Parceiro 50 / Embaixador 250 / Hall da Fama 1000)
 - [ ] **1.4** Empregos (seed manual nas 1ªs semanas)
 - [ ] **1.5** Moradia (quartos/roommates/casas, filtro por ZIP — seed manual)
 - [x] **1.6** Rastreador de preço de produto — membro cola o link de um produto (Amazon/Walmart/BestBuy), vê o histórico de preço e ofertas cruzadas nos outros marketplaces, cupons verificados automaticamente (Playwright) com selo confirmado/não confirmado, e recebe alerta quando o preço cai (recheck a cada 6h)
@@ -27,7 +27,7 @@
 
 ## FASE 2 — RECEITA RÁPIDA
 
-- [ ] **2.1** Assinatura de empresas locais $10–30/mês (free→premium)
+- [ ] **2.1** Assinatura de empresas locais $10–30/mês (free->premium)
 - [ ] **2.2** Diretório de empresas
 - [ ] **2.3** Publicidade local por região
 - [ ] **2.4** Leilão de destaque por categoria/ZIP
@@ -67,4 +67,4 @@
 
 ---
 
-*Atualizado em: 2026-06-23*
+*Atualizado em: 2026-09-28 — Fase 1.3 tracking infrastructure disponível; comissões aguardam D-006*
