@@ -37,7 +37,8 @@ def format_message(deal: dict, lang: str = "pt") -> str:
         if star_s:
             lines.append(f"Calificacion: {star_s}  ({rev} resenas)")
         lines += ["", deal["affiliate_url"], "",
-                  f"_Club USA — Score {deal.get('score','')} ({deal.get('score_label','')}) · {src}_"]
+                  f"_Club USA — Score {deal.get('score','')} ({deal.get('score_label','')}) · {src}_",
+                  "_Enlace con comision: si compras por el, apoyas al Club sin pagar de mas._"]
     else:
         lines = [f"*{deal['title'][:80]}*", ""]
         if ctx:
@@ -49,7 +50,8 @@ def format_message(deal: dict, lang: str = "pt") -> str:
         if star_s:
             lines.append(f"Avaliacao: {star_s}  ({rev} reviews)")
         lines += ["", deal["affiliate_url"], "",
-                  f"_Clube USA — Score {deal.get('score','')} ({deal.get('score_label','')}) · {src}_"]
+                  f"_Clube USA — Score {deal.get('score','')} ({deal.get('score_label','')}) · {src}_",
+                  "_Link com comissao: comprando por ele voce apoia o Clube sem pagar nada a mais._"]
 
     return "\n".join(lines)
 
