@@ -77,6 +77,12 @@ def register_member(
         except ValueError as e:
             raise ValueError(f"Email invalido: {e}")
 
+        # Anti-fraude: rejeita dominios descartaveis no cadastro (Fase 0.4)
+        from services.antifraude import validate_email_for_registration
+        ok_email, err_email = validate_email_for_registration(email)
+        if not ok_email:
+            raise ValueError(err_email)
+
     name  = sanitize(name or "", 80)
     state = sanitize(state or "", 50)
     language = language if language in ("pt", "es") else "pt"
