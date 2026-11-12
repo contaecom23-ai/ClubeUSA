@@ -35,7 +35,10 @@ Cole a saída (`ENCRYPTION_KEY` e `JWT_SECRET`) no `.env`.
    - `ENCRYPTION_KEY`, `JWT_SECRET` (do passo 2)
    - `ADMIN_SECRET` (defina uma senha forte)
    - `APP_URL` (a URL pública que o Render vai gerar, ex: `https://clubeusa-api.onrender.com`)
-   - `MESSENGER` = `telegram` ou `zapi`, e as credenciais correspondentes (`TELEGRAM_BOT_TOKEN` etc, ou `ZAPI_*`)
+   - **`ZAPI_INSTANCE`, `ZAPI_TOKEN`, `ZAPI_CLIENT_TOKEN`** — **SEMPRE obrigatórios**, independente do MESSENGER. O OTP de login é enviado por WhatsApp individual via Z-API. Sem isto, o app aceita cadastro mas nenhum usuário consegue fazer login (recebem "código enviado" mas o código nunca chega).
+   - `MESSENGER` = `telegram` ou `zapi` — controla o canal de broadcast de deals/notícias (grupos). Não afeta o OTP.
+     - Se `telegram`: preencher `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_PT`, `TELEGRAM_CHANNEL_ES`
+     - Se `zapi`: usa os grupos WhatsApp configurados no Z-API (não precisa de Telegram)
    - **Deixar em branco os campos `STRIPE_*`** — não estamos usando Stripe por enquanto
 
 ## 4. Ativar membros VIP manualmente (sem Stripe)
