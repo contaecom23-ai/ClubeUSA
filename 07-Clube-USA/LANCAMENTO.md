@@ -17,7 +17,11 @@ Checklist vivo do lancamento enxuto (lean launch). Atualizado em 11 nov 2026.
 
 ## Falta — depende do Gerson (um de cada vez)
 
-1. **Render/producao**: credenciais e aprovacao para deploy + migrations. ANTES do deploy, rodar no Supabase a migration nova: `db/zip_search_migration.sql` (colunas de geo — sem ela, /member/deals quebra).
+1. **Render/producao**: credenciais e aprovacao para deploy + migrations. ANTES do deploy, rodar no Supabase, NESTA ORDEM, as migrations pendentes:
+   - `clubeusa/db/email_confirm_migration.sql` (se ainda não rodou — base da próxima)
+   - `clubeusa/db/valid_registration_migration.sql` (anti-fraude #181 — depende da email_confirm)
+   - `clubeusa/db/zip_search_migration.sql` (colunas de geo — sem ela, /member/deals quebra)
+   - `clubeusa/db/promotions_migration.sql` (promoções #182)
 2. **Stripe live**: chaves live e criacao do preco VIP (decisao: US$ 2,99 vs US$ 4,99; e conta BR vs EUA — ver analise no chat).
 3. **Z-API**: numero dedicado e instancia (risco de ban — nao usar numero pessoal).
 4. **Contas de afiliado**: Amazon Associates, Impact (Home Depot, Lowe's etc.).
