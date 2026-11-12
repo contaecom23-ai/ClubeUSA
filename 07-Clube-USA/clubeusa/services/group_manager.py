@@ -336,7 +336,7 @@ def _build_welcome_message(group_name: str, language: str) -> str:
             f"Solo el admin envia mensajes en este grupo.\n"
             f"Los links son verificados y seguros.\n\n"
             f"*Sorteo semanal:* cada domingo\n"
-            f"Haz click en al menos 1 deal por semana para participar.\n\n"
+            f"Haz clic en al menos 1 deal por semana para participar.\n\n"
             f"Accede a tu panel en: *clubeusa.com*\n\n"
             f"_Club USA — Ahorra con quien te entiende_"
         ),
