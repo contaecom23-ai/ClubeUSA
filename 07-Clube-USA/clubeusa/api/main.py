@@ -101,7 +101,8 @@ _CORS_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 # Em dev, aceita qualquer ngrok/tunnel automaticamente
-if os.environ.get("ENVIRONMENT", "development") == "development":
+# IMPORTANTE: sem default — ausência de ENVIRONMENT não abre CORS para wildcard
+if os.environ.get("ENVIRONMENT") == "development":
     _CORS_ORIGINS = ["*"]
 
 app.add_middleware(
