@@ -59,6 +59,78 @@ def get_metrics() -> dict:
 
 
 # ============================================================
+#  ANALYTICS DE CRESCIMENTO (Fase 0.3)
+# ============================================================
+
+def get_analytics_growth(days: int = 30) -> dict:
+    """
+    Retorna série temporal de crescimento + métricas de funil para o período.
+
+    days: janela em dias (1–90). Padrão 30.
+    """
+    days = max(1, min(days, 90))
+    sb = _supabase()
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(days=days)).isoformat()
+
+    # --- Contagens totais (todos os membros, não só no período) ---
+    all_members = sb.table("members").select(
+        "created_at,email_verified,referred_by,status"
+    ).execute().data or []
+
+    total_members    = len(all_members)
+    email_verified   = sum(1 for m in all_members if m.get("email_verified"))
+    via_referral     = sum(1 for m in all_members if m.get("referred_by"))
+
+    # --- Membros novos no período ---
+    new_members = [m for m in all_members if (m.get("created_at") or "") >= since]
+    new_in_period = len(new_members)
+
+    # --- Série temporal: novos por dia ---
+    daily: dict = {}
+    for m in new_members:
+        raw = m.get("created_at", "")
+        date_key = raw[:10] if raw else ""
+        if date_key:
+            daily[date_key] = daily.get(date_key, 0) + 1
+
+    # Preenche dias sem cadastro com 0
+    growth_series = []
+    for i in range(days - 1, -1, -1):
+        d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+        growth_series.append({"date": d, "new_members": daily.get(d, 0)})
+
+    # --- Referral conversions no período ---
+    referrals = sb.table("referrals").select(
+        "status,created_at"
+    ).gte("created_at", since).execute().data or []
+    ref_confirmed = sum(1 for r in referrals if r.get("status") == "confirmed")
+    ref_pending   = sum(1 for r in referrals if r.get("status") == "pending")
+
+    # --- Cliques em links de referral (audit_log) ---
+    clicks = sb.table("audit_logs").select("id").eq(
+        "action", "referral.link_clicked"
+    ).gte("created_at", since).execute().data or []
+    referral_link_clicks = len(clicks)
+
+    return {
+        "period_days":   days,
+        "generated_at":  now.isoformat(),
+        "growth_series": growth_series,
+        "totals": {
+            "total_members":            total_members,
+            "new_in_period":            new_in_period,
+            "email_verified":           email_verified,
+            "email_verification_rate":  round(email_verified / total_members * 100, 1) if total_members else 0.0,
+            "registered_via_referral":  via_referral,
+            "referral_conversions_period": ref_confirmed,
+            "referral_pending_period":     ref_pending,
+            "referral_link_clicks_period": referral_link_clicks,
+        },
+    }
+
+
+# ============================================================
 #  MEMBROS
 # ============================================================
 

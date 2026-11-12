@@ -23,6 +23,7 @@
 #  POST /alerts/from-link    — criar alerta via URL Amazon (plano pago)
 #  GET  /admin                   — painel admin HTML
 #  GET  /admin/metrics           — snapshot do sistema (admin)
+#  GET  /admin/analytics/growth  — série temporal + funil (admin, Fase 0.3)
 #  GET  /admin/members           — lista membros (admin)
 #  GET  /admin/members/{id}      — perfil completo (admin)
 #  POST /admin/members/{id}/status — alterar status (admin)
@@ -1218,6 +1219,21 @@ async def admin_panel():
 async def admin_metrics(_=Depends(require_admin)):
     from services.admin_service import get_metrics
     return get_metrics()
+
+
+@app.get("/admin/analytics/growth")
+async def admin_analytics_growth(
+    days: int = 30,
+    _=Depends(require_admin),
+):
+    """
+    Série temporal de crescimento de membros + métricas de funil.
+    days: janela em dias (1–90, padrão 30).
+    """
+    if not (1 <= days <= 90):
+        raise HTTPException(status_code=422, detail="days deve estar entre 1 e 90.")
+    from services.admin_service import get_analytics_growth
+    return get_analytics_growth(days=days)
 
 
 @app.get("/admin/members")
