@@ -37,7 +37,8 @@ def format_message(deal: dict, lang: str = "pt") -> str:
         if star_s:
             lines.append(f"Calificacion: {star_s}  ({rev} resenas)")
         lines += ["", deal["affiliate_url"], "",
-                  f"_Club USA — Score {deal.get('score','')} ({deal.get('score_label','')}) · {src}_"]
+                  f"_Club USA — Score {deal.get('score','')} ({deal.get('score_label','')}) · {src}_",
+                  "_Enlace con comision: si compras por el, apoyas al Club sin pagar de mas._"]
     else:
         lines = [f"*{deal['title'][:80]}*", ""]
         if ctx:
@@ -49,7 +50,8 @@ def format_message(deal: dict, lang: str = "pt") -> str:
         if star_s:
             lines.append(f"Avaliacao: {star_s}  ({rev} reviews)")
         lines += ["", deal["affiliate_url"], "",
-                  f"_Clube USA — Score {deal.get('score','')} ({deal.get('score_label','')}) · {src}_"]
+                  f"_Clube USA — Score {deal.get('score','')} ({deal.get('score_label','')}) · {src}_",
+                  "_Link com comissao: comprando por ele voce apoia o Clube sem pagar nada a mais._"]
 
     return "\n".join(lines)
 
@@ -188,68 +190,3 @@ def auto_send_approved() -> int:
             time.sleep(delay)
 
     save_db(db)
-    save_sent(sent)
-    log.info(f"Auto-send: {n} enviados.")
-    return n
-
-
-def send_price_alert(alert: dict, current_price: float, phone: str, lang: str = "pt") -> bool:
-    """Envia notificacao de alerta de preco via WhatsApp."""
-    title        = alert.get("product_title") or alert["asin"]
-    price_before = alert.get("price_current")
-    asin         = alert["asin"]
-    affiliate    = f"https://www.amazon.com/dp/{asin}?tag={config.AMAZON_PARTNER_TAG}"
-
-    if price_before:
-        drop_pct = round((price_before - current_price) / price_before * 100)
-        price_line = (
-            f"Era: ~${price_before:.2f}~   Agora: *${current_price:.2f}*\n"
-            f"Queda de *{drop_pct}% OFF* ↓"
-            if lang != "es" else
-            f"Antes: ~${price_before:.2f}~   Ahora: *${current_price:.2f}*\n"
-            f"Bajó *{drop_pct}% OFF* ↓"
-        )
-    else:
-        price_line = f"Agora: *${current_price:.2f}*" if lang != "es" else f"Ahora: *${current_price:.2f}*"
-
-    if lang == "es":
-        msg = (
-            f"🔔 *Alerta de Precio — Club USA*\n\n"
-            f"{title[:80]}\n\n"
-            f"{price_line}\n\n"
-            f"👉 {affiliate}"
-        )
-    else:
-        msg = (
-            f"🔔 *Alerta de Preço — Clube USA*\n\n"
-            f"{title[:80]}\n\n"
-            f"{price_line}\n\n"
-            f"👉 {affiliate}"
-        )
-
-    return _send_whatsapp(msg, phone=phone)
-
-
-def send_tracked_product_alert(product: dict, offer: dict, coupon: dict | None, phone: str, lang: str = "pt") -> None:
-    """Notifica o membro sobre queda de preco (e cupom confirmado, se houver) de um produto rastreado."""
-    if lang == "es":
-        lines = [
-            "💰 *Bajada de precio — Club USA*", "",
-            f"*{product['title'][:80]}*",
-            f"{offer['marketplace'].title()}: *${offer['price']:.2f}*",
-        ]
-    else:
-        lines = [
-            "💰 *Queda de preço — Clube USA*", "",
-            f"*{product['title'][:80]}*",
-            f"{offer['marketplace'].title()}: *${offer['price']:.2f}*",
-        ]
-
-    if coupon and coupon.get("verified"):
-        label = "Cupom confirmado" if lang != "es" else "Cupón confirmado"
-        lines.append(f"🎟️ {label}: `{coupon['code']}`")
-
-    lines += ["", offer["url"]]
-    message = "\n".join(lines)
-
-    _send_message(message, message, recipient=phone, lang=lang)
