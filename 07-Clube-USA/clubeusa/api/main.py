@@ -36,15 +36,16 @@
 
 import hmac
 import os
+import re
 import logging
 import subprocess
 import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, Depends, HTTPException, Request, Header
+from fastapi import FastAPI, Depends, HTTPException, Request, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 import stripe
@@ -125,6 +126,14 @@ async def security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"]         = "1; mode=block"
     response.headers["Referrer-Policy"]           = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"]        = "geolocation=(), microphone=()"
+    response.headers["Content-Security-Policy"]   = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none';"
+    )
     return response
 
 
@@ -293,7 +302,7 @@ def _otp_verify(phone_hash: str, otp: str) -> tuple:
         sb.table("otp_codes").delete().eq("phone_hash", phone_hash).execute()
         return False, "Muitas tentativas. Solicite novo codigo."
 
-    if record["otp"] != otp:
+    if not hmac.compare_digest(record["otp"], otp):
         sb.table("otp_codes").update({"attempts": record["attempts"] + 1}).eq(
             "phone_hash", phone_hash
         ).execute()
@@ -356,9 +365,37 @@ async def request_otp(body: OTPRequest, request: Request):
     if os.environ.get("ENVIRONMENT") == "production":
         _send_otp_whatsapp(phone, otp)
     else:
-        log.info(f"[DEV] OTP para {phone}: {otp}")
+        # Nunca logar phone (PII) nem OTP em texto claro
+        log.info(f"[DEV] OTP gerado para hash={phone_hash[:8]}...")
 
     return {"message": "Codigo enviado para seu WhatsApp.", "expires_in": 600}
+
+
+@app.get("/auth/email/confirm")
+async def confirm_email_route(token: str):
+    """
+    Confirma email via token recebido por email.
+    Chamado quando o usuario clica no link de confirmacao.
+    Redireciona para o painel com status de sucesso/erro.
+    """
+    from fastapi.responses import RedirectResponse
+    from services.member_service import confirm_email
+    try:
+        confirm_email(token)
+        return RedirectResponse(url=f"{APP_URL}/painel?email_confirmed=1", status_code=302)
+    except ValueError as e:
+        safe_msg = str(e).replace(" ", "+")
+        return RedirectResponse(url=f"{APP_URL}/painel?email_error={safe_msg}", status_code=302)
+
+
+@app.post("/auth/email/resend")
+async def resend_email_confirm(member: dict = Depends(get_current_member)):
+    """Reenvia email de confirmacao. Rate-limit: 3/hora (via middleware global)."""
+    from services.member_service import resend_email_confirmation
+    try:
+        return resend_email_confirmation(member["sub"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/auth/otp/verify")
@@ -433,7 +470,7 @@ async def update_profile_categories(body: UpdateCategoriesRequest, member: dict 
 @app.get("/member/deals")
 async def get_deals(
     category: Optional[str] = None,
-    limit: int = 20,
+    limit: int = Query(20, ge=1, le=50),
     member: dict = Depends(get_current_member)
 ):
     """
@@ -828,6 +865,15 @@ async def group_webhook(request: Request):
     Recebe eventos de entrada/saida de membros via Z-API.
     Atualiza member_count em tempo real para manter os 2 grupos corretos no site.
     """
+    # Verificacao de segredo compartilhado (configure ZAPI_WEBHOOK_SECRET no deploy).
+    # Em dev (sem a var), o check e ignorado para nao bloquear testes locais.
+    webhook_secret = os.environ.get("ZAPI_WEBHOOK_SECRET", "")
+    if webhook_secret:
+        client_token = request.headers.get("Client-Token", "")
+        if not hmac.compare_digest(client_token.encode(), webhook_secret.encode()):
+            log.warning("Webhook Z-API recusado: Client-Token invalido.")
+            return {"ok": True}  # 200 para nao vazar existencia do endpoint
+
     try:
         payload = await request.json()
     except Exception:
@@ -878,6 +924,64 @@ async def health():
         "service": "clube-usa-api",
         "version": "1.0.0",
     }
+
+
+# ============================================================
+#  ROTA — REFERRAL REDIRECT
+#  /r/{code} → /?ref={code}  (Fase 0.2)
+# ============================================================
+
+_REFERRAL_CODE_RE = re.compile(r'^[A-Z0-9]{6,12}$')
+
+@app.get("/r/{referral_code}", include_in_schema=False)
+async def referral_redirect(referral_code: str, request: Request):
+    """
+    Redireciona /r/{code} para a landing page com o código de referral
+    pré-carregado (?ref=CODE). Registra o clique no audit_log para
+    rastrear atribuição (qual cadastro veio de qual link).
+    """
+    code = referral_code.strip().upper()
+
+    # Rejeita formato inválido — redireciona para home sem parâmetro
+    if not _REFERRAL_CODE_RE.match(code):
+        return RedirectResponse("/", status_code=302)
+
+    # Registra o clique para rastreamento de atribuição (falha silenciosa)
+    try:
+        from supabase import create_client
+        sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+        member = (
+            sb.table("members")
+            .select("id")
+            .eq("referral_code", code)
+            .eq("status", "active")
+            .execute()
+        )
+        if member.data:
+            sb.table("audit_logs").insert({
+                "actor_type": "system",
+                "action":     "referral.link_clicked",
+                "target_type": "member",
+                "target_id":   member.data[0]["id"],
+                "metadata":    {
+                    "referral_code": code,
+                    "user_agent": request.headers.get("user-agent", "")[:200],
+                },
+            }).execute()
+    except Exception as e:
+        log.debug(f"Referral click log falhou (nao critico): {e}")
+
+    response = RedirectResponse(f"/?ref={code}", status_code=302)
+    # Cookie de 7 dias como fallback para multi-step journeys
+    response.set_cookie(
+        key="cu_ref",
+        value=code,
+        max_age=7 * 24 * 3600,
+        httponly=False,  # precisa ser lido pelo JS de registro
+        samesite="lax",
+        secure=(os.environ.get("ENVIRONMENT") == "production"),
+    )
+    return response
 
 
 # ============================================================
@@ -993,6 +1097,7 @@ def _send_otp_whatsapp(phone: str, otp: str):
 @app.get("/vip", include_in_schema=False)
 @app.get("/vip/sucesso", include_in_schema=False)
 @app.get("/vip/cancelado", include_in_schema=False)
+@app.get("/email/confirmar", include_in_schema=False)
 async def serve_site():
     """Serve o site (platform.html) em qualquer rota do frontend."""
     html_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "platform.html")
@@ -1085,15 +1190,18 @@ async def admin_scan_deals(_=Depends(require_admin)):
 @app.post("/admin/deals/send")
 async def admin_send_deals(_=Depends(require_admin)):
     """Envia todos os deals aprovados em background."""
-    _ds2 = os.path.join(os.path.dirname(__file__), "..", "..", "dealscanner2")
-    _log = open(os.path.join(_ds2, "logs", "sender_bg.log"), "a")
-    subprocess.Popen(
-        [sys.executable, "run_sender.py"],
-        cwd=os.path.abspath(_ds2),
-        start_new_session=True,
-        stdout=_log,
-        stderr=_log,
-    )
+    _ds2 = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "dealscanner2"))
+    log_path = os.path.join(_ds2, "logs", "sender_bg.log")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    # Abre, lança o processo e fecha imediatamente no pai — o filho herda o fd.
+    with open(log_path, "a") as _log:
+        subprocess.Popen(
+            [sys.executable, "run_sender.py"],
+            cwd=_ds2,
+            start_new_session=True,
+            stdout=_log,
+            stderr=_log,
+        )
     return {"ok": True, "message": "Envio iniciado em background."}
 
 
