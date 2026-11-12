@@ -386,7 +386,16 @@ async def request_otp(body: OTPRequest, request: Request):
 
     # Envia via WhatsApp (ou loga em dev)
     if os.environ.get("ENVIRONMENT") == "production":
-        _send_otp_whatsapp(phone, otp)
+        language = "pt"
+        try:
+            from supabase import create_client as _cc
+            _sb = _cc(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+            _m = _sb.table("members").select("language").eq("phone_hash", phone_hash).limit(1).execute()
+            if _m.data and _m.data[0].get("language"):
+                language = _m.data[0]["language"]
+        except Exception:
+            pass  # fallback pt
+        _send_otp_whatsapp(phone, otp, language)
     else:
         # Nunca logar phone (PII) nem OTP em texto claro
         log.info(f"[DEV] OTP gerado para hash={phone_hash[:8]}...")
@@ -1159,10 +1168,14 @@ async def cancel_tracked_product_route(tracked_id: str, member: dict = Depends(r
         raise HTTPException(status_code=404, detail="Produto rastreado não encontrado.")
 
 
-def _send_otp_whatsapp(phone: str, otp: str):
+def _send_otp_whatsapp(phone: str, otp: str, language: str = "pt"):
     """Envia OTP via WhatsApp."""
     import requests as req
-    msg = f"*Clube USA*\n\nSeu codigo de acesso: *{otp}*\n\nValido por 10 minutos.\nNunca compartilhe este codigo."
+    messages = {
+        "pt": f"*Clube USA*\n\nSeu codigo de acesso: *{otp}*\n\nValido por 10 minutos.\nNunca compartilhe este codigo.",
+        "es": f"*Club USA*\n\nTu codigo de acceso: *{otp}*\n\nValido por 10 minutos.\nNunca compartas este codigo.",
+    }
+    msg = messages.get(language, messages["pt"])
     try:
         req.post(
             f"https://api.z-api.io/instances/{os.environ['ZAPI_INSTANCE']}/token/{os.environ['ZAPI_TOKEN']}/send-text",
